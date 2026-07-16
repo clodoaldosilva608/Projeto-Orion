@@ -1,7 +1,7 @@
 import { listGoalsAction } from '@/modules/goals/services/goals.actions'
 import { Target, Plus, Calendar, TrendingUp, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
-
+import { DeleteGoalButton } from './DeleteGoalButton'
 export default async function MetasPage() {
   const { data: goals, error } = await listGoalsAction()
 
@@ -78,7 +78,7 @@ export default async function MetasPage() {
                     <Target className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-white truncate max-w-[180px]" title={goal.name}>
+                    <h3 className="font-semibold text-white truncate max-w-[150px]" title={goal.name}>
                       {goal.name}
                     </h3>
                     <span className="badge badge-info mt-1 uppercase" style={{ fontSize: '10px' }}>
@@ -86,6 +86,7 @@ export default async function MetasPage() {
                     </span>
                   </div>
                 </div>
+                <DeleteGoalButton goalId={goal.id} />
               </div>
 
               <div className="space-y-4">

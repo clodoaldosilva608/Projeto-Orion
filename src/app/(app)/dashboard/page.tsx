@@ -56,6 +56,29 @@ export default async function DashboardPage() {
   // Top 5 Atividades recentes
   const recentActivities = results.slice(0, 5)
 
+  // Gráfico: últimos 7 dias
+  const last7Days = Array.from({ length: 7 }).map((_, i) => {
+    const d = new Date()
+    d.setDate(d.getDate() - (6 - i))
+    return {
+      date: d,
+      dateString: d.toISOString().split('T')[0],
+      dayName: ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'][d.getDay()],
+      value: 0
+    }
+  })
+
+  results.filter((r: any) => r.status === 'approved').forEach((r: any) => {
+    const rDate = new Date(r.createdAt).toISOString().split('T')[0]
+    const dayData = last7Days.find(d => d.dateString === rDate)
+    if (dayData) {
+      dayData.value += Number(r.value)
+    }
+  })
+
+  // Normalize para o gráfico (0 a 100%)
+  const maxChartValue = Math.max(...last7Days.map(d => d.value), 1) // evita divisão por zero
+
   const stats = [
     {
       label: 'Metas Ativas',
@@ -288,19 +311,30 @@ export default async function DashboardPage() {
 
         {/* Simple visual bar chart */}
         <div className="flex items-end gap-2 h-32">
-          {[65, 72, 58, 85, 91, 78, 88].map((val, i) => (
-            <div key={i} className="flex-1 flex flex-col items-center gap-1">
+          {last7Days.map((dayData, i) => (
+            <div key={i} className="flex-1 flex flex-col items-center gap-1 group relative">
               <div
-                className="w-full rounded-t-md transition-all"
+                className="w-full rounded-t-md transition-all relative overflow-hidden"
                 style={{
-                  height: `${(val / 100) * 100}%`,
+                  height: `${(dayData.value / maxChartValue) * 100}%`,
                   background: i === 6 ? 'linear-gradient(180deg, rgb(99 102 241), rgb(168 85 247))' : 'rgb(var(--surface-3))',
                   minHeight: '8px',
                 }}
-              />
+              >
+                {dayData.value > 0 && (
+                  <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+                )}
+              </div>
               <span className="text-xs" style={{ color: 'rgb(var(--text-muted))' }}>
-                {['S', 'T', 'Q', 'Q', 'S', 'S', 'D'][i]}
+                {dayData.dayName}
               </span>
+              
+              {/* Tooltip on hover */}
+              {dayData.value > 0 && (
+                <div className="absolute -top-8 bg-gray-900 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 pointer-events-none">
+                  {dayData.value.toLocaleString('pt-BR')}
+                </div>
+              )}
             </div>
           ))}
         </div>

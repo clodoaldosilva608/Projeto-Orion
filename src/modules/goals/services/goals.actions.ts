@@ -122,3 +122,39 @@ export async function listGoalsAction() {
     return { error: 'Erro ao buscar metas' }
   }
 }
+
+export async function deleteGoalAction(goalId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) return { error: 'Não autorizado' }
+
+  const dbUser = await prisma.user.findUnique({
+    where: { supabaseId: user.id }
+  })
+
+  if (!dbUser) return { error: 'Usuário não encontrado' }
+
+  try {
+    await prisma.goal.update({
+      where: {
+        id: BigInt(goalId),
+        companyId: dbUser.companyId
+      },
+      data: {
+        active: false,
+        deletedAt: new Date(),
+        deletedBy: dbUser.id
+      }
+    })
+
+    revalidatePath('/metas')
+    revalidatePath('/dashboard')
+    
+    return { error: null }
+  } catch (error: any) {
+    console.error('Error deleting goal:', error)
+    return { error: 'Erro ao deletar a meta' }
+  }
+}
+
