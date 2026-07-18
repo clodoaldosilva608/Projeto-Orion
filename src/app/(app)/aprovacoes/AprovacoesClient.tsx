@@ -112,7 +112,7 @@ export function AprovacoesClient({ results }: { results: PendingResult[] }) {
             {result.notes && (
               <div className="p-3 rounded-xl" style={{ background: 'rgb(var(--glass-bg))', border: '1px solid rgb(var(--glass-border))' }}>
                 <p className="text-xs italic" style={{ color: 'rgb(var(--text-secondary))' }}>
-                  "{result.notes}"
+                  &quot;{result.notes}&quot;
                 </p>
               </div>
             )}

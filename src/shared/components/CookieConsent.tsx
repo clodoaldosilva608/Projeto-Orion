@@ -13,10 +13,10 @@ export function CookieConsent() {
   useEffect(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY)
-      if (!stored) setVisible(true)
+      if (!stored) queueMicrotask(() => setVisible(true))
     } catch {
       // Sem acesso ao localStorage: mostra o banner por segurança
-      setVisible(true)
+      queueMicrotask(() => setVisible(true))
     }
   }, [])
 

@@ -76,8 +76,8 @@ function safeStringify(value: unknown): string {
 }
 
 function JsonBlock({ label, value, color }: { label: string; value: unknown; color: string }) {
-  if (value === null || value === undefined) return null
   const [open, setOpen] = useState(false)
+  if (value === null || value === undefined) return null
   return (
     <div className="rounded-lg overflow-hidden" style={{ background: 'rgb(var(--surface-1))' }}>
       <button

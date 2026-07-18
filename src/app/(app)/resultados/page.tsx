@@ -87,7 +87,7 @@ export default async function ResultadosPage() {
                           </p>
                           {result.notes && (
                             <p className="text-xs mt-1 italic" style={{ color: 'rgb(var(--text-muted))' }}>
-                              "{result.notes}"
+                              &quot;{result.notes}&quot;
                             </p>
                           )}
                         </div>
