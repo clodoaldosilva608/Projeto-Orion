@@ -18,6 +18,8 @@ import {
   ChevronDown,
   CheckCircle2,
   ScrollText,
+  KeyRound,
+  ShieldCheck,
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -40,6 +42,7 @@ const navItems = [
       { href: '/indicadores', label: 'Indicadores', icon: BarChart3 },
       { href: '/aprovacoes', label: 'Aprovações', icon: CheckCircle2 },
       { href: '/auditoria', label: 'Auditoria', icon: ScrollText },
+      { href: '/licencas', label: 'Licenças', icon: KeyRound },
     ],
   },
   {
@@ -47,6 +50,7 @@ const navItems = [
     items: [
       { href: '/empresa', label: 'Empresa', icon: Building2 },
       { href: '/configuracoes', label: 'Configurações', icon: Settings },
+      { href: '/admin', label: 'Admin', icon: ShieldCheck },
     ],
   },
 ]
