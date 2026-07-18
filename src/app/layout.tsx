@@ -10,6 +10,11 @@ export const metadata: Metadata = {
   keywords: ['gestão comercial', 'metas', 'indicadores', 'KPI', 'dashboard', 'vendas'],
   authors: [{ name: 'Orion Platform' }],
   robots: 'index, follow',
+  manifest: '/manifest.webmanifest',
+  icons: {
+    icon: '/icon.svg',
+    apple: '/icon.svg',
+  },
   openGraph: {
     title: 'Orion — Gestão Inteligente de Equipes Comerciais',
     description: 'Plataforma para gestão de metas, indicadores e equipes comerciais.',
