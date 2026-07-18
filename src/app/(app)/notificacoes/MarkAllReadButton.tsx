@@ -1,6 +1,6 @@
 'use client'
 
-import { CheckDouble } from 'lucide-react'
+import { CheckCheck } from 'lucide-react'
 import { markAllAsReadAction } from '@/modules/notifications/services/notifications.actions'
 import { useTransition } from 'react'
 
@@ -24,7 +24,7 @@ export function MarkAllReadButton() {
         border: '1px solid rgb(var(--glass-border))'
       }}
     >
-      <CheckDouble className="w-4 h-4" />
+      <CheckCheck className="w-4 h-4" />
       Marcar todas como lidas
     </button>
   )

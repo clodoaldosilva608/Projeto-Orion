@@ -1,30 +1,21 @@
 #!/usr/bin/env bash
 # ============================================================================
 # orion-publish.sh — Publica uma nova Fase do Projeto Orion
-# Automatiza: commit + push + tag fase-N + release no GitHub
+# Automatiza: commit + push (master + espelho main) + tag fase-N + release GitHub
 #
 # USO:
 #   ./orion-publish.sh <FASE> "Mensagem do commit"
-#   Ex: ./orion-publish.sh 7 "feat: Phase 7 - Relatorios e exportacao"
-#
-# O que ele faz:
-#   1. git add . && git commit -m "<msg>"
-#   2. git push origin master  (e master:main para manter branch padrao)
-#   3. cria tag anotada fase-<FASE> e faz push das tags
-#   4. cria Release no GitHub via API (token lido de .github_token)
+#   Ex: ./orion-publish.sh 8 "feat: Fase 8 - Modulo Indicadores + Construtor"
 #
 # REQUISITOS:
 #   - .github_token com um GitHub PAT (scope 'repo') na raiz do projeto
-#   - jq instalado (opcional; sem ele usa python para o JSON)
-# ============================================================================
+# ===========================================================================
 set -euo pipefail
 
-# --- configuravel ---
 REPO="clodoaldosilva608/Projeto-Orion"
 BRANCH="master"
-DEFAULT_REMOTE_BRANCH="main"   # branch padrao do GitHub (mantida espelhada)
+DEFAULT_REMOTE_BRANCH="main"
 
-# --- args ---
 if [ "$#" -lt 2 ]; then
   echo "USO: ./orion-publish.sh <FASE> \"Mensagem do commit\"" >&2
   exit 1
@@ -33,39 +24,42 @@ FASE="$1"
 MSG="$2"
 TAG="fase-${FASE}"
 
-# --- token ---
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TOKEN_FILE="${SCRIPT_DIR}/.github_token"
 if [ ! -f "$TOKEN_FILE" ]; then
-  echo "ERRO: arquivo .github_token nao encontrado em ${SCRIPT_DIR}" >&2
-  echo "Gere um PAT (github.com/settings/tokens, scope 'repo') e salve o token puro nele." >&2
+  echo "ERRO: .github_token nao encontrado em ${SCRIPT_DIR}" >&2
   exit 1
 fi
 TOKEN="$(tr -d '[:space:]' < "$TOKEN_FILE")"
+
+# URL remota com token embutido (funciona em ambientes sem credential helper)
+AUTH_REMOTE="https://x-access-token:${TOKEN}@github.com/${REPO}.git"
 
 # --- 1. commit ---
 echo "==> git add ."
 git add .
 echo "==> git commit -m \"${MSG}\""
-git commit -m "${MSG}" || { echo "Nada para commitar (working tree limpa?)."; }
+git -c user.name="clodoaldosilva608" -c user.email="clodoaldosilva608@users.noreply.github.com" commit -m "${MSG}" \
+  || { echo "Nada para commitar (working tree limpa?)."; }
 
 # --- 2. push master + manter main espelhada ---
 echo "==> git push origin ${BRANCH}"
-git push origin "${BRANCH}"
-echo "==> git push origin ${BRANCH}:${DEFAULT_REMOTE_BRANCH} (espelha branch padrao)"
-git push origin "${BRANCH}:${DEFAULT_REMOTE_BRANCH}" || echo "(aviso: nao foi possivel espelhar ${DEFAULT_REMOTE_BRANCH})"
+git -c http.version=HTTP/1.1 push "${AUTH_REMOTE}" "${BRANCH}"
+echo "==> espelha ${BRANCH} -> ${DEFAULT_REMOTE_BRANCH} (branch padrao do GitHub)"
+git -c http.version=HTTP/1.1 push "${AUTH_REMOTE}" "${BRANCH}:${DEFAULT_REMOTE_BRANCH}" \
+  || echo "(aviso: nao foi possivel espelhar ${DEFAULT_REMOTE_BRANCH})"
 
 # --- 3. tag ---
 echo "==> criando tag ${TAG}"
 git tag -a "${TAG}" -m "${MSG}"
-echo "==> git push origin --tags"
-git push origin --tags
+echo "==> git push --tags"
+git -c http.version=HTTP/1.1 push "${AUTH_REMOTE}" --tags
 
 # --- 4. release via API do GitHub ---
 NAME="Fase ${FASE} - ${MSG#*: }"
 BODY="*${MSG}*
 
-Publicado automaticamente via orion-publish.sh.*
+Publicado automaticamente via orion-publish.sh.
 
 - Tag: ${TAG}
 - Branch: ${BRANCH}"
