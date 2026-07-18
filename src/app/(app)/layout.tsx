@@ -36,7 +36,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     })
     if (dbUser) {
       unreadCount = await prisma.notification.count({
-        where: { userId: dbUser.id, read: false }
+        where: { userId: dbUser.id, readAt: null }
       })
     }
   } catch { /* ignore */ }

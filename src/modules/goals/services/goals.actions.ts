@@ -143,8 +143,7 @@ export async function deleteGoalAction(goalId: string) {
       },
       data: {
         active: false,
-        deletedAt: new Date(),
-        deletedBy: dbUser.id
+        deletedAt: new Date()
       }
     })
 

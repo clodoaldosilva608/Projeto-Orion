@@ -39,7 +39,7 @@ export default function NovaMetaForm({ indicators }: { indicators: Indicator[] }
     const result = await createGoalAction({
       name: formData.name,
       description: formData.description,
-      indicatorId: formData.indicatorId,
+      indicatorId: Number(formData.indicatorId),
       targetValue: parseFloat(formData.targetValue),
       type: formData.type as any,
       startDate: formData.startDate,

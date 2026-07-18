@@ -77,8 +77,21 @@ export async function registerAction(registerData: RegisterData) {
 }
 
 /**
- * Solicitar redefinição de senha
+ * Atualizar senha (usado na tela de redefinição)
  */
+export async function updatePasswordAction(newPassword: string) {
+  const supabase = await createClient()
+
+  const { error } = await supabase.auth.updateUser({
+    password: newPassword,
+  })
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  return { error: null }
+}
 export async function resetPasswordAction(email: string) {
   const supabase = await createClient()
 

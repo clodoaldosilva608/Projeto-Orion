@@ -130,8 +130,7 @@ export async function deleteCampaignAction(campaignId: string) {
         companyId: dbUser.companyId, // Segurança: garantir tenant
       },
       data: {
-        deletedAt: new Date(),
-        deletedBy: dbUser.id
+        deletedAt: new Date()
       }
     })
 

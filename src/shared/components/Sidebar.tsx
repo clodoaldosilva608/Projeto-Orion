@@ -35,6 +35,7 @@ const navItems = [
     items: [
       { href: '/equipe', label: 'Equipe', icon: Users },
       { href: '/notificacoes', label: 'Notificações', icon: Bell },
+      { href: '/indicadores', label: 'Indicadores', icon: BarChart3 },
     ],
   },
   {

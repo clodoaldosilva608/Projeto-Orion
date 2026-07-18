@@ -9,6 +9,7 @@ export interface RankingEntry {
   name: string
   email: string
   avatarUrl: string | null
+  jobTitle: string | null
   totalValue: number
   approvedCount: number
   goalCount: number
@@ -58,7 +59,7 @@ export async function getRankingAction(period?: 'week' | 'month' | 'quarter' | '
       },
       include: {
         user: {
-          select: { id: true, name: true, email: true, avatarUrl: true }
+          select: { id: true, name: true, email: true, avatarUrl: true, jobTitle: true }
         }
       }
     })
@@ -83,6 +84,7 @@ export async function getRankingAction(period?: 'week' | 'month' | 'quarter' | '
       name: string
       email: string
       avatarUrl: string | null
+      jobTitle: string | null
       totalValue: number
       approvedCount: number
     }> = {}
@@ -95,6 +97,7 @@ export async function getRankingAction(period?: 'week' | 'month' | 'quarter' | '
           name: r.user.name,
           email: r.user.email,
           avatarUrl: r.user.avatarUrl,
+          jobTitle: r.user.jobTitle,
           totalValue: 0,
           approvedCount: 0,
         }
