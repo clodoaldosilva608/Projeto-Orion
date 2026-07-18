@@ -2,7 +2,8 @@ import { listResultsAction } from '@/modules/results/services/results.actions'
 import { listGoalsAction } from '@/modules/goals/services/goals.actions'
 import SubmitResultForm from './SubmitResultForm'
 import ApproveResultAction from './ApproveResultAction'
-import { AlertCircle, Clock, CheckCircle2, TrendingUp, XCircle } from 'lucide-react'
+import { AlertCircle, Clock, CheckCircle2, TrendingUp, XCircle, ArrowRight } from 'lucide-react'
+import Link from 'next/link'
 
 export default async function ResultadosPage() {
   const [goalsRes, resultsRes] = await Promise.all([
@@ -13,14 +14,29 @@ export default async function ResultadosPage() {
   const goals = goalsRes.data || []
   const results = resultsRes.data || []
 
+  const pendingCount = results.filter((r: { status: string }) => r.status === 'pending' || r.status === 'draft' || r.status === 'revised').length
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-white mb-1">Lançamento de Resultados</h1>
-        <p className="text-sm" style={{ color: 'rgb(var(--text-secondary))' }}>
-          Registre suas vendas e acompanhe o histórico da equipe.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-white mb-1">Lançamento de Resultados</h1>
+          <p className="text-sm" style={{ color: 'rgb(var(--text-secondary))' }}>
+            Registre suas vendas e acompanhe o histórico da equipe.
+          </p>
+        </div>
+        {pendingCount > 0 && (
+          <Link
+            href="/aprovacoes"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all hover:-translate-y-0.5"
+            style={{ background: 'rgb(var(--orion-indigo) / 0.15)', color: 'rgb(var(--orion-indigo))', border: '1px solid rgb(var(--orion-indigo) / 0.3)' }}
+          >
+            <CheckCircle2 className="w-4 h-4" />
+            {pendingCount} {pendingCount === 1 ? 'pendente' : 'pendentes'} para aprovar
+            <ArrowRight className="w-4 h-4" />
+          </Link>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

@@ -16,6 +16,8 @@ import {
   LogOut,
   Zap,
   ChevronDown,
+  CheckCircle2,
+  ScrollText,
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -36,6 +38,8 @@ const navItems = [
       { href: '/equipe', label: 'Equipe', icon: Users },
       { href: '/notificacoes', label: 'Notificações', icon: Bell },
       { href: '/indicadores', label: 'Indicadores', icon: BarChart3 },
+      { href: '/aprovacoes', label: 'Aprovações', icon: CheckCircle2 },
+      { href: '/auditoria', label: 'Auditoria', icon: ScrollText },
     ],
   },
   {
