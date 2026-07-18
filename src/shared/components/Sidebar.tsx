@@ -20,6 +20,7 @@ import {
   ScrollText,
   KeyRound,
   ShieldCheck,
+  Sparkles,
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -32,6 +33,7 @@ const navItems = [
       { href: '/resultados', label: 'Resultados', icon: BarChart3 },
       { href: '/ranking', label: 'Ranking', icon: Trophy },
       { href: '/campanhas', label: 'Campanhas', icon: Megaphone },
+      { href: '/ia', label: 'IA', icon: Sparkles },
     ],
   },
   {
