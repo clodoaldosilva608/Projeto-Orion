@@ -90,13 +90,18 @@ export async function listResultsAction(filters?: { status?: ResultStatus }) {
     // Serializa BigInts
     const serialized = results.map(r => ({
       ...r,
+      value: Number(r.value),
       id: r.id.toString(),
       companyId: r.companyId.toString(),
       goalId: r.goalId.toString(),
       userId: r.userId.toString(),
+      createdAt: r.createdAt.toISOString(),
+      updatedAt: r.updatedAt.toISOString(),
       createdBy: r.createdBy?.toString(),
       updatedBy: r.updatedBy?.toString(),
       approvedBy: r.approvedBy?.toString(),
+      referenceDate: r.referenceDate.toISOString(),
+      approvedAt: r.approvedAt ? r.approvedAt.toISOString() : null,
       goal: {
         ...r.goal,
         id: r.goal.id.toString(),
@@ -153,13 +158,18 @@ export async function listPendingResultsAction() {
 
     const serialized = results.map(r => ({
       ...r,
+      value: Number(r.value),
       id: r.id.toString(),
       companyId: r.companyId.toString(),
       goalId: r.goalId.toString(),
       userId: r.userId.toString(),
+      createdAt: r.createdAt.toISOString(),
+      updatedAt: r.updatedAt.toISOString(),
       createdBy: r.createdBy?.toString(),
       updatedBy: r.updatedBy?.toString(),
       approvedBy: r.approvedBy?.toString(),
+      referenceDate: r.referenceDate.toISOString(),
+      approvedAt: r.approvedAt ? r.approvedAt.toISOString() : null,
       goal: {
         ...r.goal,
         id: r.goal.id.toString(),

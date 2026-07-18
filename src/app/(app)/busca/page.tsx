@@ -34,11 +34,15 @@ export default async function SearchPage({
         select: { id: true, name: true, email: true },
         take: 10,
       })
-      goals = await prisma.goal.findMany({
+      goals = (await prisma.goal.findMany({
         where: { companyId, name: filter },
         select: { id: true, name: true, targetValue: true },
         take: 10,
-      })
+      })).map((g) => ({
+        id: g.id,
+        name: g.name,
+        targetValue: g.targetValue ? g.targetValue.toNumber() : null,
+      }))
     }
   }
 
