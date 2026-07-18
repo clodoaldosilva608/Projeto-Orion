@@ -33,3 +33,7 @@ next-env.d.ts
 
 # vercel
 .vercel
+
+# Hermes temporarios / logs de dev
+.hermes-tmp.*
+orion_dev_run.log

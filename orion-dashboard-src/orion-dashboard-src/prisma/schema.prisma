@@ -1,0 +1,270 @@
+// =================================================================
+// PROJETO ORION - Schema Prisma (NOVA VISÃO SaaS Platform)
+// Plataforma SaaS para Desenvolvimento, Entrega e Licenciamento
+// de Aplicações Personalizadas
+// =================================================================
+// Baseado em: Doc 29 - Customer Journey and License Lifecycle
+// =================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// =================================================================
+// MÓDULO: CLIENTES
+// =================================================================
+
+model Customer {
+  id           String   @id @default(cuid())
+  uuid         String   @unique @default(cuid())
+  name         String
+  email        String   @unique
+  company      String?
+  niche        String? // nicho de atuação
+  phone        String?
+  avatarUrl    String?
+  status       String   @default("active") // active | suspended | blocked | cancelled
+  mfaEnabled   Boolean  @default(false)
+  lastLogin    DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  deletedAt    DateTime?
+
+  applications Application[]
+  licenses     License[]
+  payments     Payment[]
+  downloads    Download[]
+  tickets      SupportTicket[]
+  notifications Notification[]
+}
+
+// =================================================================
+// MÓDULO: APLICAÇÕES
+// =================================================================
+
+model Application {
+  id            String   @id @default(cuid())
+  uuid          String   @unique @default(cuid())
+  customerId    String
+  name          String
+  description   String?
+  niche         String? // nicho da aplicação
+  objective     String? // objetivo declarado pelo cliente
+  features      String? // JSON: funcionalidades desejadas
+  version       String   @default("1.0.0")
+  status        String   @default("draft") // draft | backlog | development | testing | homologation | published | updated | archived
+  complexity    String   @default("medium") // low | medium | high | enterprise
+  artifactUrl   String? // URL do artefato no Object Storage
+  artifactSize  Int? // bytes
+  artifactHash  String? // SHA-256
+  publishedAt   DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  deletedAt     DateTime?
+
+  customer    Customer     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  licenses    License[]
+  downloads   Download[]
+  updates     AppUpdate[]
+
+  @@index([customerId])
+  @@index([status])
+}
+
+model AppUpdate {
+  id            String   @id @default(cuid())
+  applicationId String
+  version       String
+  type          String // fix | improvement | feature | security
+  changelog     String
+  artifactUrl   String?
+  artifactHash  String?
+  status        String   @default("pending") // pending | published | rolled_back
+  createdAt     DateTime @default(now())
+  publishedAt   DateTime?
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId])
+}
+
+// =================================================================
+// MÓDULO: LICENÇAS
+// =================================================================
+
+model License {
+  id              String   @id @default(cuid())
+  uuid            String   @unique @default(cuid())
+  licenseKey      String   @unique // identificador único
+  customerId      String
+  applicationId   String?
+  plan            String   @default("starter") // starter | professional | enterprise | trial
+  status          String   @default("created") // created | pending | active | suspended | blocked | cancelled | expired
+  duration        Int      @default(365) // dias
+  maxUsers        Int      @default(10)
+  maxDevices      Int      @default(1)
+  maxApps         Int      @default(1)
+  storageMb       Int      @default(500)
+  price           Float    @default(0)
+  currency        String   @default("BRL")
+  autoRenew       Boolean  @default(true)
+  startDate       DateTime?
+  endDate         DateTime?
+  trialEndsAt     DateTime? // para trial de 15 dias
+  activatedAt     DateTime?
+  suspendedAt     DateTime?
+  cancelledAt     DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  customer      Customer     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  application   Application? @relation(fields: [applicationId], references: [id])
+  payments      Payment[]
+  downloads     Download[]
+
+  @@index([customerId])
+  @@index([status])
+  @@index([licenseKey])
+}
+
+// =================================================================
+// MÓDULO: PAGAMENTOS (Stripe)
+// =================================================================
+
+model Payment {
+  id              String   @id @default(cuid())
+  uuid            String   @unique @default(cuid())
+  customerId      String
+  licenseId       String?
+  stripePaymentId String?  @unique // pi_xxx
+  stripeInvoiceId String?  @unique // in_xxx
+  amount          Float
+  currency        String   @default("BRL")
+  method          String   @default("card") // card | pix | boleto
+  status          String   @default("pending") // pending | succeeded | failed | refunded | canceled
+  description     String?
+  invoiceUrl      String? // URL da nota fiscal
+  invoicePdf      String?
+  paidAt          DateTime?
+  refundedAt      DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  license  License? @relation(fields: [licenseId], references: [id])
+
+  @@index([customerId])
+  @@index([status])
+}
+
+// =================================================================
+// MÓDULO: DOWNLOADS
+// =================================================================
+
+model Download {
+  id            String   @id @default(cuid())
+  uuid          String   @unique @default(cuid())
+  customerId    String
+  applicationId String
+  licenseId     String?
+  downloadToken String   @unique // token de uso único
+  signedUrl     String?  // URL assinada temporária
+  deviceInfo    String?  // User-Agent
+  ipAddress     String?
+  status        String   @default("pending") // pending | completed | expired | revoked
+  expiresAt     DateTime // expiração automática
+  downloadedAt  DateTime?
+  createdAt     DateTime @default(now())
+
+  customer    Customer    @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  license     License?    @relation(fields: [licenseId], references: [id])
+
+  @@index([customerId])
+  @@index([applicationId])
+}
+
+// =================================================================
+// MÓDULO: SUPORTE
+// =================================================================
+
+model SupportTicket {
+  id          String   @id @default(cuid())
+  uuid        String   @unique @default(cuid())
+  customerId  String
+  subject     String
+  description String
+  priority    String   @default("normal") // low | normal | high | urgent
+  status      String   @default("open") // open | in_progress | resolved | closed
+  category    String   @default("general") // general | technical | billing | license
+  assignedTo  String?
+  resolvedAt  DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  messages TicketMessage[]
+
+  @@index([customerId])
+  @@index([status])
+}
+
+model TicketMessage {
+  id        String   @id @default(cuid())
+  ticketId  String
+  authorId  String
+  authorRole String  @default("customer") // customer | admin | agent
+  message   String
+  attachments String? // JSON
+  createdAt DateTime @default(now())
+
+  ticket SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId])
+}
+
+// =================================================================
+// MÓDULO: NOTIFICAÇÕES
+// =================================================================
+
+model Notification {
+  id        String   @id @default(cuid())
+  customerId String?
+  title     String
+  message   String
+  type      String   @default("system") // system | app | license | payment | support | trial
+  priority  String   @default("normal") // low | normal | high | urgent
+  read      Boolean  @default(false)
+  readAt    DateTime?
+  createdAt DateTime @default(now())
+
+  customer Customer? @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId, read])
+}
+
+// =================================================================
+// MÓDULO: AUDITORIA
+// =================================================================
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  customerId String?
+  userId     String?
+  action     String // create | update | delete | login | download | publish | suspend | cancel
+  entity     String // customer | application | license | payment | download
+  entityId   String?
+  oldValue   String? // JSON
+  newValue   String? // JSON
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  @@index([customerId, createdAt])
+  @@index([entity, entityId])
+}

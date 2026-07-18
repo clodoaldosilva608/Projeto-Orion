@@ -1,7 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    typedRoutes: true,
+  typedRoutes: true,
+  turbopack: {
+    root: 'C:/Users/gessy/Downloads/Projeto-OrioN/codigo-01/orion-app',
   },
   images: {
     remotePatterns: [
