@@ -1,10 +1,9 @@
 'use server'
 
 import { prisma } from '@/shared/lib/prisma'
+import { isValidLicenseKey } from '@/modules/licensing/lib/license-key'
 import { createClient } from '@/shared/lib/supabase-server'
 import { revalidatePath } from 'next/cache'
-
-const LICENSE_KEY_REGEX = /^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/
 
 export type LicenseStatus = 'trial' | 'active' | 'suspended' | 'expired' | 'canceled'
 
@@ -135,8 +134,7 @@ export async function activateLicenseAction(key: string): Promise<{ data: Serial
 
   if (!dbUser) return { data: null, error: 'Usuário não encontrado' }
 
-  const normalizedKey = key.trim().toUpperCase()
-  if (!LICENSE_KEY_REGEX.test(normalizedKey)) {
+  if (!isValidLicenseKey(key)) {
     return { data: null, error: 'Chave de licença inválida. Use o formato XXXX-XXXX-XXXX.' }
   }
 

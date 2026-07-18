@@ -21,6 +21,7 @@ import {
   KeyRound,
   ShieldCheck,
   Sparkles,
+  ShieldAlert,
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -53,6 +54,7 @@ const navItems = [
       { href: '/empresa', label: 'Empresa', icon: Building2 },
       { href: '/configuracoes', label: 'Configurações', icon: Settings },
       { href: '/admin', label: 'Admin', icon: ShieldCheck },
+      { href: '/privacidade', label: 'Privacidade', icon: ShieldAlert },
     ],
   },
 ]
