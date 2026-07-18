@@ -1,0 +1,13 @@
+{
+  "name": "Orion",
+  "short_name": "Orion",
+  "description": "Gestão inteligente de equipes comerciais: metas, indicadores, resultados e IA.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1E3A8A",
+  "theme_color": "#1E3A8A",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/icon-maskable.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}
