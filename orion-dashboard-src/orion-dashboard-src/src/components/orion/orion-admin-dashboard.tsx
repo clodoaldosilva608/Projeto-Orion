@@ -62,13 +62,16 @@ export function OrionAdminDashboardInner({ data }: { data: AdminDashboardData })
   const mutations = useMutations()
   const { confirmState, confirm, close: closeConfirm } = useConfirm()
 
-  // Mock notifications for the panel
-  const adminNotifications = [
-    { id: 'n1', title: 'Pagamento confirmado', message: 'R$ 18.000 via PIX — Beatriz Lima', type: 'payment', priority: 'normal', read: false, createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000) },
-    { id: 'n2', title: 'Licença suspensa', message: 'Rafael Costa — inadimplência', type: 'license', priority: 'urgent', read: false, createdAt: new Date(Date.now() - 5 * 60 * 60 * 1000) },
-    { id: 'n3', title: 'Nova aplicação publicada', message: 'Farmácia Gestão Pro v2.3.1', type: 'app', priority: 'high', read: false, createdAt: new Date(Date.now() - 8 * 60 * 60 * 1000) },
-    { id: 'n4', title: 'Chamado urgente aberto', message: 'Clínica Vida — Licença suspensa', type: 'support', priority: 'urgent', read: true, createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000) },
-  ]
+  // Mock notifications for the panel — calculadas uma vez (evita impureza no render)
+  const adminNotifications = useMemo(() => {
+    const now = Date.now()
+    return [
+      { id: 'n1', title: 'Pagamento confirmado', message: 'R$ 18.000 via PIX — Beatriz Lima', type: 'payment', priority: 'normal', read: false, createdAt: new Date(now - 2 * 60 * 60 * 1000) },
+      { id: 'n2', title: 'Licença suspensa', message: 'Rafael Costa — inadimplência', type: 'license', priority: 'urgent', read: false, createdAt: new Date(now - 5 * 60 * 60 * 1000) },
+      { id: 'n3', title: 'Nova aplicação publicada', message: 'Farmácia Gestão Pro v2.3.1', type: 'app', priority: 'high', read: false, createdAt: new Date(now - 8 * 60 * 60 * 1000) },
+      { id: 'n4', title: 'Chamado urgente aberto', message: 'Clínica Vida — Licença suspensa', type: 'support', priority: 'urgent', read: true, createdAt: new Date(now - 24 * 60 * 60 * 1000) },
+    ]
+  }, [])
 
   const menuGroups: Array<{
     id: string
