@@ -3,6 +3,7 @@
  * Cliente, Aplicações, Licenças, Pagamentos, Downloads, Suporte
  */
 import { db } from '../src/lib/db'
+import { hashPassword } from '../src/lib/auth'
 
 async function main() {
   console.log('🌱 Iniciando seed do Orion SaaS Platform...')
@@ -20,6 +21,29 @@ async function main() {
   await db.application.deleteMany()
   await db.customer.deleteMany()
 
+  // 0. Criar administrador padrão (acesso à Central de Comando)
+  console.log('  Criando administrador padrão...')
+  const adminEmail = (process.env.ADMIN_EMAIL || 'admin@orion.com').trim().toLowerCase()
+  const adminPassword = process.env.ADMIN_PASSWORD || 'Orion@2026'
+  const existingAdmin = await db.customer.findUnique({ where: { email: adminEmail } })
+  if (!existingAdmin) {
+    const passwordHash = await hashPassword(adminPassword)
+    await db.customer.create({
+      data: {
+        name: 'Administrador Orion',
+        email: adminEmail,
+        company: 'Orion Platform',
+        role: 'admin',
+        status: 'active',
+        mfaEnabled: false,
+        passwordHash,
+      },
+    })
+    console.log(`    Admin criado: ${adminEmail} / ${adminPassword}`)
+  } else {
+    console.log(`    Admin já existe: ${adminEmail}`)
+  }
+
   // 1. Criar clientes
   console.log('  Criando clientes...')
   const customers = [
@@ -31,7 +55,6 @@ async function main() {
       phone: '(11) 3333-4444',
       status: 'active',
       mfaEnabled: true,
-      lastLogin: new Date(Date.now() - 2 * 60 * 60 * 1000),
     },
     {
       name: 'João Pereira',
@@ -166,53 +189,6 @@ async function main() {
   for (const app of apps) {
     const record = await db.application.create({ data: app })
     appRecords.push(record)
-  }
-
-  // 2b. Criar atualizações de aplicações (AppUpdate / versionamento)
-  console.log('  Criando atualizações de aplicações...')
-  const appUpdates = [
-    {
-      applicationId: appRecords[0].id,
-      version: '2.3.1',
-      type: 'security',
-      changelog: 'Correção de vulnerabilidade no módulo de autenticação e reforço de criptografia dos tokens de sessão.',
-      status: 'published',
-      artifactHash: 'sha256:abc123def456',
-      createdAt: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000),
-      publishedAt: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000),
-    },
-    {
-      applicationId: appRecords[0].id,
-      version: '2.4.0',
-      type: 'feature',
-      changelog: 'Novo módulo de gamificação com ranking de vendedores, medalhas e metas por equipe.',
-      status: 'pending',
-      createdAt: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000),
-    },
-    {
-      applicationId: appRecords[2].id,
-      version: '3.1.0',
-      type: 'improvement',
-      changelog: 'Otimização de performance no PDV: emissão de cupom fiscal 40% mais rápida.',
-      status: 'published',
-      artifactHash: 'sha256:def789ghi012',
-      createdAt: new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000),
-      publishedAt: new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000),
-    },
-    {
-      applicationId: appRecords[5].id,
-      version: '1.5.2',
-      type: 'fix',
-      changelog: 'Correção no cálculo de cronograma de obras e ajuste de fuso horário em relatórios.',
-      status: 'published',
-      artifactHash: 'sha256:ghi345jkl678',
-      createdAt: new Date(now.getTime() - 15 * 24 * 60 * 60 * 1000),
-      publishedAt: new Date(now.getTime() - 15 * 24 * 60 * 60 * 1000),
-    },
-  ]
-
-  for (const up of appUpdates) {
-    await db.appUpdate.create({ data: up })
   }
 
   // 3. Criar licenças

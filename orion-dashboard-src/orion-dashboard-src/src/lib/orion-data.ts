@@ -112,6 +112,16 @@ export type DashboardData = {
     ipAddress: string | null
     createdAt: Date
   }>
+  trial: { isActive: boolean; daysLeft: number; endsAt: Date | null } | null
+  auditLogs: Array<{
+    id: string
+    action: string
+    entity: string
+    entityId: string | null
+    ipAddress: string | null
+    userAgent: string | null
+    createdAt: Date
+  }>
   stats: {
     totalApps: number
     publishedApps: number
@@ -152,7 +162,7 @@ export async function getDashboardData(): Promise<DashboardData> {
   }
 
   // Buscar todos os dados do cliente
-  const [applications, licenses, downloads, payments, tickets, notifications, activity] =
+  const [applications, licenses, downloads, payments, tickets, notifications, activity, auditLogs] =
     await Promise.all([
       db.application.findMany({
         where: { customerId: customer.id, deletedAt: null },
@@ -189,6 +199,11 @@ export async function getDashboardData(): Promise<DashboardData> {
         where: { customerId: customer.id },
         orderBy: { createdAt: 'desc' },
         take: 8,
+      }),
+      db.auditLog.findMany({
+        where: { customerId: customer.id },
+        orderBy: { createdAt: 'desc' },
+        take: 30,
       }),
     ])
 
@@ -240,6 +255,17 @@ export async function getDashboardData(): Promise<DashboardData> {
     pendingUpdates: appUpdates.filter((u) => u.status === 'pending').length,
   }
 
+  const trialLicense = licenses.find((l) => l.plan === 'trial' && l.status === 'active')
+  const trial = trialLicense
+    ? {
+        isActive: true,
+        daysLeft: trialLicense.trialEndsAt
+          ? Math.max(0, Math.ceil((trialLicense.trialEndsAt.getTime() - now) / DAY_MS))
+          : 0,
+        endsAt: trialLicense.trialEndsAt,
+      }
+    : null
+
   return {
     customer: {
       id: customer.id,
@@ -252,6 +278,7 @@ export async function getDashboardData(): Promise<DashboardData> {
       mfaEnabled: customer.mfaEnabled,
       lastLogin: customer.lastLogin,
     },
+    trial,
     applications: applications.map((a) => ({
       id: a.id,
       name: a.name,
@@ -331,6 +358,15 @@ export async function getDashboardData(): Promise<DashboardData> {
       entity: a.entity,
       ipAddress: a.ipAddress,
       createdAt: a.createdAt,
+    })),
+    auditLogs: auditLogs.map((log) => ({
+      id: log.id,
+      action: log.action,
+      entity: log.entity,
+      entityId: log.entityId,
+      ipAddress: log.ipAddress,
+      userAgent: log.userAgent,
+      createdAt: log.createdAt,
     })),
     stats,
   }

@@ -28,6 +28,11 @@ model Customer {
   niche        String? // nicho de atuação
   phone        String?
   avatarUrl    String?
+  // ===== AUTH (Passo 1 - MVP) =====
+  passwordHash String? // bcrypt; null = cliente convidado (ainda sem conta)
+  role         String   @default("customer") // admin | customer
+  resetToken   String? // token de recuperação de senha
+  resetExpires DateTime? // expiração do token
   status       String   @default("active") // active | suspended | blocked | cancelled
   mfaEnabled   Boolean  @default(false)
   lastLogin    DateTime?
@@ -40,6 +45,7 @@ model Customer {
   payments     Payment[]
   downloads    Download[]
   tickets      SupportTicket[]
+  auditLogs    AuditLog[]
   notifications Notification[]
 }
 
@@ -264,6 +270,8 @@ model AuditLog {
   ipAddress  String?
   userAgent  String?
   createdAt  DateTime @default(now())
+
+  customer Customer? @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
   @@index([customerId, createdAt])
   @@index([entity, entityId])
