@@ -29,8 +29,6 @@ const NAV_ITEMS = [
   { id: 'configuracoes', label: 'Configurações', icon: Settings, badge: null, color: 'rgb(120 120 140)' },
 ]
 
-const STORAGE_KEY = 'orion-sidebar-collapsed'
-
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false)
   const [active, setActive] = useState('dashboard')
@@ -38,22 +36,11 @@ export function Sidebar() {
   const [mounted, setMounted] = useState(false)
   const pulseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Hidratação: lê preferência salva do localStorage
+  // Sempre inicia no estado expandido (clássico). O usuário pode recolher
+  // durante a sessão, mas ao recarregar a página volta ao estado padrão.
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY)
-      if (saved === 'true') setCollapsed(true)
-    } catch {}
     setMounted(true)
   }, [])
-
-  // Persiste mudanças
-  useEffect(() => {
-    if (!mounted) return
-    try {
-      localStorage.setItem(STORAGE_KEY, String(collapsed))
-    } catch {}
-  }, [collapsed, mounted])
 
   // Atalho de teclado: Ctrl+B para toggle (mesmo padrão do VS Code, Slack, etc.)
   useEffect(() => {
