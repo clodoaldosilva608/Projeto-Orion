@@ -1,88 +1,60 @@
-import { ArrowRight } from 'lucide-react'
+export type AiUsagePoint = { day: string; value: number };
 
-// 14 days of AI usage data (in thousands)
-const AI_USAGE = [
-  { day: '01', value: 12.5 },
-  { day: '02', value: 14.8 },
-  { day: '03', value: 13.2 },
-  { day: '04', value: 16.5 },
-  { day: '05', value: 18.2 },
-  { day: '06', value: 17.1 },
-  { day: '07', value: 19.5 },
-  { day: '08', value: 21.3 },
-  { day: '09', value: 20.1 },
-  { day: '10', value: 22.8 },
-  { day: '11', value: 21.5 },
-  { day: '12', value: 23.9 },
-  { day: '13', value: 24.2 },
-  { day: '14', value: 25.1 },
-]
+/**
+ * AI Usage Chart — bar chart with the gradient spec:
+ *  - Last bar:  linear-gradient(180deg, #a855f7, #ec4899)
+ *  - Other bars: lighter version (lower opacity)
+ */
+export function AIUsageChart({ data }: { data: AiUsagePoint[] }) {
+  const max = data.length ? Math.max(...data.map((d) => d.value)) : 1;
+  const total = data.reduce((acc, d) => acc + d.value, 0);
+  const totalK = (total / 1000).toFixed(1).replace(".", ",");
 
-export function AIUsageChart() {
-  const max = 30
+  // gradients (per spec)
+  const lastBarGradient = "linear-gradient(180deg, #a855f7 0%, #ec4899 100%)";
+  const barGradient =
+    "linear-gradient(180deg, rgba(168, 85, 247, 0.55) 0%, rgba(236, 72, 153, 0.45) 100%)";
+
   return (
-    <div className="glass-card p-5">
-      <div className="flex items-center justify-between mb-4">
+    <div className="glass-card glass-card-hover p-5 lg:p-6 flex flex-col h-full">
+      <div className="flex items-start justify-between mb-5">
         <div>
-          <h3 className="text-sm font-semibold text-white">Uso de IA por Período</h3>
-          <p className="text-tiny mt-0.5" style={{ color: 'var(--text-muted)' }}>
-            Últimos 14 dias · tokens consumidos (milhares)
+          <h3 className="text-base font-semibold text-fg">Uso de IA por Período</h3>
+          <p className="text-xs text-muted-2 mt-0.5">
+            Últimos 14 dias (tokens em milhares)
           </p>
         </div>
-        <a
-          href="#"
-          className="text-tiny font-medium flex items-center gap-1 transition-colors hover:opacity-80"
-          style={{ color: 'var(--brand-primary)' }}
-        >
-          Ver relatório
-          <ArrowRight className="w-3 h-3" />
-        </a>
+        <div className="text-right">
+          <p className="text-xl font-bold text-fg">{totalK}k</p>
+          <p className="text-[11px] text-muted-2">tokens totais</p>
+        </div>
       </div>
 
-      <div className="flex items-end gap-1.5 h-40">
-        {AI_USAGE.map((d, i) => {
-          const height = (d.value / max) * 100
-          const isLast = i === AI_USAGE.length - 1
+      <div className="flex items-end justify-between gap-1.5 flex-1 min-h-[160px]">
+        {data.map((d, i) => {
+          const h = max > 0 ? (d.value / max) * 100 : 0;
+          const isLast = i === data.length - 1;
           return (
             <div
               key={i}
-              className="flex-1 flex flex-col items-center gap-1.5 group"
+              className="flex-1 flex flex-col items-center gap-2 group"
+              title={`${d.day}: ${d.value.toLocaleString("pt-BR")} tokens`}
             >
-              <div className="w-full flex-1 flex items-end">
+              <div className="relative w-full h-full flex items-end">
                 <div
-                  className="w-full rounded-t-md transition-all relative cursor-pointer"
+                  className="w-full rounded-t-md transition-all duration-300 group-hover:opacity-90"
                   style={{
-                    height: `${height}%`,
-                    background: isLast
-                      ? 'linear-gradient(180deg, #a855f7, #ec4899)'
-                      : 'linear-gradient(180deg, rgba(139, 92, 246, 0.6), rgba(236, 72, 153, 0.3))',
-                    minHeight: '4px',
+                    height: `${h}%`,
+                    background: isLast ? lastBarGradient : barGradient,
+                    minHeight: h > 0 ? "4px" : "0",
                   }}
-                >
-                  <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity rounded-t-md" />
-                </div>
+                />
               </div>
-              <span
-                className={`text-tiny ${isLast ? 'font-semibold' : ''}`}
-                style={{ color: isLast ? '#c4b5fd' : 'var(--text-muted)' }}
-              >
-                {d.day}
-              </span>
+              <span className="text-[9px] text-muted-2">{d.day}</span>
             </div>
-          )
+          );
         })}
       </div>
-
-      <div className="mt-4 pt-3 flex items-center justify-between" style={{ borderTop: '1px solid var(--border-subtle)' }}>
-        <div>
-          <p className="text-tiny" style={{ color: 'var(--text-muted)' }}>Total no período</p>
-          <p className="text-lg font-bold text-white">271.7k tokens</p>
-        </div>
-        <div className="text-right">
-          <p className="text-tiny" style={{ color: 'var(--text-muted)' }}>Tendência</p>
-          <p className="text-sm font-semibold" style={{ color: '#34d399' }}>↑ +18,4%</p>
-        </div>
-      </div>
     </div>
-  )
+  );
 }

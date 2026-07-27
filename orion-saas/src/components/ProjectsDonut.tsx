@@ -1,113 +1,84 @@
-interface Segment {
-  label: string
-  value: number
-  percent: number
-  color: string
-}
+export type DonutSegment = {
+  label: string;
+  value: number;
+  percent: number;
+  color: string;
+};
 
-const SEGMENTS: Segment[] = [
-  { label: 'Planejamento', value: 48, percent: 14, color: '#3b82f6' },
-  { label: 'Em Desenvolvimento', value: 56, percent: 16, color: '#60a5fa' },
-  { label: 'Em Testes', value: 68, percent: 20, color: '#fbbf24' },
-  { label: 'Homologação', value: 34, percent: 10, color: '#fb923c' },
-  { label: 'Aguardando Cliente', value: 41, percent: 12, color: '#f87171' },
-  { label: 'Concluídos', value: 95, percent: 28, color: '#10b981' },
-]
+const R = 70;
+const CX = 100;
+const CY = 100;
+const C = 2 * Math.PI * R;
+const GAP = 2;
 
-export function ProjectsDonut() {
-  const total = SEGMENTS.reduce((acc, s) => acc + s.value, 0)
-  const radius = 70
-  const strokeWidth = 18
-  const circumference = 2 * Math.PI * radius
-
-  let offset = 0
-  const arcs = SEGMENTS.map((seg) => {
-    const dash = (seg.percent / 100) * circumference
-    const arc = {
-      ...seg,
-      dash,
-      gap: circumference - dash,
-      offset: -offset,
-    }
-    offset += dash
-    return arc
-  })
+export function ProjectsDonut({ data }: { data: DonutSegment[] }) {
+  let cumulative = 0;
+  const total = data.reduce((acc, s) => acc + s.value, 0);
 
   return (
-    <div className="glass-card p-5">
-      <h3 className="text-sm font-semibold text-white mb-1">Projetos por Status</h3>
-      <p className="text-tiny mb-4" style={{ color: 'var(--text-muted)' }}>
-        Distribuição atual dos projetos
-      </p>
+    <div className="glass-card glass-card-hover p-5 lg:p-6 flex flex-col h-full">
+      <div className="mb-4">
+        <h3 className="text-base font-semibold text-fg">Projetos por Status</h3>
+        <p className="text-xs text-muted-2 mt-0.5">
+          Distribuição dos {total} projetos
+        </p>
+      </div>
 
-      <div className="flex items-center gap-5">
-        {/* Donut SVG */}
-        <div className="relative flex-shrink-0">
-          <svg width="160" height="160" viewBox="0 0 160 160">
-            <g transform="translate(80, 80) rotate(-90)">
-              {arcs.map((arc, i) => (
-                <circle
-                  key={i}
-                  r={radius}
-                  fill="none"
-                  stroke={arc.color}
-                  strokeWidth={strokeWidth}
-                  strokeDasharray={`${arc.dash} ${arc.gap}`}
-                  strokeDashoffset={arc.offset}
-                />
-              ))}
+      <div className="flex flex-col sm:flex-row items-center gap-5 flex-1">
+        <div className="relative shrink-0">
+          <svg viewBox="0 0 200 200" className="w-40 h-40 lg:w-44 lg:h-44">
+            <g transform={`rotate(-90 ${CX} ${CY})`}>
+              <circle
+                cx={CX}
+                cy={CY}
+                r={R}
+                fill="none"
+                stroke="var(--grid-line)"
+                strokeWidth={22}
+              />
+              {data.map((seg) => {
+                const len = (seg.percent / 100) * C - GAP;
+                const offset = -cumulative;
+                cumulative += (seg.percent / 100) * C;
+                return (
+                  <circle
+                    key={seg.label}
+                    cx={CX}
+                    cy={CY}
+                    r={R}
+                    fill="none"
+                    stroke={seg.color}
+                    strokeWidth={22}
+                    strokeLinecap="round"
+                    strokeDasharray={`${len} ${C - len}`}
+                    strokeDashoffset={offset}
+                  />
+                );
+              })}
             </g>
-            <text
-              x="80"
-              y="74"
-              textAnchor="middle"
-              fill="#f9fafb"
-              fontSize="28"
-              fontWeight="700"
-            >
-              {total}
-            </text>
-            <text
-              x="80"
-              y="92"
-              textAnchor="middle"
-              fill="#6b7280"
-              fontSize="10"
-            >
-              Projetos
-            </text>
           </svg>
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <span className="text-2xl font-bold text-fg">{total}</span>
+            <span className="text-[11px] text-muted-2">projetos</span>
+          </div>
         </div>
 
-        {/* Legend */}
-        <div className="flex-1 space-y-1.5">
-          {SEGMENTS.map((seg) => (
-            <div key={seg.label} className="flex items-center justify-between text-xs">
-              <div className="flex items-center gap-2 min-w-0">
-                <span
-                  className="w-2 h-2 rounded-full flex-shrink-0"
-                  style={{ background: seg.color }}
-                />
-                <span
-                  className="truncate"
-                  style={{ color: 'var(--text-secondary)' }}
-                >
-                  {seg.label}
-                </span>
-              </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <span className="font-semibold text-white tabular-nums">{seg.value}</span>
-                <span
-                  className="text-tiny tabular-nums w-8 text-right"
-                  style={{ color: 'var(--text-muted)' }}
-                >
-                  {seg.percent}%
-                </span>
-              </div>
-            </div>
+        <ul className="flex-1 w-full space-y-2.5">
+          {data.map((seg) => (
+            <li key={seg.label} className="flex items-center gap-3 text-sm">
+              <span
+                className="h-2.5 w-2.5 rounded-full shrink-0"
+                style={{ backgroundColor: seg.color }}
+              />
+              <span className="flex-1 text-muted-fg truncate">{seg.label}</span>
+              <span className="font-semibold text-fg">{seg.value}</span>
+              <span className="text-muted-2 text-xs w-9 text-right">
+                {seg.percent}%
+              </span>
+            </li>
           ))}
-        </div>
+        </ul>
       </div>
     </div>
-  )
+  );
 }

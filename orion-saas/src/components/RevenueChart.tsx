@@ -1,136 +1,161 @@
-import { TrendingUp } from 'lucide-react'
+import { TrendingUp } from "lucide-react";
 
-// Mock data: 12 months of revenue (in R$ thousands)
-const REVENUE_DATA = [
-  { month: 'Jun', value: 142 },
-  { month: 'Jul', value: 168 },
-  { month: 'Ago', value: 155 },
-  { month: 'Set', value: 189 },
-  { month: 'Out', value: 205 },
-  { month: 'Nov', value: 198 },
-  { month: 'Dez', value: 224 },
-  { month: 'Jan', value: 218 },
-  { month: 'Fev', value: 241 },
-  { month: 'Mar', value: 235 },
-  { month: 'Abr', value: 262 },
-  { month: 'Mai', value: 286.58 },
-]
+export type RevenuePoint = { month: string; value: number };
 
-export function RevenueChart() {
-  const max = Math.max(...REVENUE_DATA.map((d) => d.value))
-  const min = 0
-  const width = 600
-  const height = 200
-  const padding = { top: 20, right: 20, bottom: 30, left: 50 }
-  const chartWidth = width - padding.left - padding.right
-  const chartHeight = height - padding.top - padding.bottom
+const W = 600;
+const H = 220;
+const PAD_X = 24;
+const PAD_TOP = 24;
+const PAD_BOTTOM = 36;
 
-  const points = REVENUE_DATA.map((d, i) => {
-    const x = padding.left + (i / (REVENUE_DATA.length - 1)) * chartWidth
-    const y = padding.top + chartHeight - ((d.value - min) / (max - min)) * chartHeight
-    return { x, y, ...d }
-  })
+function buildPoints(values: number[]) {
+  if (values.length === 0) return [] as [number, number][];
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const lo = min - (max - min) * 0.15 - 1;
+  const hi = max + (max - min) * 0.15 + 1;
+  const step = values.length > 1 ? (W - PAD_X * 2) / (values.length - 1) : 0;
+  return values.map((v, i) => {
+    const x = PAD_X + i * step;
+    const y = PAD_TOP + (1 - (v - lo) / (hi - lo)) * (H - PAD_TOP - PAD_BOTTOM);
+    return [x, y] as [number, number];
+  });
+}
 
-  // Smooth curve using cubic bezier
-  const pathD = points
-    .map((p, i) => {
-      if (i === 0) return `M ${p.x} ${p.y}`
-      const prev = points[i - 1]
-      const cpx1 = prev.x + (p.x - prev.x) / 2
-      const cpx2 = prev.x + (p.x - prev.x) / 2
-      return `C ${cpx1} ${prev.y}, ${cpx2} ${p.y}, ${p.x} ${p.y}`
-    })
-    .join(' ')
+function smoothPath(pts: [number, number][]) {
+  if (pts.length < 2) return "";
+  let d = `M ${pts[0][0].toFixed(2)} ${pts[0][1].toFixed(2)}`;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[i === 0 ? 0 : i - 1];
+    const p1 = pts[i];
+    const p2 = pts[i + 1];
+    const p3 = pts[i + 2 < pts.length ? i + 2 : i + 1];
+    const cp1x = p1[0] + (p2[0] - p0[0]) / 6;
+    const cp1y = p1[1] + (p2[1] - p0[1]) / 6;
+    const cp2x = p2[0] - (p3[0] - p1[0]) / 6;
+    const cp2y = p2[1] - (p3[1] - p1[1]) / 6;
+    d += ` C ${cp1x.toFixed(2)} ${cp1y.toFixed(2)}, ${cp2x.toFixed(2)} ${cp2y.toFixed(2)}, ${p2[0].toFixed(2)} ${p2[1].toFixed(2)}`;
+  }
+  return d;
+}
 
-  const areaD = `${pathD} L ${points[points.length - 1].x} ${padding.top + chartHeight} L ${points[0].x} ${padding.top + chartHeight} Z`
+function formatBRL(n: number) {
+  return n.toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
 
-  // Y-axis ticks
-  const yTicks = [0, 100, 200, 300, 400]
+export function RevenueChart({
+  data,
+  mrr,
+}: {
+  data: RevenuePoint[];
+  mrr: number;
+}) {
+  const values = data.map((d) => d.value);
+  const points = buildPoints(values);
+  const linePath = smoothPath(points);
+  const areaPath =
+    points.length > 0
+      ? `${linePath} L ${points[points.length - 1][0].toFixed(2)} ${H - PAD_BOTTOM} L ${points[0][0].toFixed(2)} ${H - PAD_BOTTOM} Z`
+      : "";
 
   return (
-    <div className="glass-card p-5">
+    <div className="glass-card glass-card-hover p-5 lg:p-6 flex flex-col h-full">
       <div className="flex items-start justify-between mb-4">
         <div>
-          <h3 className="text-sm font-semibold text-white">Receita nos Últimos 12 Meses</h3>
-          <p className="text-tiny mt-0.5" style={{ color: 'var(--text-muted)' }}>
-            Evolução do MRR ao longo do tempo
-          </p>
+          <h3 className="text-base font-semibold text-fg">
+            Receita nos Últimos 12 Meses
+          </h3>
+          <p className="text-xs text-muted-2 mt-0.5">MRR acumulado por mês</p>
         </div>
         <div className="text-right">
-          <p className="text-xl font-bold text-white">R$ 286.580,00</p>
-          <p className="text-tiny font-semibold flex items-center gap-0.5 justify-end" style={{ color: '#34d399' }}>
-            <TrendingUp className="w-3 h-3" />
-            +18,6%
-          </p>
+          <p className="text-xl font-bold text-fg">{formatBRL(mrr)}</p>
+          <span
+            className="inline-flex items-center gap-1 text-xs font-semibold"
+            style={{ color: "#10b981" }}
+          >
+            <TrendingUp className="h-3.5 w-3.5" /> +18,6%
+          </span>
         </div>
       </div>
 
-      <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto" preserveAspectRatio="xMidYMid meet">
-        <defs>
-          <linearGradient id="revenue-gradient" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.4" />
-            <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0" />
-          </linearGradient>
-          <linearGradient id="line-gradient" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor="#6366f1" />
-            <stop offset="100%" stopColor="#a855f7" />
-          </linearGradient>
-        </defs>
+      <div className="flex-1 min-h-0">
+        <svg
+          viewBox={`0 0 ${W} ${H}`}
+          className="w-full h-full"
+          preserveAspectRatio="none"
+        >
+          <defs>
+            {/* Area gradient: #8b5cf6 0.4 opacity → transparent */}
+            <linearGradient id="revArea" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.4" />
+              <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0" />
+            </linearGradient>
+            <linearGradient id="revLine" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor="#6366f1" />
+              <stop offset="100%" stopColor="#a78bfa" />
+            </linearGradient>
+          </defs>
 
-        {/* Grid lines */}
-        {yTicks.map((tick) => {
-          const y = padding.top + chartHeight - (tick / 400) * chartHeight
-          return (
-            <g key={tick}>
-              <line
-                x1={padding.left}
-                y1={y}
-                x2={width - padding.right}
-                y2={y}
-                stroke="rgba(255,255,255,0.04)"
-                strokeWidth="1"
-              />
+          {/* gridlines */}
+          {[0, 0.25, 0.5, 0.75, 1].map((t) => (
+            <line
+              key={t}
+              x1={PAD_X}
+              x2={W - PAD_X}
+              y1={PAD_TOP + t * (H - PAD_TOP - PAD_BOTTOM)}
+              y2={PAD_TOP + t * (H - PAD_TOP - PAD_BOTTOM)}
+              stroke="var(--grid-line)"
+              strokeWidth={1}
+            />
+          ))}
+
+          {areaPath && <path d={areaPath} fill="url(#revArea)" />}
+          {linePath && (
+            <path
+              d={linePath}
+              fill="none"
+              stroke="url(#revLine)"
+              strokeWidth={2.5}
+              strokeLinecap="round"
+            />
+          )}
+
+          {points.map(([x, y], i) => (
+            <g key={i}>
+              {i === points.length - 1 && (
+                <>
+                  <circle cx={x} cy={y} r={7} fill="#a78bfa" opacity={0.25} />
+                  <circle cx={x} cy={y} r={4.5} fill="#a78bfa" />
+                </>
+              )}
+              {i !== points.length - 1 && (
+                <circle
+                  cx={x}
+                  cy={y}
+                  r={2.5}
+                  fill="var(--bg)"
+                  stroke="#a78bfa"
+                  strokeWidth={1.5}
+                />
+              )}
               <text
-                x={padding.left - 8}
-                y={y + 3}
-                textAnchor="end"
-                fill="#6b7280"
+                x={x}
+                y={H - 12}
+                textAnchor="middle"
                 fontSize="10"
+                fill="var(--muted-2)"
               >
-                R$ {tick}k
+                {data[i]?.month ?? ""}
               </text>
             </g>
-          )
-        })}
-
-        {/* Area */}
-        <path d={areaD} fill="url(#revenue-gradient)" />
-
-        {/* Line */}
-        <path d={pathD} fill="none" stroke="url(#line-gradient)" strokeWidth="2.5" strokeLinecap="round" />
-
-        {/* Points */}
-        {points.map((p, i) => (
-          <g key={i}>
-            <circle cx={p.x} cy={p.y} r="3" fill="#0a0b14" stroke="#a855f7" strokeWidth="2" />
-            <text
-              x={p.x}
-              y={height - 10}
-              textAnchor="middle"
-              fill="#6b7280"
-              fontSize="10"
-            >
-              {p.month}
-            </text>
-          </g>
-        ))}
-
-        {/* Highlight last point */}
-        <g>
-          <circle cx={points[points.length - 1].x} cy={points[points.length - 1].y} r="5" fill="#a855f7" />
-          <circle cx={points[points.length - 1].x} cy={points[points.length - 1].y} r="9" fill="#a855f7" fillOpacity="0.2" />
-        </g>
-      </svg>
+          ))}
+        </svg>
+      </div>
     </div>
-  )
+  );
 }

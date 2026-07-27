@@ -1,109 +1,141 @@
 import {
-  Users, FolderKanban, Boxes, KeyRound, DollarSign, Brain,
-  TrendingUp, type LucideIcon,
-} from 'lucide-react'
+  Users,
+  FolderKanban,
+  AppWindow,
+  KeyRound,
+  DollarSign,
+  Cpu,
+  TrendingUp,
+  type LucideIcon,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 
-interface Kpi {
-  label: string
-  value: string
-  change: string
-  icon: LucideIcon
-  iconColor: string
-  iconBg: string
+export type KpiValue = {
+  value: number;
+  change: string;
+};
+
+export type Kpis = {
+  clients: KpiValue;
+  projects: KpiValue;
+  applications: KpiValue;
+  licenses: KpiValue;
+  mrr: KpiValue;
+  aiUsage: KpiValue;
+};
+
+type Kpi = {
+  label: string;
+  value: string;
+  change: string;
+  icon: LucideIcon;
+  accent: string;
+};
+
+function formatInt(n: number) {
+  return n.toLocaleString("pt-BR");
 }
 
-const KPIS: Kpi[] = [
-  {
-    label: 'Clientes',
-    value: '1.248',
-    change: '+12,3%',
-    icon: Users,
-    iconColor: '#60a5fa',
-    iconBg: 'rgba(59, 130, 246, 0.12)',
-  },
-  {
-    label: 'Projetos Ativos',
-    value: '342',
-    change: '+8,7%',
-    icon: FolderKanban,
-    iconColor: '#a78bfa',
-    iconBg: 'rgba(139, 92, 246, 0.12)',
-  },
-  {
-    label: 'Aplicações Publicadas',
-    value: '278',
-    change: '+15,2%',
-    icon: Boxes,
-    iconColor: '#34d399',
-    iconBg: 'rgba(16, 185, 129, 0.12)',
-  },
-  {
-    label: 'Licenças Ativas',
-    value: '1.035',
-    change: '+10,2%',
-    icon: KeyRound,
-    iconColor: '#fbbf24',
-    iconBg: 'rgba(245, 158, 11, 0.12)',
-  },
-  {
-    label: 'Receita Mensal (MRR)',
-    value: 'R$ 286.580,00',
-    change: '+18,6%',
-    icon: DollarSign,
-    iconColor: '#10b981',
-    iconBg: 'rgba(16, 185, 129, 0.12)',
-  },
-  {
-    label: 'Uso de IA Líder',
-    value: '24.586',
-    change: '+22,4%',
-    icon: Brain,
-    iconColor: '#f472b6',
-    iconBg: 'rgba(236, 72, 153, 0.12)',
-  },
-]
+function formatBRL(n: number) {
+  return n.toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
 
-export function KpiGrid() {
+export function KpiGrid({ kpis }: { kpis: Kpis }) {
+  const cards: Kpi[] = [
+    {
+      label: "Clientes",
+      value: formatInt(kpis.clients.value),
+      change: kpis.clients.change,
+      icon: Users,
+      accent: "from-violet-500/20 to-violet-500/5 text-violet-300",
+    },
+    {
+      label: "Projetos Ativos",
+      value: formatInt(kpis.projects.value),
+      change: kpis.projects.change,
+      icon: FolderKanban,
+      accent: "from-indigo-500/20 to-indigo-500/5 text-indigo-300",
+    },
+    {
+      label: "Aplicações Publicadas",
+      value: formatInt(kpis.applications.value),
+      change: kpis.applications.change,
+      icon: AppWindow,
+      accent: "from-fuchsia-500/20 to-fuchsia-500/5 text-fuchsia-300",
+    },
+    {
+      label: "Licenças Ativas",
+      value: formatInt(kpis.licenses.value),
+      change: kpis.licenses.change,
+      icon: KeyRound,
+      accent: "from-emerald-500/20 to-emerald-500/5 text-emerald-300",
+    },
+    {
+      label: "Receita Mensal (MRR)",
+      value: formatBRL(kpis.mrr.value),
+      change: kpis.mrr.change,
+      icon: DollarSign,
+      accent: "from-amber-500/20 to-amber-500/5 text-amber-300",
+    },
+    {
+      label: "Uso de IA Líder",
+      value: formatInt(kpis.aiUsage.value),
+      change: kpis.aiUsage.change,
+      icon: Cpu,
+      accent: "from-sky-500/20 to-sky-500/5 text-sky-300",
+    },
+  ];
+
+  // Responsive: 2 cols mobile, 3 cols tablet (md), 6 cols desktop (xl)
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-      {KPIS.map((kpi, i) => {
-        const Icon = kpi.icon
+    <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 lg:gap-5 stagger">
+      {cards.map((kpi) => {
+        const Icon = kpi.icon;
         return (
           <div
             key={kpi.label}
-            className="kpi-card animate-fade-in"
-            style={{ animationDelay: `${i * 0.05}s` }}
+            className="glass-card glass-card-hover p-4 sm:p-5 flex flex-col gap-3 sm:gap-4 overflow-hidden"
           >
-            <div className="flex items-start justify-between mb-3">
+            <div className="flex items-start justify-between">
               <div
-                className="w-9 h-9 rounded-lg flex items-center justify-center"
-                style={{ background: kpi.iconBg }}
+                className={cn(
+                  "flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-xl bg-gradient-to-br",
+                  kpi.accent,
+                )}
               >
-                <Icon className="w-4 h-4" style={{ color: kpi.iconColor }} />
+                <Icon className="h-5 w-5" />
               </div>
               <span
-                className="text-tiny font-semibold flex items-center gap-0.5"
-                style={{ color: '#34d399' }}
+                className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold"
+                style={{
+                  backgroundColor: "rgba(16, 185, 129, 0.10)",
+                  color: "#10b981",
+                }}
               >
-                <TrendingUp className="w-3 h-3" />
+                <TrendingUp className="h-3.5 w-3.5" />
                 {kpi.change}
               </span>
             </div>
-            <p
-              className="text-2xl font-bold text-white tracking-tight mb-0.5"
-              style={{ fontVariantNumeric: 'tabular-nums' }}
-            >
-              {kpi.value}
-            </p>
-            <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-              {kpi.label}
-            </p>
-            <p className="text-tiny mt-1" style={{ color: 'var(--text-muted)' }}>
-              vs mês anterior
-            </p>
+            <div>
+              <p
+                className="font-bold text-fg tracking-tight leading-tight"
+                style={{ fontSize: "clamp(1.25rem, 2.2vw, 1.875rem)" }}
+              >
+                {kpi.value}
+              </p>
+              <p className="mt-1 text-xs sm:text-sm text-muted-fg">{kpi.label}</p>
+              <p className="mt-1.5 sm:mt-2 text-[11px] text-muted-2">
+                vs mês anterior
+              </p>
+            </div>
           </div>
-        )
+        );
       })}
     </div>
-  )
+  );
 }

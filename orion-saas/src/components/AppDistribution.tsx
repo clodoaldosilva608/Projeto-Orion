@@ -1,63 +1,108 @@
-import { Globe, Smartphone, Radio, Monitor } from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
+import {
+  Globe,
+  Smartphone,
+  AppWindow,
+  Monitor,
+  type LucideIcon,
+} from "lucide-react";
 
-interface AppType {
-  label: string
-  count: number
-  percent: number
-  icon: LucideIcon
-  color: string
-  bg: string
-}
+export type AppDistItem = {
+  label: string;
+  count: number;
+  percent: number;
+};
 
-const APP_TYPES: AppType[] = [
-  { label: 'Web Apps', count: 142, percent: 51, icon: Globe, color: '#60a5fa', bg: 'rgba(59, 130, 246, 0.12)' },
-  { label: 'Mobile Apps', count: 96, percent: 35, icon: Smartphone, color: '#a78bfa', bg: 'rgba(139, 92, 246, 0.12)' },
-  { label: 'PWA', count: 28, percent: 10, icon: Radio, color: '#c4b5fd', bg: 'rgba(196, 181, 253, 0.12)' },
-  { label: 'Desktop Apps', count: 12, percent: 4, icon: Monitor, color: '#f472b6', bg: 'rgba(236, 72, 153, 0.12)' },
-]
+type AppMeta = {
+  icon: LucideIcon;
+  short: string;
+  bg: string;
+  fg: string;
+};
 
-export function AppDistribution() {
-  const total = APP_TYPES.reduce((acc, t) => acc + t.count, 0)
+const APP_META: Record<string, AppMeta> = {
+  "Web Apps": {
+    icon: Globe,
+    short: "Web",
+    bg: "rgba(139, 92, 246, 0.15)",
+    fg: "#a78bfa",
+  },
+  "Mobile Apps": {
+    icon: Smartphone,
+    short: "Mobile",
+    bg: "rgba(14, 165, 233, 0.15)",
+    fg: "#38bdf8",
+  },
+  PWA: {
+    icon: AppWindow,
+    short: "PWA",
+    bg: "rgba(236, 72, 153, 0.15)",
+    fg: "#f472b6",
+  },
+  "Desktop Apps": {
+    icon: Monitor,
+    short: "Desktop",
+    bg: "rgba(16, 185, 129, 0.15)",
+    fg: "#34d399",
+  },
+};
+
+export function AppDistribution({ data }: { data: AppDistItem[] }) {
+  const total = data.reduce((acc, d) => acc + d.count, 0);
 
   return (
-    <div className="glass-card p-5">
-      <h3 className="text-sm font-semibold text-white mb-1">Distribuição de Aplicações</h3>
-      <p className="text-tiny mb-4" style={{ color: 'var(--text-muted)' }}>
-        {total} aplicações publicadas no total
-      </p>
+    <div className="glass-card glass-card-hover p-5 lg:p-6 flex flex-col h-full">
+      <div className="mb-4">
+        <h3 className="text-base font-semibold text-fg">
+          Distribuição de Aplicações
+        </h3>
+        <p className="text-xs text-muted-2 mt-0.5">
+          {total} aplicações publicadas
+        </p>
+      </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        {APP_TYPES.map((t) => {
-          const Icon = t.icon
+      <div className="grid grid-cols-2 gap-3 flex-1">
+        {data.map((a) => {
+          const meta =
+            APP_META[a.label] ?? {
+              icon: AppWindow,
+              short: a.label,
+              bg: "rgba(139, 92, 246, 0.15)",
+              fg: "#a78bfa",
+            };
+          const Icon = meta.icon;
           return (
             <div
-              key={t.label}
-              className="p-3 rounded-lg transition-colors hover:bg-white/3"
-              style={{
-                background: 'rgba(255,255,255,0.02)',
-                border: '1px solid var(--border-subtle)',
-              }}
+              key={a.label}
+              className="rounded-xl bg-chip border border-soft p-4 flex flex-col gap-3"
             >
               <div
-                className="w-9 h-9 rounded-lg flex items-center justify-center mb-2"
-                style={{ background: t.bg }}
+                className="flex h-10 w-10 items-center justify-center rounded-lg"
+                style={{ backgroundColor: meta.bg, color: meta.fg }}
               >
-                <Icon className="w-4 h-4" style={{ color: t.color }} />
+                <Icon className="h-5 w-5" />
               </div>
-              <p className="text-xl font-bold text-white tabular-nums">{t.count}</p>
-              <div className="flex items-center justify-between mt-0.5">
-                <span className="text-tiny" style={{ color: 'var(--text-secondary)' }}>
-                  {t.label}
-                </span>
-                <span className="text-tiny font-semibold" style={{ color: t.color }}>
-                  {t.percent}%
-                </span>
+              <div>
+                <p className="text-2xl font-bold text-fg">{a.count}</p>
+                <p className="text-xs text-muted-fg">{meta.short}</p>
+              </div>
+              <div className="mt-auto">
+                <div className="flex items-center justify-between text-[11px] text-muted-2 mb-1">
+                  <span>{a.percent}%</span>
+                </div>
+                <div
+                  className="h-1.5 rounded-full overflow-hidden"
+                  style={{ background: "var(--chip-bg)" }}
+                >
+                  <div
+                    className="h-full rounded-full brand-gradient"
+                    style={{ width: `${a.percent}%` }}
+                  />
+                </div>
               </div>
             </div>
-          )
+          );
         })}
       </div>
     </div>
-  )
+  );
 }

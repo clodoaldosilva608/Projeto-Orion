@@ -1,130 +1,107 @@
 import {
-  AlertTriangle, Clock, Database, Activity, MessageSquareWarning, ArrowRight,
-} from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
+  AlertOctagon,
+  AlertTriangle,
+  Info,
+  type LucideIcon,
+} from "lucide-react";
 
-interface Alert {
-  icon: LucideIcon
-  severity: 'critical' | 'warning' | 'info'
-  title: string
-  description: string
-  time: string
-}
+type Severity = "critical" | "warning" | "info";
 
-const ALERTS: Alert[] = [
-  {
-    icon: AlertTriangle,
-    severity: 'critical',
-    title: 'Uso de IA acima do limite',
-    description: 'Consumo ultrapassou 90% do limite mensal',
-    time: 'há 15 min',
-  },
-  {
-    icon: Clock,
-    severity: 'warning',
-    title: 'Projeto atrasado',
-    description: 'Projeto LogTrack está 2 dias atrasado',
-    time: 'há 1h',
-  },
-  {
-    icon: Database,
-    severity: 'warning',
-    title: 'Backup não executado',
-    description: 'Backup diário não executado',
-    time: 'há 2h',
-  },
-  {
-    icon: Activity,
-    severity: 'info',
-    title: 'Sistema instável',
-    description: 'Latência alta detectada no ambiente de staging',
-    time: 'há 3h',
-  },
-  {
-    icon: MessageSquareWarning,
-    severity: 'info',
-    title: 'Novo chamado crítico',
-    description: 'Chamado #1238 aberto pelo cliente FormaPlus',
-    time: 'há 3h',
-  },
-]
+export type Alert = {
+  id: string;
+  severity: string;
+  title: string;
+  description: string;
+  createdAt: string;
+};
 
-const SEVERITY_STYLES = {
+/**
+ * Per spec: left border colored by severity (red 3px critical,
+ * amber 3px warning, blue 3px info).
+ */
+const META: Record<
+  Severity,
+  { icon: LucideIcon; color: string; chipBg: string; label: string }
+> = {
   critical: {
-    iconBg: 'rgba(239, 68, 68, 0.15)',
-    iconColor: '#f87171',
-    label: 'Crítico',
-    labelColor: '#f87171',
+    icon: AlertOctagon,
+    color: "#ef4444",
+    chipBg: "rgba(239, 68, 68, 0.15)",
+    label: "Crítico",
   },
   warning: {
-    iconBg: 'rgba(245, 158, 11, 0.15)',
-    iconColor: '#fbbf24',
-    label: 'Alerta',
-    labelColor: '#fbbf24',
+    icon: AlertTriangle,
+    color: "#f59e0b",
+    chipBg: "rgba(245, 158, 11, 0.15)",
+    label: "Atenção",
   },
   info: {
-    iconBg: 'rgba(59, 130, 246, 0.15)',
-    iconColor: '#60a5fa',
-    label: 'Info',
-    labelColor: '#60a5fa',
+    icon: Info,
+    color: "#3b82f6",
+    chipBg: "rgba(59, 130, 246, 0.15)",
+    label: "Informação",
   },
+};
+
+function timeAgo(iso: string) {
+  const then = new Date(iso).getTime();
+  const now = Date.now();
+  const diff = Math.max(0, now - then);
+  const min = Math.floor(diff / 60000);
+  if (min < 1) return "agora";
+  if (min < 60) return `há ${min} min`;
+  const h = Math.floor(min / 60);
+  if (h < 24) return `há ${h} h`;
+  const d = Math.floor(h / 24);
+  return `há ${d} d`;
 }
 
-export function AlertsPanel() {
+export function AlertsPanel({ alerts }: { alerts: Alert[] }) {
   return (
-    <div className="glass-card p-5">
+    <div className="glass-card glass-card-hover p-5 lg:p-6 flex flex-col h-full">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-semibold text-white">Alertas e Notificações</h3>
-        <a
-          href="#"
-          className="text-tiny font-medium flex items-center gap-1 transition-colors hover:opacity-80"
-          style={{ color: 'var(--brand-primary)' }}
-        >
-          Ver todas
-          <ArrowRight className="w-3 h-3" />
-        </a>
+        <h3 className="text-base font-semibold text-fg">
+          Alertas e Notificações
+        </h3>
+        <span className="text-xs text-muted-2">{alerts.length} ativos</span>
       </div>
 
-      <div className="space-y-2">
-        {ALERTS.map((a, i) => {
-          const Icon = a.icon
-          const style = SEVERITY_STYLES[a.severity]
+      <ul className="space-y-3 flex-1 max-h-96 overflow-y-auto scroll-area pr-1">
+        {alerts.map((a) => {
+          const sev = (a.severity as Severity) ?? "info";
+          const meta = META[sev] ?? META.info;
+          const Icon = meta.icon;
           return (
-            <div
-              key={i}
-              className="flex gap-3 p-2 rounded-lg transition-colors hover:bg-white/3"
-              style={{ borderLeft: `2px solid ${style.iconColor}` }}
+            <li
+              key={a.id}
+              className="flex gap-3 rounded-lg bg-chip border border-soft p-3"
+              style={{ borderLeft: `3px solid ${meta.color}` }}
             >
               <div
-                className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
-                style={{ background: style.iconBg }}
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
+                style={{ backgroundColor: meta.chipBg, color: meta.color }}
               >
-                <Icon className="w-3.5 h-3.5" style={{ color: style.iconColor }} />
+                <Icon className="h-[18px] w-[18px]" />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-0.5">
-                  <p className="text-xs font-semibold text-white truncate">{a.title}</p>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="text-sm font-medium text-fg">{a.title}</p>
                   <span
-                    className="text-tiny font-medium uppercase flex-shrink-0"
-                    style={{ color: style.labelColor }}
+                    className="inline-flex rounded px-1.5 py-0.5 text-[10px] font-semibold"
+                    style={{ backgroundColor: meta.chipBg, color: meta.color }}
                   >
-                    {style.label}
+                    {meta.label}
                   </span>
                 </div>
-                <p
-                  className="text-tiny leading-snug truncate"
-                  style={{ color: 'var(--text-secondary)' }}
-                >
-                  {a.description}
-                </p>
-                <p className="text-tiny mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                  {a.time}
+                <p className="text-xs text-muted-fg mt-0.5">{a.description}</p>
+                <p className="text-[10px] text-muted-2 mt-1">
+                  {timeAgo(a.createdAt)}
                 </p>
               </div>
-            </div>
-          )
+            </li>
+          );
         })}
-      </div>
+      </ul>
     </div>
-  )
+  );
 }

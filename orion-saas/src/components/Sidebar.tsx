@@ -1,150 +1,262 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard, Users, FolderKanban, Boxes, KeyRound, CreditCard,
-  Repeat, Tag, TicketPercent, GitBranch, Hammer, Rocket, Flag,
-  Bug, Bot, Cpu, Brain, Gauge, Server, MessageSquare, BookOpen,
-  ShieldCheck, Settings, ScrollText, ChevronLeft, Sparkles
-} from 'lucide-react'
+  Sparkles,
+  LayoutDashboard,
+  Users,
+  FolderKanban,
+  AppWindow,
+  KeyRound,
+  CreditCard,
+  Repeat,
+  Package,
+  TicketPercent,
+  ListTree,
+  Hammer,
+  Rocket,
+  Tags,
+  Bug,
+  Bot,
+  Cpu,
+  Boxes,
+  Gauge,
+  Server,
+  MessageSquare,
+  BookOpen,
+  ShieldCheck,
+  Settings,
+  ScrollText,
+  Bell,
+  Database,
+  Trophy,
+  ChevronLeft,
+  LogOut,
+  type LucideIcon,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 
-const SECTIONS = [
-  {
-    title: 'Gerenciamento',
-    items: [
-      { label: 'Dashboard', icon: LayoutDashboard, active: true },
-      { label: 'Clientes', icon: Users },
-      { label: 'Projetos', icon: FolderKanban },
-      { label: 'Aplicações', icon: Boxes },
-      { label: 'Licenças', icon: KeyRound },
-      { label: 'Pagamentos', icon: CreditCard },
-      { label: 'Assinaturas', icon: Repeat },
-      { label: 'Planos', icon: Tag },
-      { label: 'Cupons', icon: TicketPercent },
-    ],
-  },
-  {
-    title: 'Desenvolvimento',
-    items: [
-      { label: 'File de Projetos', icon: GitBranch },
-      { label: 'Builds', icon: Hammer },
-      { label: 'Deploys', icon: Rocket },
-      { label: 'Releases', icon: Flag },
-      { label: 'Anomalias', icon: Bug },
-    ],
-  },
-  {
-    title: 'IA e Automação',
-    items: [
-      { label: 'Agentes de IA', icon: Bot },
-      { label: 'Jobs de IA', icon: Cpu },
-      { label: 'Modelos', icon: Brain },
-      { label: 'Consumo de IA', icon: Gauge },
-      { label: 'Provedores', icon: Server },
-    ],
-  },
-  {
-    title: 'Suporte',
-    items: [
-      { label: 'Chatbots', icon: MessageSquare },
-      { label: 'Base de Conhecimento', icon: BookOpen },
-    ],
-  },
-  {
-    title: 'Sistema',
-    items: [
-      { label: 'Usuários', icon: Users },
-      { label: 'Funções e Permissões', icon: ShieldCheck },
-      { label: 'Configurações', icon: Settings },
-      { label: 'Logs de Auditoria', icon: ScrollText },
-    ],
-  },
-]
+type NavItem = {
+  label: string;
+  href: string;
+  icon: LucideIcon;
+  badge?: string;
+};
 
-export function Sidebar() {
-  const [collapsed, setCollapsed] = useState(false)
+type NavSection = {
+  title: string;
+  items: NavItem[];
+};
+
+const SECTIONS: NavSection[] = [
+  {
+    title: "Gerenciamento",
+    items: [
+      { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+      { label: "Clientes", href: "/clientes", icon: Users },
+      { label: "Projetos", href: "/projetos", icon: FolderKanban },
+      { label: "Aplicações", href: "/aplicacoes", icon: AppWindow },
+      { label: "Licenças", href: "/licencas", icon: KeyRound, badge: "1.035" },
+      { label: "Pagamentos", href: "/pagamentos", icon: CreditCard },
+      { label: "Assinaturas", href: "/assinaturas", icon: Repeat },
+      { label: "Planos", href: "/planos", icon: Package },
+      { label: "Cupons", href: "/cupons", icon: TicketPercent },
+      { label: "Campanhas", href: "/campanhas", icon: Trophy },
+    ],
+  },
+  {
+    title: "Desenvolvimento",
+    items: [
+      { label: "File de Projetos", href: "/file-projetos", icon: ListTree, badge: "7" },
+      { label: "Builds", href: "/builds", icon: Hammer },
+      { label: "Deploys", href: "/deploys", icon: Rocket },
+      { label: "Releases", href: "/releases", icon: Tags },
+      { label: "Anomalias", href: "/anomalias", icon: Bug, badge: "3" },
+    ],
+  },
+  {
+    title: "IA e Automação",
+    items: [
+      { label: "Agentes de IA", href: "/agentes-ia", icon: Bot },
+      { label: "Jobs de IA", href: "/jobs-ia", icon: Cpu },
+      { label: "Modelos", href: "/modelos", icon: Boxes },
+      { label: "Consumo de IA", href: "/consumo-ia", icon: Gauge },
+      { label: "Provedores", href: "/provedores", icon: Server },
+    ],
+  },
+  {
+    title: "Suporte",
+    items: [
+      { label: "Chatbots", href: "/chatbots", icon: MessageSquare },
+      { label: "Base de Conhecimento", href: "/base-conhecimento", icon: BookOpen },
+    ],
+  },
+  {
+    title: "Sistema",
+    items: [
+      { label: "Usuários", href: "/usuarios", icon: Users },
+      { label: "Funções e Permissões", href: "/funcoes-permissoes", icon: ShieldCheck },
+      { label: "Notificações", href: "/notificacoes", icon: Bell },
+      { label: "Backups", href: "/backups", icon: Database },
+      { label: "Configurações", href: "/configuracoes", icon: Settings },
+      { label: "Logs de Auditoria", href: "/logs-auditoria", icon: ScrollText },
+    ],
+  },
+];
+
+export function Sidebar({
+  collapsed,
+  onToggleCollapse,
+  mobileOpen,
+  onCloseMobile,
+}: {
+  collapsed: boolean;
+  onToggleCollapse: () => void;
+  mobileOpen: boolean;
+  onCloseMobile: () => void;
+}) {
+  const pathname = usePathname();
 
   return (
-    <aside
-      className="flex flex-col h-screen transition-all duration-300 flex-shrink-0"
-      style={{
-        width: collapsed ? '72px' : '260px',
-        background: 'rgba(13, 15, 23, 0.8)',
-        borderRight: '1px solid var(--border-subtle)',
-        backdropFilter: 'blur(20px)',
-      }}
-    >
-      {/* Logo */}
-      <div
-        className="flex items-center gap-3 px-5 py-5"
-        style={{ borderBottom: '1px solid var(--border-subtle)' }}
-      >
+    <>
+      {/* Mobile overlay */}
+      {mobileOpen && (
         <div
-          className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg"
-          style={{
-            background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-            boxShadow: '0 4px 14px rgba(139, 92, 246, 0.4)',
-          }}
-        >
-          <Sparkles className="w-5 h-5 text-white" />
-        </div>
-        {!collapsed && (
-          <div className="overflow-hidden">
-            <p className="font-bold text-white text-base leading-tight tracking-tight">ORION</p>
-            <p className="text-tiny" style={{ color: 'var(--text-muted)' }}>Platform Admin</p>
-          </div>
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
+          onClick={onCloseMobile}
+          aria-hidden
+        />
+      )}
+
+      <aside
+        className={cn(
+          "fixed lg:sticky top-0 z-50 lg:z-30 h-screen shrink-0 flex flex-col transition-all duration-300 ease-in-out glass-sidebar",
+          "border-r border-soft",
+          collapsed ? "w-[72px]" : "w-[260px]",
+          mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
         )}
-      </div>
-
-      {/* Nav sections */}
-      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-5">
-        {SECTIONS.map((section) => (
-          <div key={section.title}>
-            {!collapsed && (
-              <p
-                className="text-tiny font-semibold uppercase tracking-wider px-3 mb-2"
-                style={{ color: 'var(--text-muted)' }}
-              >
-                {section.title}
-              </p>
-            )}
-            <div className="space-y-0.5">
-              {section.items.map((item) => {
-                const Icon = item.icon
-                return (
-                  <a
-                    key={item.label}
-                    href="#"
-                    className={`sidebar-item ${item.active ? 'active' : ''} ${collapsed ? 'justify-center' : ''}`}
-                    title={collapsed ? item.label : undefined}
-                  >
-                    <Icon className="icon" />
-                    {!collapsed && <span>{item.label}</span>}
-                  </a>
-                )
-              })}
-            </div>
-          </div>
-        ))}
-      </nav>
-
-      {/* Collapse button */}
-      <div
-        className="p-3"
-        style={{ borderTop: '1px solid var(--border-subtle)' }}
       >
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          className="sidebar-item w-full"
-          style={collapsed ? { justifyContent: 'center' } : {}}
+        {/* Logo */}
+        <Link
+          href="/dashboard"
+          onClick={onCloseMobile}
+          className={cn(
+            "flex items-center gap-3 h-16 px-4 border-b border-soft shrink-0 hover:bg-chip transition-colors",
+            collapsed && "justify-center px-0",
+          )}
         >
-          <ChevronLeft
-            className="icon"
-            style={{ transform: collapsed ? 'rotate(180deg)' : 'none', transition: 'transform 0.3s' }}
-          />
-          {!collapsed && <span>Recolher menu</span>}
-        </button>
-      </div>
-    </aside>
-  )
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl brand-gradient shrink-0 shadow-lg shadow-violet-500/20">
+            <Sparkles className="h-5 w-5 text-white" />
+          </div>
+          {!collapsed && (
+            <div className="leading-tight">
+              <p className="text-lg font-bold tracking-wide brand-text">ORION</p>
+              <p className="text-[10px] uppercase tracking-[0.2em] text-muted-2">
+                SaaS Platform
+              </p>
+            </div>
+          )}
+        </Link>
+
+        {/* Nav */}
+        <nav className="flex-1 overflow-y-auto overflow-x-hidden py-4 px-3 space-y-6 scroll-area"
+             style={{ maxHeight: "calc(100vh - 64px - 88px)" }}>
+          {SECTIONS.map((section) => (
+            <div key={section.title}>
+              {!collapsed && (
+                <p className="px-3 mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-2">
+                  {section.title}
+                </p>
+              )}
+              <ul className="space-y-1">
+                {section.items.map((item) => {
+                  const Icon = item.icon;
+                  const isActive =
+                    pathname === item.href ||
+                    (item.href !== "/dashboard" && pathname.startsWith(item.href));
+                  return (
+                    <li key={item.label}>
+                      <Link
+                        href={item.href}
+                        onClick={onCloseMobile}
+                        title={collapsed ? item.label : undefined}
+                        className={cn(
+                          "group relative w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all",
+                          collapsed && "justify-center px-0",
+                          isActive
+                            ? "text-fg"
+                            : "text-muted-fg hover:text-fg hover:bg-chip-hover",
+                        )}
+                        style={
+                          isActive
+                            ? { backgroundColor: "rgba(139, 92, 246, 0.12)" }
+                            : undefined
+                        }
+                      >
+                        {isActive && (
+                          <span
+                            className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-1 rounded-r-full"
+                            style={{ backgroundColor: "#8b5cf6" }}
+                          />
+                        )}
+                        <Icon
+                          className={cn(
+                            "h-[18px] w-[18px] shrink-0",
+                            isActive
+                              ? "text-violet-300"
+                              : "text-muted-2 group-hover:text-fg",
+                          )}
+                        />
+                        {!collapsed && (
+                          <span className="flex-1 text-left truncate">
+                            {item.label}
+                          </span>
+                        )}
+                        {!collapsed && item.badge && (
+                          <span className="rounded-md bg-chip border border-soft px-1.5 py-0.5 text-[10px] font-semibold text-fg">
+                            {item.badge}
+                          </span>
+                        )}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
+        </nav>
+
+        {/* Footer: logout + collapse */}
+        <div className="border-t border-soft p-3 space-y-1 shrink-0">
+          <Link
+            href="/api/auth/logout"
+            className={cn(
+              "w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-fg hover:text-fg hover:bg-chip-hover transition-colors",
+              collapsed && "justify-center px-0",
+            )}
+            title="Sair"
+          >
+            <LogOut className="h-[18px] w-[18px]" />
+            {!collapsed && <span>Sair</span>}
+          </Link>
+          <button
+            onClick={onToggleCollapse}
+            className={cn(
+              "w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-fg hover:text-fg hover:bg-chip-hover transition-colors",
+              collapsed && "justify-center px-0",
+            )}
+          >
+            <ChevronLeft
+              className={cn(
+                "h-[18px] w-[18px] transition-transform",
+                collapsed && "rotate-180",
+              )}
+            />
+            {!collapsed && <span>Recolher menu</span>}
+          </button>
+        </div>
+      </aside>
+    </>
+  );
 }

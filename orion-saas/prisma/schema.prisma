@@ -1,0 +1,1265 @@
+// ================================================================
+// ORION - PRISMA SCHEMA
+// Stack: PostgreSQL 15+ (Supabase) / Prisma ORM 5+
+// Documento de Referência: 06_Logical_Database_Model.md
+// ================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DIRECT_URL")
+  
+}
+
+// ================================================================
+// ENUMS CENTRAIS
+// ================================================================
+
+enum UserStatus {
+  pending
+  active
+  suspended
+  invited
+  inactive
+
+  @@map("user_status")
+}
+
+enum BranchStatus {
+  active
+  inactive
+  maintenance
+  closed
+
+  @@map("branch_status")
+}
+
+enum GoalType {
+  daily
+  weekly
+  monthly
+  quarterly
+  yearly
+  custom
+
+  @@map("goal_type")
+}
+
+enum ResultStatus {
+  draft
+  pending
+  approved
+  rejected
+  revised
+
+  @@map("result_status")
+}
+
+enum CampaignStatus {
+  draft
+  scheduled
+  active
+  paused
+  finished
+  canceled
+
+  @@map("campaign_status")
+}
+
+enum AwardType {
+  points
+  money
+  product
+  badge
+  experience
+  custom
+
+  @@map("award_type")
+}
+
+enum NotificationPriority {
+  low
+  normal
+  high
+  urgent
+
+  @@map("notification_priority")
+}
+
+enum NotificationChannel {
+  in_app
+  email
+  sms
+  push
+  webhook
+
+  @@map("notification_channel")
+}
+
+enum AuditAction {
+  create
+  update
+  delete
+  restore
+  login
+  logout
+  export
+  import
+  config
+
+  @@map("audit_action")
+}
+
+enum LicensePlan {
+  free
+  starter
+  pro
+  enterprise
+  custom
+
+  @@map("license_plan")
+}
+
+enum LicenseStatus {
+  trial
+  active
+  suspended
+  expired
+  canceled
+
+  @@map("license_status")
+}
+
+enum BackupType {
+  full
+  incremental
+  differential
+  snapshot
+
+  @@map("backup_type")
+}
+
+enum BackupStatus {
+  queued
+  running
+  completed
+  failed
+  expired
+
+  @@map("backup_status")
+}
+
+enum EmailStatus {
+  queued
+  sending
+  sent
+  failed
+  bounced
+  suppressed
+
+  @@map("email_status")
+}
+
+enum WebhookStatus {
+  queued
+  delivering
+  delivered
+  failed
+  retry
+
+  @@map("webhook_status")
+}
+
+enum FilePurpose {
+  avatar
+  attachment
+  import
+  export
+  logo
+  document
+  temp
+
+  @@map("file_purpose")
+}
+
+enum PluginStatus {
+  installed
+  enabled
+  disabled
+  error
+  pending_update
+
+  @@map("plugin_status")
+}
+
+enum ApiKeyScope {
+  read
+  write
+  admin
+  full
+
+  @@map("api_key_scope")
+}
+
+// ================================================================
+// DOMÍNIO CORE
+// ================================================================
+
+// Tabela: licenses
+// Ref: Doc06 - Capítulo de Licenciamento
+model License {
+  id             BigInt        @id @default(autoincrement())
+  uuid           String        @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  plan           LicensePlan   @default(free)
+  status         LicenseStatus @default(trial)
+  maxUsers       Int           @default(5) @map("max_users")
+  maxBranches    Int           @default(1) @map("max_branches")
+  maxIndicators  Int           @default(10) @map("max_indicators")
+  startDate      DateTime      @map("start_date") @db.Timestamptz
+  expirationDate DateTime      @map("expiration_date") @db.Timestamptz
+  trialEndsAt    DateTime?     @map("trial_ends_at") @db.Timestamptz
+  price          Decimal?      @db.Decimal(18, 4)
+  currency       String        @default("BRL") @db.Char(3)
+  notes          String?       @db.Text
+  createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime      @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt      DateTime?     @map("deleted_at") @db.Timestamptz
+  active         Boolean       @default(true)
+  version        Int           @default(1)
+  metadata       Json          @default("{}")
+
+  companies Company[]
+
+  @@map("licenses")
+}
+
+// Tabela: companies
+// Ref: Doc06 - Capítulo 8
+model Company {
+  id                  BigInt      @id @default(autoincrement())
+  uuid                String      @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  legalName           String      @map("legal_name") @db.VarChar(255)
+  tradeName           String      @map("trade_name") @db.VarChar(255)
+  cnpj                String?     @db.VarChar(18)
+  stateRegistration   String?     @map("state_registration") @db.VarChar(50)
+  taxIdCountry        String?     @map("tax_id_country") @db.VarChar(50)
+  phone               String?     @db.VarChar(30)
+  mobile              String?     @db.VarChar(30)
+  email               String?     @db.VarChar(255)
+  website             String?     @db.VarChar(255)
+  zipCode             String?     @map("zip_code") @db.VarChar(20)
+  address             String?     @db.VarChar(255)
+  addressNumber       String?     @map("address_number") @db.VarChar(20)
+  complement          String?     @db.VarChar(100)
+  district            String?     @db.VarChar(100)
+  city                String?     @db.VarChar(100)
+  state               String?     @db.VarChar(100)
+  country             String      @default("BR") @db.VarChar(100)
+  latitude            Decimal?    @db.Decimal(10, 8)
+  longitude           Decimal?    @db.Decimal(11, 8)
+  logoUrl             String?     @map("logo_url")
+  theme               String      @default("orion-light") @db.VarChar(50)
+  language            String      @default("pt") @db.Char(2)
+  currency            String      @default("BRL") @db.Char(3)
+  timezone            String      @default("America/Sao_Paulo") @db.VarChar(50)
+  fiscalCalendar      String      @default("january") @map("fiscal_calendar") @db.VarChar(20)
+  licenseId           BigInt?     @map("license_id")
+  licenseExpiresAt    DateTime?   @map("license_expires_at") @db.Timestamptz
+  onboardingCompleted Boolean     @default(false) @map("onboarding_completed")
+  onboardingStep      String?     @map("onboarding_step") @db.VarChar(50)
+  plan                LicensePlan @default(free)
+  trialEndsAt         DateTime?   @map("trial_ends_at") @db.Timestamptz
+  createdAt           DateTime    @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt           DateTime    @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt           DateTime?   @map("deleted_at") @db.Timestamptz
+  createdBy           BigInt?     @map("created_by")
+  updatedBy           BigInt?     @map("updated_by")
+  deletedBy           BigInt?     @map("deleted_by")
+  active              Boolean     @default(true)
+  version             Int         @default(1)
+  externalId          String?     @map("external_id") @db.VarChar(100)
+  metadata            Json        @default("{}")
+
+  license             License?             @relation(fields: [licenseId], references: [id])
+  branches            Branch[]
+  users               User[]
+  roles               Role[]
+  indicators          Indicator[]
+  indicatorCategories IndicatorCategory[]
+  goals               Goal[]
+  results             Result[]
+  campaigns           Campaign[]
+  rankings            Ranking[]
+  dashboards          Dashboard[]
+  notifications       Notification[]
+  auditLogs           AuditLog[]
+  backups             Backup[]
+  systemSettings      SystemSetting[]
+  fileUploads         FileUpload[]
+  pluginInstallations PluginInstallation[]
+  apiKeys             ApiKey[]
+  emailQueue          EmailQueue[]
+  webhookDeliveries   WebhookDelivery[]
+
+  @@unique([cnpj], map: "udx_companies_cnpj")
+  @@unique([email], map: "udx_companies_email")
+  @@unique([externalId], map: "udx_companies_external")
+  @@index([tradeName], map: "idx_companies_trade_name")
+  @@index([plan, licenseExpiresAt], map: "idx_companies_plan")
+  @@map("companies")
+}
+
+// Tabela: branches
+// Ref: Doc06 - Capítulo 9
+model Branch {
+  id             BigInt       @id @default(autoincrement())
+  uuid           String       @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId      BigInt       @map("company_id")
+  code           String       @db.VarChar(50)
+  name           String       @db.VarChar(255)
+  phone          String?      @db.VarChar(30)
+  mobile         String?      @db.VarChar(30)
+  managerId      BigInt?      @map("manager_id")
+  zipCode        String?      @map("zip_code") @db.VarChar(20)
+  address        String?      @db.VarChar(255)
+  addressNumber  String?      @map("address_number") @db.VarChar(20)
+  complement     String?      @db.VarChar(100)
+  district       String?      @db.VarChar(100)
+  city           String?      @db.VarChar(100)
+  state          String?      @db.VarChar(100)
+  country        String       @default("BR") @db.VarChar(100)
+  latitude       Decimal?     @db.Decimal(10, 8)
+  longitude      Decimal?     @db.Decimal(11, 8)
+  operatingHours Json?        @map("operating_hours")
+  status         BranchStatus @default(active)
+  isHeadquarters Boolean      @default(false) @map("is_headquarters")
+  openedAt       DateTime?    @map("opened_at") @db.Date
+  closedAt       DateTime?    @map("closed_at") @db.Date
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime     @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt      DateTime?    @map("deleted_at") @db.Timestamptz
+  createdBy      BigInt?      @map("created_by")
+  updatedBy      BigInt?      @map("updated_by")
+  deletedBy      BigInt?      @map("deleted_by")
+  active         Boolean      @default(true)
+  version        Int          @default(1)
+  externalId     String?      @map("external_id") @db.VarChar(100)
+  metadata       Json         @default("{}")
+
+  company Company  @relation(fields: [companyId], references: [id])
+  manager User?    @relation("BranchManager", fields: [managerId], references: [id])
+  users   User[]   @relation("UserBranch")
+  goals   Goal[]
+
+  @@unique([companyId, code], map: "udx_branches_company_code")
+  @@index([companyId], map: "idx_branches_company")
+  @@index([companyId, status], map: "idx_branches_company_status")
+  @@map("branches")
+}
+
+// Tabela: roles
+// Ref: Doc06 - RBAC
+model Role {
+  id          BigInt    @id @default(autoincrement())
+  uuid        String    @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId   BigInt    @map("company_id")
+  name        String    @db.VarChar(100)
+  slug        String    @db.VarChar(100)
+  description String?   @db.Text
+  isSystem    Boolean   @default(false) @map("is_system")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz
+  active      Boolean   @default(true)
+  version     Int       @default(1)
+  metadata    Json      @default("{}")
+
+  company         Company          @relation(fields: [companyId], references: [id])
+  users           User[]
+  rolePermissions RolePermission[]
+
+  @@unique([companyId, slug], map: "udx_roles_company_slug")
+  @@index([companyId], map: "idx_roles_company")
+  @@map("roles")
+}
+
+// Tabela: permissions
+// Ref: Doc06 - RBAC
+model Permission {
+  id          BigInt    @id @default(autoincrement())
+  uuid        String    @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  module      String    @db.VarChar(100)
+  action      String    @db.VarChar(100)
+  slug        String    @unique @db.VarChar(200)
+  description String?   @db.Text
+  isSystem    Boolean   @default(true) @map("is_system")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  active      Boolean   @default(true)
+
+  rolePermissions RolePermission[]
+
+  @@index([module], map: "idx_permissions_module")
+  @@map("permissions")
+}
+
+// Tabela: role_permissions (junção N:N)
+model RolePermission {
+  id           BigInt   @id @default(autoincrement())
+  roleId       BigInt   @map("role_id")
+  permissionId BigInt   @map("permission_id")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId], map: "udx_role_permissions")
+  @@map("role_permissions")
+}
+
+// Tabela: users
+// Ref: Doc06 - Capítulo 10
+model User {
+  id               BigInt     @id @default(autoincrement())
+  uuid             String     @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId        BigInt     @map("company_id")
+  branchId         BigInt?    @map("branch_id")
+  roleId           BigInt?    @map("role_id")
+  supabaseId       String?    @unique @map("supabase_id") @db.VarChar(255)
+  name             String     @db.VarChar(255)
+  email            String     @db.VarChar(255)
+  emailVerifiedAt  DateTime?  @map("email_verified_at") @db.Timestamptz
+  phone            String?    @db.VarChar(30)
+  mobile           String?    @db.VarChar(30)
+  cpf              String?    @db.VarChar(14)
+  avatarUrl        String?    @map("avatar_url")
+  jobTitle         String?    @map("job_title") @db.VarChar(100)
+  department       String?    @db.VarChar(100)
+  status           UserStatus @default(pending)
+  passwordHash     String?    @map("password_hash") @db.Text
+  lastLoginAt      DateTime?  @map("last_login_at") @db.Timestamptz
+  lastLoginIp      String?    @map("last_login_ip") @db.VarChar(45)
+  twoFactorEnabled Boolean    @default(false) @map("two_factor_enabled")
+  twoFactorSecret  String?    @map("two_factor_secret") @db.Text
+  preferences      Json       @default("{}")
+  createdAt        DateTime   @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime   @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt        DateTime?  @map("deleted_at") @db.Timestamptz
+  createdBy        BigInt?    @map("created_by")
+  updatedBy        BigInt?    @map("updated_by")
+  deletedBy        BigInt?    @map("deleted_by")
+  active           Boolean    @default(true)
+  version          Int        @default(1)
+  externalId       String?    @map("external_id") @db.VarChar(100)
+  metadata         Json       @default("{}")
+
+  company              Company          @relation(fields: [companyId], references: [id])
+  branch               Branch?          @relation("UserBranch", fields: [branchId], references: [id])
+  role                 Role?            @relation(fields: [roleId], references: [id])
+  managedBranches      Branch[]         @relation("BranchManager")
+  sessions             Session[]
+  refreshTokens        RefreshToken[]
+  apiKeys              ApiKey[]
+  fileUploads          FileUpload[]
+  goals                Goal[]           @relation("GoalOwner")
+  results              Result[]
+  notifications        Notification[]
+  auditLogs            AuditLog[]
+  campaignParticipants CampaignParticipant[]
+
+  @@unique([companyId, email], map: "udx_users_company_email")
+  @@index([companyId], map: "idx_users_company")
+  @@index([companyId, status], map: "idx_users_company_status")
+  @@index([email], map: "idx_users_email")
+  @@map("users")
+}
+
+// Tabela: sessions
+// Ref: Doc06 - Auth
+model Session {
+  id           BigInt    @id @default(autoincrement())
+  uuid         String    @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId       BigInt    @map("user_id")
+  companyId    BigInt    @map("company_id")
+  token        String    @unique @db.Text
+  ipAddress    String?   @map("ip_address") @db.VarChar(45)
+  userAgent    String?   @map("user_agent") @db.Text
+  deviceInfo   Json?     @map("device_info")
+  expiresAt    DateTime  @map("expires_at") @db.Timestamptz
+  lastActiveAt DateTime  @default(now()) @map("last_active_at") @db.Timestamptz
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  revokedAt    DateTime? @map("revoked_at") @db.Timestamptz
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId], map: "idx_sessions_user")
+  @@index([token], map: "idx_sessions_token")
+  @@index([expiresAt], map: "idx_sessions_expires")
+  @@map("sessions")
+}
+
+// Tabela: refresh_tokens
+model RefreshToken {
+  id        BigInt    @id @default(autoincrement())
+  userId    BigInt    @map("user_id")
+  companyId BigInt    @map("company_id")
+  token     String    @unique @db.Text
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz
+  usedAt    DateTime? @map("used_at") @db.Timestamptz
+  revokedAt DateTime? @map("revoked_at") @db.Timestamptz
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId], map: "idx_refresh_tokens_user")
+  @@index([token], map: "idx_refresh_tokens_token")
+  @@map("refresh_tokens")
+}
+
+// Tabela: api_keys
+model ApiKey {
+  id          BigInt      @id @default(autoincrement())
+  uuid        String      @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId   BigInt      @map("company_id")
+  userId      BigInt      @map("user_id")
+  name        String      @db.VarChar(100)
+  keyHash     String      @unique @map("key_hash") @db.Text
+  keyPrefix   String      @map("key_prefix") @db.VarChar(20)
+  scope       ApiKeyScope @default(read)
+  expiresAt   DateTime?   @map("expires_at") @db.Timestamptz
+  lastUsedAt  DateTime?   @map("last_used_at") @db.Timestamptz
+  lastUsedIp  String?     @map("last_used_ip") @db.VarChar(45)
+  requestCount BigInt     @default(0) @map("request_count")
+  createdAt   DateTime    @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime    @updatedAt @map("updated_at") @db.Timestamptz
+  revokedAt   DateTime?   @map("revoked_at") @db.Timestamptz
+  active      Boolean     @default(true)
+  metadata    Json        @default("{}")
+
+  company Company @relation(fields: [companyId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@index([companyId], map: "idx_api_keys_company")
+  @@map("api_keys")
+}
+
+// Tabela: file_uploads
+model FileUpload {
+  id          BigInt      @id @default(autoincrement())
+  uuid        String      @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId   BigInt      @map("company_id")
+  userId      BigInt      @map("user_id")
+  purpose     FilePurpose @default(attachment)
+  fileName    String      @map("file_name") @db.VarChar(500)
+  fileSize    BigInt      @map("file_size")
+  mimeType    String      @map("mime_type") @db.VarChar(100)
+  storageKey  String      @map("storage_key") @db.Text
+  publicUrl   String?     @map("public_url") @db.Text
+  bucketName  String      @default("orion-uploads") @map("bucket_name") @db.VarChar(100)
+  createdAt   DateTime    @default(now()) @map("created_at") @db.Timestamptz
+  deletedAt   DateTime?   @map("deleted_at") @db.Timestamptz
+  active      Boolean     @default(true)
+  metadata    Json        @default("{}")
+
+  company Company @relation(fields: [companyId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@index([companyId], map: "idx_file_uploads_company")
+  @@index([userId], map: "idx_file_uploads_user")
+  @@map("file_uploads")
+}
+
+// ================================================================
+// DOMÍNIO PERFORMANCE
+// ================================================================
+
+// Tabela: indicator_categories
+model IndicatorCategory {
+  id          BigInt    @id @default(autoincrement())
+  uuid        String    @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId   BigInt    @map("company_id")
+  name        String    @db.VarChar(255)
+  description String?   @db.Text
+  color       String?   @db.VarChar(7)
+  icon        String?   @db.VarChar(100)
+  sortOrder   Int       @default(0) @map("sort_order")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz
+  active      Boolean   @default(true)
+  version     Int       @default(1)
+  metadata    Json      @default("{}")
+
+  company    Company     @relation(fields: [companyId], references: [id])
+  indicators Indicator[]
+
+  @@index([companyId], map: "idx_indicator_categories_company")
+  @@map("indicator_categories")
+}
+
+// Tabela: indicators (KPIs)
+model Indicator {
+  id           BigInt    @id @default(autoincrement())
+  uuid         String    @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId    BigInt    @map("company_id")
+  categoryId   BigInt?   @map("category_id")
+  name         String    @db.VarChar(255)
+  slug         String    @db.VarChar(255)
+  description  String?   @db.Text
+  unit         String?   @db.VarChar(50)
+  formula      String?   @db.Text
+  direction    String    @default("higher_is_better") @db.VarChar(50)
+  color        String?   @db.VarChar(7)
+  icon         String?   @db.VarChar(100)
+  isSystem     Boolean   @default(false) @map("is_system")
+  allowManual  Boolean   @default(true) @map("allow_manual")
+  sortOrder    Int       @default(0) @map("sort_order")
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt    DateTime? @map("deleted_at") @db.Timestamptz
+  createdBy    BigInt?   @map("created_by")
+  updatedBy    BigInt?   @map("updated_by")
+  active       Boolean   @default(true)
+  version      Int       @default(1)
+  externalId   String?   @map("external_id") @db.VarChar(100)
+  metadata     Json      @default("{}")
+
+  company  Company            @relation(fields: [companyId], references: [id])
+  category IndicatorCategory? @relation(fields: [categoryId], references: [id])
+  goals    Goal[]
+  rankings Ranking[]
+
+  @@unique([companyId, slug], map: "udx_indicators_company_slug")
+  @@index([companyId], map: "idx_indicators_company")
+  @@map("indicators")
+}
+
+// Tabela: goals (Metas)
+model Goal {
+  id             BigInt    @id @default(autoincrement())
+  uuid           String    @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId      BigInt    @map("company_id")
+  branchId       BigInt?   @map("branch_id")
+  userId         BigInt?   @map("user_id")
+  indicatorId    BigInt    @map("indicator_id")
+  name           String    @db.VarChar(255)
+  description    String?   @db.Text
+  type           GoalType  @default(monthly)
+  targetValue    Decimal   @map("target_value") @db.Decimal(18, 4)
+  minValue       Decimal?  @map("min_value") @db.Decimal(18, 4)
+  maxValue       Decimal?  @map("max_value") @db.Decimal(18, 4)
+  startDate      DateTime  @map("start_date") @db.Date
+  endDate        DateTime  @map("end_date") @db.Date
+  weight         Decimal   @default(1) @db.Decimal(5, 2)
+  campaignId     BigInt?   @map("campaign_id")
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt      DateTime? @map("deleted_at") @db.Timestamptz
+  createdBy      BigInt?   @map("created_by")
+  updatedBy      BigInt?   @map("updated_by")
+  active         Boolean   @default(true)
+  version        Int       @default(1)
+  externalId     String?   @map("external_id") @db.VarChar(100)
+  metadata       Json      @default("{}")
+
+  company   Company    @relation(fields: [companyId], references: [id])
+  branch    Branch?    @relation(fields: [branchId], references: [id])
+  owner     User?      @relation("GoalOwner", fields: [userId], references: [id])
+  indicator Indicator  @relation(fields: [indicatorId], references: [id])
+  campaign  Campaign?  @relation(fields: [campaignId], references: [id])
+  results   Result[]
+
+  @@index([companyId], map: "idx_goals_company")
+  @@index([companyId, branchId], map: "idx_goals_company_branch")
+  @@index([companyId, userId], map: "idx_goals_company_user")
+  @@index([startDate, endDate], map: "idx_goals_dates")
+  @@map("goals")
+}
+
+// Tabela: results (Resultados)
+model Result {
+  id            BigInt       @id @default(autoincrement())
+  uuid          String       @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId     BigInt       @map("company_id")
+  goalId        BigInt       @map("goal_id")
+  userId        BigInt       @map("user_id")
+  value         Decimal      @db.Decimal(18, 4)
+  referenceDate DateTime     @map("reference_date") @db.Date
+  status        ResultStatus @default(pending)
+  notes         String?      @db.Text
+  approvedBy    BigInt?      @map("approved_by")
+  approvedAt    DateTime?    @map("approved_at") @db.Timestamptz
+  sourceSystem  String?      @map("source_system") @db.VarChar(100)
+  importBatchId String?      @map("import_batch_id") @db.VarChar(100)
+  createdAt     DateTime     @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime     @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt     DateTime?    @map("deleted_at") @db.Timestamptz
+  createdBy     BigInt?      @map("created_by")
+  updatedBy     BigInt?      @map("updated_by")
+  active        Boolean      @default(true)
+  version       Int          @default(1)
+  metadata      Json         @default("{}")
+
+  company Company @relation(fields: [companyId], references: [id])
+  goal    Goal    @relation(fields: [goalId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@index([companyId], map: "idx_results_company")
+  @@index([goalId], map: "idx_results_goal")
+  @@index([userId, referenceDate], map: "idx_results_user_date")
+  @@map("results")
+}
+
+// Tabela: campaigns
+model Campaign {
+  id          BigInt         @id @default(autoincrement())
+  uuid        String         @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId   BigInt         @map("company_id")
+  name        String         @db.VarChar(255)
+  description String?        @db.Text
+  status      CampaignStatus @default(draft)
+  startDate   DateTime       @map("start_date") @db.Date
+  endDate     DateTime       @map("end_date") @db.Date
+  imageUrl    String?        @map("image_url")
+  rules       Json           @default("{}")
+  createdAt   DateTime       @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime       @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt   DateTime?      @map("deleted_at") @db.Timestamptz
+  createdBy   BigInt?        @map("created_by")
+  updatedBy   BigInt?        @map("updated_by")
+  active      Boolean        @default(true)
+  version     Int            @default(1)
+  metadata    Json           @default("{}")
+
+  company      Company               @relation(fields: [companyId], references: [id])
+  goals        Goal[]
+  participants CampaignParticipant[]
+  awards       Award[]
+
+  @@index([companyId], map: "idx_campaigns_company")
+  @@index([companyId, status], map: "idx_campaigns_company_status")
+  @@map("campaigns")
+}
+
+// Tabela: campaign_participants
+model CampaignParticipant {
+  id          BigInt    @id @default(autoincrement())
+  campaignId  BigInt    @map("campaign_id")
+  userId      BigInt    @map("user_id")
+  totalPoints Decimal   @default(0) @map("total_points") @db.Decimal(18, 4)
+  rank        Int?
+  joinedAt    DateTime  @default(now()) @map("joined_at") @db.Timestamptz
+  finishedAt  DateTime? @map("finished_at") @db.Timestamptz
+  metadata    Json      @default("{}")
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id])
+
+  @@unique([campaignId, userId], map: "udx_campaign_participants")
+  @@map("campaign_participants")
+}
+
+// Tabela: awards
+model Award {
+  id          BigInt    @id @default(autoincrement())
+  uuid        String    @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId   BigInt    @map("company_id")
+  campaignId  BigInt?   @map("campaign_id")
+  name        String    @db.VarChar(255)
+  description String?   @db.Text
+  type        AwardType @default(points)
+  value       Decimal?  @db.Decimal(18, 4)
+  imageUrl    String?   @map("image_url")
+  position    Int?
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz
+  active      Boolean   @default(true)
+  metadata    Json      @default("{}")
+
+  campaign Campaign? @relation(fields: [campaignId], references: [id])
+
+  @@index([companyId], map: "idx_awards_company")
+  @@map("awards")
+}
+
+// Tabela: rankings
+model Ranking {
+  id           BigInt    @id @default(autoincrement())
+  uuid         String    @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId    BigInt    @map("company_id")
+  indicatorId  BigInt?   @map("indicator_id")
+  name         String    @db.VarChar(255)
+  description  String?   @db.Text
+  period       String    @db.VarChar(50)
+  referenceDate DateTime @map("reference_date") @db.Date
+  snapshot     Json      @default("[]")
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  active       Boolean   @default(true)
+  metadata     Json      @default("{}")
+
+  company   Company    @relation(fields: [companyId], references: [id])
+  indicator Indicator? @relation(fields: [indicatorId], references: [id])
+
+  @@index([companyId], map: "idx_rankings_company")
+  @@map("rankings")
+}
+
+// ================================================================
+// DOMÍNIO EXPERIÊNCIA
+// ================================================================
+
+// Tabela: dashboards
+model Dashboard {
+  id        BigInt    @id @default(autoincrement())
+  uuid      String    @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId BigInt    @map("company_id")
+  name      String    @db.VarChar(255)
+  isDefault Boolean   @default(false) @map("is_default")
+  isPublic  Boolean   @default(false) @map("is_public")
+  layout    Json      @default("[]")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
+  createdBy BigInt?   @map("created_by")
+  active    Boolean   @default(true)
+  version   Int       @default(1)
+  metadata  Json      @default("{}")
+
+  company Company  @relation(fields: [companyId], references: [id])
+  widgets Widget[]
+
+  @@index([companyId], map: "idx_dashboards_company")
+  @@map("dashboards")
+}
+
+// Tabela: widgets
+model Widget {
+  id          BigInt    @id @default(autoincrement())
+  uuid        String    @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  dashboardId BigInt    @map("dashboard_id")
+  type        String    @db.VarChar(100)
+  title       String    @db.VarChar(255)
+  config      Json      @default("{}")
+  position    Json      @default("{}")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz
+  active      Boolean   @default(true)
+  metadata    Json      @default("{}")
+
+  dashboard Dashboard @relation(fields: [dashboardId], references: [id], onDelete: Cascade)
+
+  @@index([dashboardId], map: "idx_widgets_dashboard")
+  @@map("widgets")
+}
+
+// Tabela: notifications
+model Notification {
+  id         BigInt               @id @default(autoincrement())
+  uuid       String               @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId  BigInt               @map("company_id")
+  userId     BigInt               @map("user_id")
+  title      String               @db.VarChar(255)
+  body       String               @db.Text
+  channel    NotificationChannel  @default(in_app)
+  priority   NotificationPriority @default(normal)
+  readAt     DateTime?            @map("read_at") @db.Timestamptz
+  sentAt     DateTime?            @map("sent_at") @db.Timestamptz
+  data       Json                 @default("{}")
+  createdAt  DateTime             @default(now()) @map("created_at") @db.Timestamptz
+  deletedAt  DateTime?            @map("deleted_at") @db.Timestamptz
+
+  company Company @relation(fields: [companyId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@index([companyId, userId], map: "idx_notifications_company_user")
+  @@index([userId, readAt], map: "idx_notifications_user_read")
+  @@map("notifications")
+}
+
+// Tabela: email_queue
+model EmailQueue {
+  id          BigInt      @id @default(autoincrement())
+  uuid        String      @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId   BigInt      @map("company_id")
+  toEmail     String      @map("to_email") @db.VarChar(255)
+  toName      String?     @map("to_name") @db.VarChar(255)
+  subject     String      @db.VarChar(500)
+  bodyHtml    String?     @map("body_html") @db.Text
+  bodyText    String?     @map("body_text") @db.Text
+  status      EmailStatus @default(queued)
+  attempts    Int         @default(0)
+  lastAttempt DateTime?   @map("last_attempt") @db.Timestamptz
+  sentAt      DateTime?   @map("sent_at") @db.Timestamptz
+  errorMsg    String?     @map("error_msg") @db.Text
+  createdAt   DateTime    @default(now()) @map("created_at") @db.Timestamptz
+  metadata    Json        @default("{}")
+
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@index([status, attempts], map: "idx_email_queue_status")
+  @@index([companyId], map: "idx_email_queue_company")
+  @@map("email_queue")
+}
+
+// Tabela: webhook_deliveries
+model WebhookDelivery {
+  id          BigInt        @id @default(autoincrement())
+  uuid        String        @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId   BigInt        @map("company_id")
+  url         String        @db.Text
+  event       String        @db.VarChar(200)
+  payload     Json          @default("{}")
+  status      WebhookStatus @default(queued)
+  attempts    Int           @default(0)
+  lastAttempt DateTime?     @map("last_attempt") @db.Timestamptz
+  deliveredAt DateTime?     @map("delivered_at") @db.Timestamptz
+  responseCode Int?         @map("response_code")
+  responseBody String?      @map("response_body") @db.Text
+  createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  metadata    Json          @default("{}")
+
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@index([companyId, status], map: "idx_webhooks_company_status")
+  @@map("webhook_deliveries")
+}
+
+// ================================================================
+// DOMÍNIO TRANSVERSAL / PLATAFORMA
+// ================================================================
+
+// Tabela: audit_logs
+model AuditLog {
+  id          BigInt      @id @default(autoincrement())
+  uuid        String      @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId   BigInt      @map("company_id")
+  userId      BigInt?     @map("user_id")
+  action      AuditAction
+  tableName   String      @map("table_name") @db.VarChar(100)
+  recordId    BigInt?     @map("record_id")
+  recordUuid  String?     @map("record_uuid") @db.Uuid
+  oldValue    Json?       @map("old_value")
+  newValue    Json?       @map("new_value")
+  ipAddress   String?     @map("ip_address") @db.VarChar(45)
+  userAgent   String?     @map("user_agent") @db.Text
+  requestId   String?     @map("request_id") @db.VarChar(100)
+  createdAt   DateTime    @default(now()) @map("created_at") @db.Timestamptz
+
+  company Company  @relation(fields: [companyId], references: [id])
+  user    User?    @relation(fields: [userId], references: [id])
+  details AuditLogDetail[]
+
+  @@index([companyId, tableName], map: "idx_audit_logs_company_table")
+  @@index([companyId, userId], map: "idx_audit_logs_company_user")
+  @@index([createdAt], map: "idx_audit_logs_created")
+  @@map("audit_logs")
+}
+
+// Tabela: audit_log_details
+model AuditLogDetail {
+  id         BigInt  @id @default(autoincrement())
+  auditLogId BigInt  @map("audit_log_id")
+  fieldName  String  @map("field_name") @db.VarChar(100)
+  changeType String  @map("change_type") @db.VarChar(20)
+  oldValue   Json?   @map("old_value")
+  newValue   Json?   @map("new_value")
+
+  auditLog AuditLog @relation(fields: [auditLogId], references: [id], onDelete: Cascade)
+
+  @@index([auditLogId], map: "idx_audit_log_details_log")
+  @@map("audit_log_details")
+}
+
+// Tabela: backups
+model Backup {
+  id          BigInt       @id @default(autoincrement())
+  uuid        String       @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId   BigInt       @map("company_id")
+  type        BackupType   @default(full)
+  status      BackupStatus @default(queued)
+  storagePath String?      @map("storage_path") @db.Text
+  sizeBytes   BigInt?      @map("size_bytes")
+  startedAt   DateTime?    @map("started_at") @db.Timestamptz
+  finishedAt  DateTime?    @map("finished_at") @db.Timestamptz
+  expiresAt   DateTime?    @map("expires_at") @db.Timestamptz
+  errorMsg    String?      @map("error_msg") @db.Text
+  createdAt   DateTime     @default(now()) @map("created_at") @db.Timestamptz
+  metadata    Json         @default("{}")
+
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@index([companyId, status], map: "idx_backups_company_status")
+  @@map("backups")
+}
+
+// Tabela: system_settings
+model SystemSetting {
+  id        BigInt    @id @default(autoincrement())
+  companyId BigInt?   @map("company_id")
+  key       String    @db.VarChar(255)
+  value     Json      @default("{}")
+  isPublic  Boolean   @default(false) @map("is_public")
+  isSystem  Boolean   @default(false) @map("is_system")
+  group     String?   @db.VarChar(100)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  company Company? @relation(fields: [companyId], references: [id])
+
+  @@unique([companyId, key], map: "udx_system_settings_key")
+  @@index([companyId], map: "idx_system_settings_company")
+  @@map("system_settings")
+}
+
+// Tabela: plugin_installations
+model PluginInstallation {
+  id            BigInt       @id @default(autoincrement())
+  uuid          String       @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId     BigInt       @map("company_id")
+  pluginSlug    String       @map("plugin_slug") @db.VarChar(100)
+  pluginVersion String       @map("plugin_version") @db.VarChar(50)
+  status        PluginStatus @default(installed)
+  config        Json         @default("{}")
+  installedAt   DateTime     @default(now()) @map("installed_at") @db.Timestamptz
+  updatedAt     DateTime     @updatedAt @map("updated_at") @db.Timestamptz
+  lastErrorAt   DateTime?    @map("last_error_at") @db.Timestamptz
+  lastErrorMsg  String?      @map("last_error_msg") @db.Text
+
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@unique([companyId, pluginSlug], map: "udx_plugin_installations")
+  @@index([companyId], map: "idx_plugin_installations_company")
+  @@map("plugin_installations")
+}
+
+// ================================================================
+// MODELS ORION-SAAS (Plataforma SaaS)
+// ================================================================
+
+enum ProjectStatus {
+  planning
+  in_development
+  in_testing
+  homologation
+  waiting_client
+  completed
+  canceled
+  @@map("project_status_saas")
+}
+
+enum ApplicationType {
+  web
+  mobile
+  pwa
+  desktop
+  @@map("application_type_saas")
+}
+
+enum ApplicationStatus {
+  draft
+  published
+  deprecated
+  archived
+  @@map("application_status_saas")
+}
+
+enum PaymentStatus {
+  pending
+  approved
+  rejected
+  refunded
+  charged_back
+  @@map("payment_status_saas")
+}
+
+enum AlertSeverity {
+  info
+  warning
+  critical
+  @@map("alert_severity_saas")
+}
+
+enum ActivityType {
+  project_created
+  payment_approved
+  application_published
+  license_renewed
+  deploy_performed
+  user_invited
+  ticket_opened
+  @@map("activity_type_saas")
+}
+
+enum DeploymentStatus {
+  pending
+  building
+  deployed
+  failed
+  @@map("deployment_status_saas")
+}
+
+enum ProductCategory {
+  gestao_comercial
+  saude
+  financas
+  educacao
+  fitness
+  logistica
+  varejo
+  ia_dados
+  @@map("product_category_saas")
+}
+
+model Product {
+  id          String           @id @default(cuid())
+  name        String
+  slug        String           @unique
+  description String?
+  repoUrl     String?          @map("repo_url")
+  demoUrl     String?          @map("demo_url")
+  category    ProductCategory  @default(gestao_comercial)
+  priceCents  Int              @default(0) @map("price_cents")
+  status      String           @default("active")
+  features    Json             @default("[]")
+  iconColor   String           @default("#8b5cf6") @map("icon_color")
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+  deployments SaasDeployment[]
+  @@map("products")
+}
+
+model SaasDeployment {
+  id              String           @id @default(cuid())
+  url             String?
+  status          DeploymentStatus @default(pending)
+  productId       String           @map("product_id")
+  product         Product          @relation(fields: [productId], references: [id], onDelete: Cascade)
+  clientId        String?          @map("client_id")
+  vercelProjectId String?          @map("vercel_project_id")
+  deployedAt      DateTime?        @map("deployed_at")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt      @map("updated_at")
+  @@map("saas_deployments")
+}
+
+model SaasClient {
+  id        String        @id @default(cuid())
+  name      String
+  email     String        @unique
+  company   String?
+  phone     String?
+  avatarUrl String?       @map("avatar_url")
+  status    String        @default("active")
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+  payments  SaasPayment[]
+  @@map("saas_clients")
+}
+
+model SaasPayment {
+  id          String        @id @default(cuid())
+  amountCents Int           @map("amount_cents")
+  currency    String        @default("BRL")
+  status      PaymentStatus @default(pending)
+  method      String        @default("credit_card")
+  description String?
+  clientId    String        @map("client_id")
+  client      SaasClient    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+  @@map("saas_payments")
+}
+
+model SaasActivity {
+  id          String       @id @default(cuid())
+  type        ActivityType
+  title       String
+  description String
+  userId      String?      @map("user_id")
+  createdAt   DateTime     @default(now()) @map("created_at")
+  @@map("saas_activities")
+}
+
+model SaasAlert {
+  id          String        @id @default(cuid())
+  severity    AlertSeverity @default(info)
+  title       String
+  description String
+  readAt      DateTime?     @map("read_at")
+  createdAt   DateTime      @default(now()) @map("created_at")
+  @@map("saas_alerts")
+}
+
+model SaasService {
+  id           String     @id @default(cuid())
+  name         String     @unique
+  status       String     @default("operational")
+  uptime       Int        @default(100)
+  lastIncident DateTime?  @map("last_incident")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+  @@map("saas_services")
+}
+
+model SaasUser {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  name         String
+  avatarUrl    String?   @map("avatar_url")
+  role         String    @default("viewer")
+  supabaseId   String?   @unique @map("supabase_id")
+  lastLoginAt  DateTime? @map("last_login_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  @@map("saas_users")
+}
+
+model SaasProject {
+  id          String        @id @default(cuid())
+  name        String
+  description String?
+  status      ProjectStatus @default(planning)
+  progress    Int           @default(0)
+  iconColor   String        @default("#6366f1") @map("icon_color")
+  clientId    String?       @map("client_id")
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+  applications SaasApplication[]
+  @@map("saas_projects")
+}
+
+model SaasApplication {
+  id          String             @id @default(cuid())
+  name        String
+  version     String             @default("1.0.0")
+  type        ApplicationType    @default(web)
+  status      ApplicationStatus  @default(draft)
+  url         String?
+  description String?
+  projectId   String             @map("project_id")
+  project     SaasProject        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdAt   DateTime           @default(now()) @map("created_at")
+  updatedAt   DateTime           @updatedAt      @map("updated_at")
+  @@map("saas_applications")
+}
+
+model SaasLicense {
+  id              String         @id @default(cuid())
+  key             String         @unique
+  plan            LicensePlan    @default(starter)
+  status          LicenseStatus  @default(active)
+  maxUsers        Int            @default(10) @map("max_users")
+  maxApplications Int            @default(5)  @map("max_applications")
+  priceCents      Int            @default(0)  @map("price_cents")
+  startDate       DateTime       @default(now()) @map("start_date")
+  expirationDate  DateTime       @map("expiration_date")
+  clientId        String?        @map("client_id")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt      @map("updated_at")
+  @@map("saas_licenses")
+}
