@@ -1,2 +1,12 @@
-skills/
-node_modules/
+node_modules
+.next
+.env
+.env.local
+.env.production
+*.log
+.DS_Store
+.vercel
+download/
+upload/
+scripts/
+*.tgz
