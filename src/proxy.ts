@@ -13,8 +13,13 @@ export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Public routes — no auth required
-  const publicPaths = ["/", "/login", "/login/2fa", "/produtos", "/deployments", "/clear-sw", "/kill-sw", "/robots.txt", "/sitemap.xml", "/favicon.svg"];
+  const publicPaths = ["/", "/login", "/login/2fa", "/produtos", "/deployments", "/clear-sw", "/kill-sw", "/robots.txt", "/sitemap.xml", "/favicon.svg", "/favicon.ico", "/manifest.json", "/sw.js"];
   if (publicPaths.some((p) => pathname === p)) {
+    return NextResponse.next();
+  }
+
+  // Static assets — always public
+  if (pathname.startsWith("/_next/") || pathname.startsWith("/public/")) {
     return NextResponse.next();
   }
 
