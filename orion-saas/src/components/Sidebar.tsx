@@ -32,6 +32,7 @@ import {
   Database,
   Trophy,
   Gamepad2,
+  Calendar,
   ChevronLeft,
   LogOut,
   type LucideIcon,
@@ -65,6 +66,7 @@ const SECTIONS: NavSection[] = [
       { label: "Cupons", href: "/cupons", icon: TicketPercent },
       { label: "Campanhas", href: "/campanhas", icon: Trophy },
       { label: "Gamificação", href: "/gamificacao", icon: Gamepad2 },
+      { label: "Calendário", href: "/calendario", icon: Calendar },
     ],
   },
   {

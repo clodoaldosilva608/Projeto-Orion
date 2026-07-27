@@ -83,6 +83,7 @@ all_pages = [
     "/dashboard", "/metas", "/indicadores", "/resultados", "/aprovacoes", "/ranking",
     "/campanhas", "/campanhas/nova",
     "/gamificacao", "/gamificacao/leaderboard", "/gamificacao/conquistas", "/gamificacao/resgates",
+    "/calendario", "/calendario/nova",
     "/configuracoes", "/notificacoes", "/backups",
     "/usuarios", "/funcoes-permissoes", "/logs-auditoria",
     "/clientes", "/projetos", "/aplicacoes", "/licencas", "/pagamentos", "/assinaturas",

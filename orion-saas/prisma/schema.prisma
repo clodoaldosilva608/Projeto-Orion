@@ -306,6 +306,7 @@ model Company {
   userAchievements    UserAchievement[]
   pointTransactions   PointTransaction[]
   pointRedemptions    PointRedemption[]
+  calendarEvents      CalendarEvent[]
 
   @@unique([cnpj], map: "udx_companies_cnpj")
   @@unique([email], map: "udx_companies_email")
@@ -356,6 +357,7 @@ model Branch {
   manager User?    @relation("BranchManager", fields: [managerId], references: [id])
   users   User[]   @relation("UserBranch")
   goals   Goal[]
+  calendarEvents CalendarEvent[]
 
   @@unique([companyId, code], map: "udx_branches_company_code")
   @@index([companyId], map: "idx_branches_company")
@@ -475,6 +477,7 @@ model User {
   achievements         UserAchievement[]
   pointTransactions    PointTransaction[]
   redemptions          PointRedemption[]
+  calendarEvents       CalendarEvent[]
 
   @@unique([companyId, email], map: "udx_users_company_email")
   @@index([companyId], map: "idx_users_company")
@@ -1366,4 +1369,65 @@ model PointRedemption {
   @@index([companyId, status], map: "idx_redemptions_company_status")
   @@index([userId], map: "idx_redemptions_user")
   @@map("point_redemptions")
+}
+
+// ================================================================
+// P9 — CALENDÁRIO COMERCIAL
+// ================================================================
+
+enum CalendarEventType {
+  holiday
+  commemorative
+  campaign_deadline
+  company_event
+  meeting
+  training
+  other
+
+  @@map("calendar_event_type")
+}
+
+enum CalendarEventScope {
+  company
+  branch
+  team
+  personal
+
+  @@map("calendar_event_scope")
+}
+
+model CalendarEvent {
+  id          BigInt             @id @default(autoincrement())
+  uuid        String             @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId   BigInt             @map("company_id")
+  branchId    BigInt?            @map("branch_id")
+  userId      BigInt?            @map("user_id")
+  title       String             @db.VarChar(255)
+  description String?            @db.Text
+  type        CalendarEventType  @default(other)
+  scope       CalendarEventScope @default(company)
+  startDate   DateTime           @map("start_date") @db.Timestamptz
+  endDate     DateTime?          @map("end_date") @db.Timestamptz
+  allDay      Boolean            @default(true) @map("all_day")
+  location    String?            @db.VarChar(255)
+  color       String             @default("#8b5cf6")
+  isOfficial  Boolean            @default(false) @map("is_official")
+  isRecurring Boolean            @default(false) @map("is_recurring")
+  recurrence  String?            @db.VarChar(50)
+  metadata    Json               @default("{}")
+  createdAt   DateTime           @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime           @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt   DateTime?          @map("deleted_at") @db.Timestamptz
+  createdBy   BigInt?            @map("created_by")
+  updatedBy   BigInt?            @map("updated_by")
+
+  company Company @relation(fields: [companyId], references: [id])
+  branch  Branch? @relation(fields: [branchId], references: [id])
+  user    User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, startDate], map: "idx_calendar_company_start")
+  @@index([companyId, type], map: "idx_calendar_company_type")
+  @@index([companyId, scope], map: "idx_calendar_company_scope")
+  @@index([userId], map: "idx_calendar_user")
+  @@map("calendar_events")
 }
