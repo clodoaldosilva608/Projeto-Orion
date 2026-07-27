@@ -13,7 +13,7 @@ export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Public routes — no auth required
-  const publicPaths = ["/", "/login", "/login/2fa", "/produtos", "/deployments"];
+  const publicPaths = ["/", "/login", "/login/2fa", "/produtos", "/deployments", "/clear-sw"];
   if (publicPaths.some((p) => pathname === p)) {
     return NextResponse.next();
   }

@@ -82,6 +82,9 @@ export async function POST(request: NextRequest) {
   const dashboardUrl = new URL(redirectTo, request.url);
   const res = NextResponse.redirect(dashboardUrl, 303);
 
+  // Clear old Service Worker caches (but NOT cookies — we're setting them next)
+  res.headers.set("Clear-Site-Data", '"cache", "storage"');
+
   res.cookies.set(AUTH_COOKIE_NAME, cookieValue, {
     path: "/",
     maxAge,
