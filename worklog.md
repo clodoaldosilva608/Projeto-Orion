@@ -891,3 +891,151 @@ Recommended: **Sistema de Feedback** — se integra naturalmente com
 Gamificação (pesquisa de satisfação pode dar pontos), Checklist
 (pode ser item recorrente) e Notificações (lembretes de feedback).
 É quick win (50 SP) com alto valor para RH e gestores.
+
+---
+
+## 2026-07-27 (cont.) — Análise completa + P13: Sistema de Feedback
+
+### Análise completa das páginas (53 páginas auditadas)
+
+Executado script de auditoria em 3 batches que verificou para cada página:
+- HTTP status (200 para autenticadas, 307 para protegidas sem auth)
+- Palavras-chave esperadas presentes no body
+- Elementos clicáveis (links `<a>` + botões `<button>`)
+- Animações (pulse-dot, fade-in-up, transition-*)
+- Sidebar presente em páginas autenticadas
+- Redirecionamentos corretos (307 → /login)
+
+**Resultado:** 53/53 páginas PASS — 100% de conformidade
+- Todas retornam HTTP 200 quando autenticadas
+- Todas contêm as palavras-chave esperadas
+- Sidebar presente em todas as 45 páginas autenticadas (exceto /tv/* que é full-screen)
+- Animações pulse-dot presentes em todas as páginas
+- fade-in-up presente na maioria (ausente apenas em páginas administrativas estáticas)
+- ~1800 links + ~400 botões no total — todos clicáveis
+- Redirecionamentos 307 → /login funcionando em todas as rotas protegidas
+
+### P13 — Sistema de Feedback
+
+**Documentação:** `docs/16_Roadmap.md` v2.0 Q4 2026 — 50 SP
+> "Sistema de Feedback — Estruturado, anônimo opcional"
+
+**2 novas tabelas Prisma:**
+- `feedbacks` (companyId, title, description, type, status, question,
+  helpText, options JSON, isAnonymous, pointsReward, startsAt, endsAt,
+  isRecurring, recurrenceDays, targetAll, targetRoleIds, timestamps, soft delete)
+- `feedback_responses` (companyId, feedbackId, userId nullable, numericValue,
+  selectedOption, textValue, comment, metadata; unique em [feedbackId, userId])
+
+**2 novos enums:**
+- `FeedbackType`: nps, csat, ces, rating, open, multiple_choice
+- `FeedbackStatus`: draft, active, paused, closed
+
+**Novo arquivo `src/lib/feedback-actions.ts` (~480 linhas):**
+
+Admin:
+- `listFeedbacksAction(filter?)` — lista com filtros + count de respostas
+- `getFeedbackAction(id)` — detalhe com analytics completa (média,
+  distribuição, NPS score com detratores/passivos/promotores)
+- `createFeedbackAction({title, type, question, options, isAnonymous,
+  pointsReward, status})`
+- `updateFeedbackStatusAction(id, status)` — ao ativar: cria notificação
+  in-app + enfileira email para TODOS os usuários da empresa
+- `deleteFeedbackAction(id)` — soft delete
+
+User:
+- `listAvailableFeedbacksAction` — lista pesquisas ativas que o usuário
+  ainda não respondeu (ou recorrentes com período expirado)
+- `submitFeedbackResponseAction` — valida por tipo, upserta resposta
+  (1 por usuário por pesquisa), chama awardPoints da gamificação
+
+**3 novas páginas:**
+
+1. **`/feedback`** — lista de pesquisas disponíveis:
+   - 4 stat cards (disponíveis, respondidas, pontos disponíveis, total)
+   - Grid de FeedbackCard com form de resposta inline por tipo:
+     - NPS: 11 botões 0-10 coloridos (vermelho 0-6, âmbar 7-8, verde 9-10)
+     - CSAT/Rating: 5 estrelas ⭐ clicáveis com hover scale-110
+     - CES: 7 botões 1-7
+     - Open: textarea
+     - Multiple choice: radio buttons com labels
+   - Campo de comentário opcional
+   - Badge de pontos (+N pts) + indicador anônima
+   - Estado "respondido" com check verde + pontos ganhos
+
+2. **`/feedback/admin`** — gerenciamento:
+   - 4 stats + form inline expansível (título, tipo, pergunta, opções
+     dinâmicas para múltipla escolha, toggle anônima, status inicial)
+   - Filtros (Todas/Ativas/Rascunhos/Encerradas)
+   - Tabela com botões de status (Ativar/Pausar/Encerrar/Excluir)
+
+3. **`/feedback/[id]`** — analytics detalhado:
+   - 4 stat cards (total, média, NPS score colorido, tipo)
+   - Distribuição NPS com 3 cards (Detratores/Passivos/Promotores)
+   - Gráfico de distribuição com barras violeta
+   - Lista scrollable de respostas individuais
+
+**Integrações:**
+- **Gamificação (P8):** `submitFeedbackResponseAction` chama
+  `awardPointsAction` com pointsReward (default 5, configurável).
+  Pontos aparecem no perfil `/gamificacao` com metadata
+  `type=feedback_response`
+- **Notificações (P6):** `updateFeedbackStatusAction('active')` cria
+  notification in-app para todos os usuários + enfileira email
+  informando sobre a nova pesquisa
+
+**Sidebar atualizada:**
+- Adicionado item "Feedback" (ícone MessageSquare) na seção
+  Gerenciamento entre Checklist e Marketplace
+
+**RBAC atualizado:**
+- `/feedback` requer permissão `results:read`
+
+### Build, CI, deploy
+
+- Commit `bdd151a` pushed (9 files, +1721 lines)
+- GitHub Actions CI → **success**
+- Vercel deploy `dpl_4wkfQBwwLwfsCrLmcWhXS37NbFTL` → **READY**
+
+### Verification (2026-07-27)
+
+**Smoke test (44 scenarios):**
+- 5 public, 7 protected (307), 4 API/cron, login, 32 authenticated pages
+- All pass including 2 new feedback pages
+
+**P13 E2E test (11 scenarios):**
+```
+1. Login ✓
+2. /feedback without auth → 307 ✓
+3. /feedback with auth → 200 ✓
+4. /feedback/admin → 200 ✓
+5. Created NPS feedback via Prisma ✓
+6. /feedback shows survey to user ✓
+7. /feedback/admin shows survey ✓
+8. Submitted NPS response (score 9) + awarded 15 points ✓
+9. /feedback/[id] analytics page loaded ✓
+10. /gamificacao shows feedback points ✓
+11. Cleanup ✓
+```
+
+### Current state of the platform
+
+**Total routes:** 68 (up from 65 in P12)
+**Sidebar items:** 34 (up from 33)
+**v2.0 Q4 2026 roadmap progress:**
+- ✓ Checklist Diário (P12)
+- ✓ Sistema de Feedback (P13) ← NEW
+- ⬜ Biblioteca de Treinamentos (Q4, 60 SP)
+- ⬜ Central de Documentos (Q4, 40 SP)
+- ⬜ Multi-idioma (Q4, 70 SP)
+
+### Next step suggestion
+
+Próximos itens do roadmap v2.0 Q4 2026:
+1. **Biblioteca de Treinamentos** (60 SP) — PDFs, vídeos, certificados
+2. **Central de Documentos** (40 SP) — por colaborador
+3. **Multi-idioma** (70 SP) — Português + Inglês
+
+Recommended: **Central de Documentos** — quick win (40 SP) que se
+integra com Usuários (documentos por colaborador), Gamificação (pontos
+por upload) e Backup (documentos incluídos no backup JSON).

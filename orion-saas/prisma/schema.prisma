@@ -309,6 +309,8 @@ model Company {
   calendarEvents      CalendarEvent[]
   checklistTemplates  ChecklistTemplate[]
   checklistTasks      ChecklistTask[]
+  feedbacks           Feedback[]
+  feedbackResponses   FeedbackResponse[]
 
   @@unique([cnpj], map: "udx_companies_cnpj")
   @@unique([email], map: "udx_companies_email")
@@ -481,6 +483,7 @@ model User {
   redemptions          PointRedemption[]
   calendarEvents       CalendarEvent[]
   checklistTasks       ChecklistTask[]
+  feedbackResponses    FeedbackResponse[]
 
   @@unique([companyId, email], map: "udx_users_company_email")
   @@index([companyId], map: "idx_users_company")
@@ -1586,4 +1589,93 @@ model ChecklistTask {
   @@index([userId, date], map: "idx_checklist_tasks_user_date")
   @@index([userId, status], map: "idx_checklist_tasks_user_status")
   @@map("checklist_tasks")
+}
+
+// ================================================================
+// P13 — SISTEMA DE FEEDBACK
+// ================================================================
+
+enum FeedbackType {
+  nps
+  csat
+  ces
+  rating
+  open
+  multiple_choice
+
+  @@map("feedback_type")
+}
+
+enum FeedbackStatus {
+  draft
+  active
+  paused
+  closed
+
+  @@map("feedback_status")
+}
+
+// Survey/template definition
+model Feedback {
+  id            BigInt         @id @default(autoincrement())
+  uuid          String         @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId     BigInt         @map("company_id")
+  title         String         @db.VarChar(255)
+  description   String?        @db.Text
+  type          FeedbackType   @default(rating)
+  status        FeedbackStatus @default(draft)
+  question      String         @db.Text
+  helpText      String?        @map("help_text") @db.Text
+  // For multiple_choice: array of options as JSON ["ótimo", "bom", "regular", "ruim"]
+  options       Json           @default("[]")
+  isAnonymous   Boolean        @default(true) @map("is_anonymous")
+  pointsReward  Int            @default(5) @map("points_reward")
+  // Schedule: when to show the survey
+  startsAt      DateTime?      @map("starts_at") @db.Timestamptz
+  endsAt        DateTime?      @map("ends_at") @db.Timestamptz
+  isRecurring   Boolean        @default(false) @map("is_recurring")
+  recurrenceDays Int           @default(30) @map("recurrence_days") // show again after N days
+  // Targeting
+  targetAll     Boolean        @default(true) @map("target_all")
+  targetRoleIds Json           @default("[]") @map("target_role_ids") // array of role IDs as strings
+  metadata      Json           @default("{}")
+  createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime       @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt     DateTime?      @map("deleted_at") @db.Timestamptz
+  createdBy     BigInt?        @map("created_by")
+
+  company   Company           @relation(fields: [companyId], references: [id])
+  responses FeedbackResponse[]
+
+  @@index([companyId, status], map: "idx_feedback_company_status")
+  @@index([companyId, type], map: "idx_feedback_company_type")
+  @@map("feedbacks")
+}
+
+// Individual response from a user
+model FeedbackResponse {
+  id          BigInt   @id @default(autoincrement())
+  uuid        String   @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId   BigInt   @map("company_id")
+  feedbackId  BigInt   @map("feedback_id")
+  userId      BigInt?  @map("user_id") // null if anonymous
+  // For rating/nps/csat/ces: numeric value (0-10 for NPS, 1-5 for rating, etc.)
+  numericValue Int?    @map("numeric_value")
+  // For multiple_choice: index of selected option
+  selectedOption Int?  @map("selected_option")
+  // For open: text response
+  textValue   String?  @map("text_value") @db.Text
+  // For all: optional comment
+  comment     String?  @db.Text
+  metadata    Json     @default("{}")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  company  Company @relation(fields: [companyId], references: [id])
+  feedback Feedback @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
+  user     User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@unique([feedbackId, userId], map: "udx_feedback_response_user") // one response per user per survey
+  @@index([companyId, createdAt], map: "idx_feedback_responses_company_date")
+  @@index([feedbackId], map: "idx_feedback_responses_feedback")
+  @@map("feedback_responses")
 }
