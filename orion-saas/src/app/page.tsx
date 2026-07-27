@@ -189,18 +189,20 @@ export default function LandingPage() {
             <div className="fade-in-up">
               <div className="inline-flex items-center gap-2 rounded-full border border-violet-500/30 bg-violet-500/10 px-3 py-1 text-xs font-semibold text-violet-300 mb-6">
                 <Sparkles className="h-3.5 w-3.5" />
-                A FÁBRICA INTELIGENTE DE SOFTWARE
+                PLATAFORMA INTELIGENTE DE DESENVOLVIMENTO DE SOFTWARE
               </div>
               <h1 className="text-4xl md:text-5xl lg:text-[3.5rem] font-bold leading-[1.1] tracking-tight">
-                <span className="text-white">Transforme sua ideia em um </span>
-                <span className="hero-text-gradient">aplicativo profissional</span>
-                <span className="text-white"> com </span>
-                <span className="hero-text-gradient">Inteligência Artificial.</span>
+                <span className="text-white">Gerenciamos todo o ciclo de vida do seu </span>
+                <span className="hero-text-gradient">software</span>
+                <span className="text-white"> — da ideia à </span>
+                <span className="hero-text-gradient">evolução contínua</span>
+                <span className="text-white">.</span>
               </h1>
               <p className="mt-6 text-base lg:text-lg text-[#8b8fa3] leading-relaxed max-w-xl">
-                Você descreve seu negócio. O Orion planeja, desenvolve, testa,
-                licencia e entrega uma aplicação pronta para uso, com segurança,
-                tecnologia moderna e acompanhamento completo.
+                Briefing inteligente com IA. Arquitetura gerada automaticamente.
+                Templates reutilizáveis. Pipeline de desenvolvimento parcialmente
+                automatizado. Especialistas garantem a qualidade final.
+                Tudo em uma plataforma unificada.
               </p>
               <div className="mt-8 flex flex-col sm:flex-row gap-3">
                 <Link

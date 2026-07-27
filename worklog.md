@@ -1039,3 +1039,159 @@ Próximos itens do roadmap v2.0 Q4 2026:
 Recommended: **Central de Documentos** — quick win (40 SP) que se
 integra com Usuários (documentos por colaborador), Gamificação (pontos
 por upload) e Backup (documentos incluídos no backup JSON).
+
+---
+
+## 2026-07-27 (cont.) — PIVOT ESTRATÉGICO + P14: Fábrica de Software
+
+### 🔴 Análise crítica da consultoria
+
+O usuário compartilhou uma consultoria estratégica que revelou uma
+**contradição fundamental**:
+
+- **Documentação do projeto** (`docs/01_Product_Vision_Document.md`):
+  > "Plataforma de Gestão Inteligente de Equipes Comerciais"
+
+- **Consultoria compartilhada**:
+  > "plataforma completa para criação, gerenciamento, entrega,
+> licenciamento e evolução contínua de software, utilizando IA como
+> parte central do processo"
+
+**Esses são dois produtos fundamentalmente diferentes.** Tudo que
+construímos em P0-P13 (Metas, Indicadores, Campanhas, Gamificação,
+Calendário, Checklist, Feedback) estava alinhado com a visão de
+"Equipes Comerciais" — NÃO com "Fábrica de Software".
+
+### Decisão do usuário (2026-07-27)
+
+Após apresentar a contradição claramente, o usuário decidiu:
+1. ✅ **Pivotar para Software Factory** (Plataforma Inteligente de
+   Desenvolvimento de Software)
+2. ✅ **MVP Equilibrado** (conservador + IA + templates + pipeline parcial)
+
+### Documento PIVOT_PLAN.md criado
+
+Arquivo `PIVOT_PLAN.md` na raiz do projeto documenta:
+- Contexto da mudança
+- Novo posicionamento: "Gerenciamos todo o ciclo de vida do seu software"
+- Decisão sobre módulos existentes (mantidos como "Módulos de Vendas Extras")
+- Plano de execução P14-P18
+- Modelo de dados da entidade central "Projeto"
+
+### P14 — Implementation
+
+**Mudanças estruturais:**
+
+1. **Sidebar reorganizada** — 6 seções:
+   - "Fábrica de Software" (PRIMEIRA): Dashboard, Fábrica, Projetos,
+     Briefings, Templates, Clientes, Licenças, Pagamentos, Assinaturas,
+     Planos, Cupons
+   - "Desenvolvimento & Deploy": Aplicações, File de Projetos, Builds,
+     Deploys, Releases, Anomalias
+   - "IA e Automação": Agentes IA, Jobs IA, Modelos, Consumo IA,
+     Provedores, Marketplace
+   - "Módulos de Vendas (Extras)": Metas, Campanhas, Gamificação,
+     Calendário, Checklist, Feedback — **movidos para Extras**
+   - "Suporte" e "Sistema" mantidos
+
+2. **Landing page atualizada**:
+   - Badge: "PLATAFORMA INTELIGENTE DE DESENVOLVIMENTO DE SOFTWARE"
+   - Headline: "Gerenciamos todo o ciclo de vida do seu software — da
+     ideia à evolução contínua"
+   - Subtítulo descreve: Briefing IA, Arquitetura automática, Templates,
+     Pipeline parcial
+
+**4 novos modelos Prisma:**
+- `SoftwareProject` (entidade central): companyId, clientId, templateId,
+  name, status, stack JSON, timeline JSON, team JSON, keyFeatures JSON,
+  successCriteria, budgetCents, startDate, estimatedEndDate, deliveredAt,
+  licenseId, progress, repositoryUrl, demoUrl, productionUrl
+- `ProjectBriefing` (1:1 com SoftwareProject): clientName, projectType,
+  problemStatement, keyFeatures JSON, successCriteria, budgetCents,
+  timelineWeeks, aiGeneratedDoc, aiArchitectureSuggestion, aiStackSuggestion,
+  aiEstimatedHours, aiEstimatedCostCents, status
+- `ProjectTemplate` (catálogo): companyId (nullable=global), name,
+  displayName, description, category, iconEmoji, iconColor, stackDefault
+  JSON, featuresDefault JSON, estimatedHours, estimatedPriceCents,
+  isOfficial, isActive, usageCount
+- `ProjectStage` (pipeline): projectId, name, status, sortOrder,
+  assignedTo JSON, deliverables JSON, startDate, endDate, completedAt
+
+2 novos enums: `SoftwareProjectStatus` (8 valores), `BriefingStatus` (5 valores)
+
+**4 novas páginas:**
+
+1. `/fabrica` — Dashboard da fábrica:
+   - Hero com novo posicionamento + CTAs
+   - 5 KPIs (projetos, briefings, templates, clientes, entregues no mês)
+   - Pipeline visual: 7 estágios coloridos clicáveis
+   - Lista de projetos recentes
+   - 3 quick actions
+
+2. `/fabrica/projetos` — Lista de projetos:
+   - Filtros por status (7 opções)
+   - Tabela com projeto, cliente, status, progresso, estágios, prazo
+   - Empty state com CTAs
+
+3. `/fabrica/briefings` — Preview da P15:
+   - Anuncia "EM BREVE — P15"
+   - 3 feature cards: PRD por IA, Sugestões de Arquitetura, Estimativa
+   - Status: estrutura pronta, IA em P15
+
+4. `/fabrica/templates` — Catálogo:
+   - 6 templates oficiais seedados automaticamente:
+     - 🛒 E-commerce (R$ 25k, 120h)
+     - 👥 CRM Comercial (R$ 18k, 80h)
+     - 📊 Dashboard Analytics (R$ 15k, 60h)
+     - ✍️ Blog/Portal (R$ 8k, 40h)
+     - 🚀 Plataforma SaaS (R$ 45k, 200h)
+     - 📱 App Mobile PWA (R$ 22k, 100h)
+   - Grid de cards com stack, features, estimativas
+
+**Novo arquivo `src/lib/fabrica-actions.ts` (~430 linhas):**
+- `getFabricaStatsAction`: agrega KPIs + byStatus + recentProjects
+- `listSoftwareProjectsAction({status?, clientId?})`: com include briefing,
+  template, stages
+- `createSoftwareProjectAction`: cria projeto + 6 estágios padrão
+  (Briefing, Arquitetura, Desenvolvimento, Testes, Deploy, Entrega)
+- `listProjectTemplatesAction`: lista + auto-seed 6 templates oficiais
+- `seedOfficialTemplatesAction`: idempotente
+
+### Build, CI, deploy
+
+- Commit `c45d29d` pushed (11 files, +1597 lines)
+- GitHub Actions CI → **success**
+- Vercel deploy `dpl_Hji8RDujyYjhLyk1Grqz1PLKfkQA` → **READY**
+
+### Verification (2026-07-27)
+
+**Smoke test (11 pages):**
+```
+/                            200 ✓ (novo positioning)
+/fabrica                     200 ✓ (56 links, 7 botões, pulse-dot)
+/fabrica/projetos            200 ✓ (49 links, 6 botões)
+/fabrica/briefings           200 ✓ (41 links, 7 botões)
+/fabrica/templates           200 ✓ (45 links, 6 botões)
+/dashboard                   200 ✓ (módulos existentes continuam funcionando)
+/metas                       200 ✓
+/campanhas                   200 ✓
+/gamificacao                 200 ✓
+/feedback                    200 ✓
+/plugins                     200 ✓
+```
+
+Todos os módulos de vendas (P0-P13) continuam funcionando — foram
+apenas movidos para a seção "Módulos de Vendas (Extras)" no sidebar.
+
+### Current state of the platform
+
+**Total routes:** 72 (up from 68 in P13)
+**Posicionamento:** Plataforma Inteligente de Desenvolvimento de Software
+**MVP:** Equilibrado (conservador + IA + templates + pipeline parcial)
+
+### Próximas fases (plano PIVOT_PLAN.md)
+
+- **P15**: Briefing IA + Geração documentação + Sugestões arquitetura
+- **P16**: Templates reutilizáveis + Pipeline dev visual
+- **P17**: Workspace do Cliente + Licenciamento
+- **P18+**: Distribuição & Atualizações
