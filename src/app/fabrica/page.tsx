@@ -37,7 +37,15 @@ function formatDate(iso: string | null) {
 }
 
 export default async function FabricaPage() {
-  const { data, error } = await getFabricaStatsAction();
+  let data: any = null;
+  let error: string | null = null;
+  try {
+    const result = await getFabricaStatsAction();
+    data = result.data;
+    error = result.error;
+  } catch (e) {
+    error = (e as Error).message;
+  }
 
   return (
     <DashboardLayout>
