@@ -82,6 +82,7 @@ print("\n7. Authenticated pages — expect 200:")
 all_pages = [
     "/dashboard", "/metas", "/indicadores", "/resultados", "/aprovacoes", "/ranking",
     "/campanhas", "/campanhas/nova",
+    "/gamificacao", "/gamificacao/leaderboard", "/gamificacao/conquistas", "/gamificacao/resgates",
     "/configuracoes", "/notificacoes", "/backups",
     "/usuarios", "/funcoes-permissoes", "/logs-auditoria",
     "/clientes", "/projetos", "/aplicacoes", "/licencas", "/pagamentos", "/assinaturas",

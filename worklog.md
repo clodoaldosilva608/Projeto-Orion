@@ -1,173 +1,177 @@
 # Worklog — Orion SaaS Platform
 
-## 2026-07-27 — P7: Módulo de Campanhas & Premiações
+## 2026-07-27 — P8: Gamificação Avançada
 
-**Task:** "De acordo com a documentação siga para o próximo passo" — after
-completing P6 (2FA, SMTP, Webhooks, Notifications, Backups, Settings), the
-user asked to proceed to the next phase based on the project documentation.
+**Task:** "Siga para o Próximo passo sugerido pela documentação" — after
+completing P7 (Campanhas & Premiações), the user asked to proceed to the
+next phase per the project documentation.
 
 ### Investigation
 
-Reviewed `docs/16_Roadmap.md` (Roadmap estratégico) and
-`docs/07_Business_Rules_Document.md` to identify the next milestone:
-- P0-P3 covered v1.0 Q3 2025 (Core, Auth, RBAC, Indicators, Goals, Results, Dashboard, Design)
-- P4 covered v1.0 Q4 2025 (Audit, LGPD)
-- P5 covered v2.0 Q1 2026 (IA Básico + Stripe)
-- P6 covered v1.0 Q4 + v2.0 Q1 (2FA, SMTP, Webhooks, Notifications, Backups)
+Consulted `docs/16_Roadmap.md` v2.0 Q2 2026:
+> "Gamificação Avançada — Medalhas, troféus, níveis, conquistas (60 SP)"
 
-Next planned feature per roadmap v1.0 Q4 2025:
-> "Módulo Campanhas + Premiações — Regras, awards, participantes (90 SP)"
-
-Confirmed via `docs/07_Business_Rules_Document.md` Capítulo 12:
-- RN-031: Campaigns can use any indicator
-- RN-032: A campaign can use multiple indicators simultaneously
-- RN-033: Campaigns can have scoring, medals, awards, challenges, goals, bonuses
-- RN-034: Awards can be medals, trophies, points, gifts, money, trips, products, custom
-- RN-035: Awards can be automatic
-- RN-083-085: Notifications on new campaign, ending campaign, award granted
-
-### Sandbox reset & re-clone
-
-Sandbox was fully reset (only Initial commit + 3 placeholder commits). Re-cloned
-from GitHub preserving all P0-P6 commits:
-```
-git clone https://github.com/clodoaldosilva608/Projeto-Orion.git orion-saas
-```
+Cross-referenced with `docs/07_Business_Rules_Document.md` Capítulo 38
+(RN-159 a RN-166):
+- RN-159: Pontos por Ação (12 regras com valores default)
+- RN-160: Níveis (7 níveis fixos: Iniciante → Lenda)
+- RN-161: Medalhas (4 tipos: ouro/prata/bronze/troféu)
+- RN-162: Conquistas (12 achievements desbloqueáveis)
+- RN-163: Privacidade de Conquistas (default privado)
+- RN-164: Ranking de Pontos (configurável)
+- RN-165: Troca de Pontos (catálogo configurável)
+- RN-166: Reset de Pontos (sem expiração, mensal considera só o mês)
 
 ### Implementation
 
-**New files (9):**
+**Prisma schema (3 new models, 3 new enums):**
+- `UserAchievement` (unique on userId+achievementKey, category enum)
+- `PointTransaction` (ledger of points: earned/spent/bonus/penalty)
+- `PointRedemption` (status: pending/approved/rejected/fulfilled)
+- Enums: `AchievementCategory`, `PointTxType`, `RedemptionStatus`
+- Relations added to `User` (achievements, pointTransactions, redemptions)
+  and `Company` (userAchievements, pointTransactions, pointRedemptions)
+- Applied via `prisma db push` — 3 new tables created in Supabase
 
-1. `src/lib/campanhas-actions.ts` (~440 lines) — full server-action layer:
-   - `listCampaignsAction(filter)` — filter by all/active/finished/draft
-   - `getCampaignAction(id)` — includes participants, awards, goals
-   - `createCampaignAction({ name, description, startDate, endDate, rules, imageUrl })`
-   - `updateCampaignStatusAction(id, status)` — handles 6 statuses
-     (draft/scheduled/active/paused/finished/canceled); triggers email +
-     webhook on active/finished transitions
-   - `deleteCampaignAction(id)` — soft delete
-   - `addParticipantAction / removeParticipantAction / joinCampaignAction`
-   - `addAwardAction / deleteAwardAction`
-   - `recomputeLeaderboardAction(campaignId)` — sums approved Results
-     from Goals linked to the campaign, updates totalPoints + rank
-   - `listCompanyUsersAction()` — for participant picker
+**New lib `src/lib/gamification.ts` (constants):**
+- `LEVELS` (7): Iniciante (0) → Bronze (1k) → Prata (5k) → Ouro (15k)
+  → Platina (40k) → Diamante (100k) → Lenda (250k) — each with color + icon
+- `getLevelForPoints(points)`, `getNextLevel(points)`, `getLevelProgress(points)`
+- `DEFAULT_POINT_RULES` (12): result_on_time (+10), result_late (+5),
+  goal_daily_beat (+50), goal_weekly_beat (+200), goal_monthly_beat (+1000),
+  ranking_up (+20), campaign_join (+100), campaign_win (+500),
+  streak_7/30/90 (+100/+500/+2000), ai_feedback_positive (+5)
+- `MEDALS` (4): ouro 🥇, prata 🥈, bronze 🥉, troféu 🏆
+- `ACHIEVEMENTS` (12): streak_7/30/90, goal_10/50/100, first_goal,
+  first_campaign_win, client_1/10/100, early_bird, ai_enthusiast
+- `DEFAULT_REWARDS` (6): caneca (500), camiseta (1k), folga (3k),
+  vale-50 (5k), vale-200 (20k), bônus-500 (50k)
 
-2. `src/app/campanhas/page.tsx` — list page with 4 stat cards,
-   filter tabs (Todas/Ativas/Rascunhos/Encerradas), grid of campaign cards
-3. `src/app/campanhas/CampaignClient.tsx` — client components
-   (CampaignFilter, DeleteCampaignButton)
-4. `src/app/campanhas/nova/page.tsx` + `NovaCampanhaForm.tsx` — form
-   with JSON rules editor
-5. `src/app/campanhas/[id]/page.tsx` — detail page with leaderboard,
-   awards list, add award/participant forms, status action buttons
-6. `src/app/campanhas/[id]/CampaignDetailClient.tsx` — StatusButtons,
-   LeaderboardActions, AddParticipantForm, AddAwardForm, AwardList
+**New lib `src/lib/gamification-actions.ts` (~430 lines):**
+- `awardPointsAction({ userId, reasonKey, points?, referenceId?, metadata? })`
+- `checkAndUnlockAchievements(userId, companyId)` — called automatically
+  after awardPoints; creates in-app notification + enqueues email when
+  achievement is unlocked
+- `computeStreakDays(userId)` — walks back from today counting consecutive
+  days with approved results
+- `getUserProfileAction(userId?)` — full profile: totalPoints, monthlyPoints,
+  level, progress, achievements, recentTransactions, recentRedemptions,
+  campaignsJoined
+- `getCompanyLeaderboardAction(period: "month" | "all")` — top 50 by points
+- `redeemPointsAction(rewardKey)` — verifies available balance (total - spent)
+- `listRedemptionsAction / approveRedemptionAction / rejectRedemptionAction / fulfillRedemptionAction`
+- `getGamificationSettingsAction / saveGamificationSettingsAction`
+  (rankingEnabled, redemptionEnabled)
+- `getGamificationCatalogAction` — static catalog (levels/achievements/rewards/medals)
 
-**Modified files (2):**
-- `src/components/Sidebar.tsx` — added Trophy icon, "Campanhas" item in
-  Gerenciamento section
-- `src/lib/rbac.ts` — added `/campanhas` route permission (goals:read)
+**4 new pages:**
+1. `/gamificacao` — user profile with:
+   - Hero card: level badge, name, progress bar with current/next level,
+     monthly points, achievements count
+   - Achievements grid (12 cards, unlocked highlighted with amber border)
+   - Recent point transactions (last 20, with +/- icons and colors)
+   - Rewards catalog (6 prizes with RedeemButton client component)
+   - Level ladder (7 levels with "você" badge on current)
+
+2. `/gamificacao/leaderboard` — company ranking:
+   - Period tabs (Este mês / Todos os tempos)
+   - Podium: 2nd/1st/3rd cards with gold/silver/bronze gradients,
+     1st scaled up + ring + "Campeão" badge
+   - Full classification table (position, avatar, name, points, level)
+
+3. `/gamificacao/conquistas` — achievements catalog:
+   - 4 stat cards (Total, Desbloqueadas, Bloqueadas, Progresso %)
+   - Grouped by category (streak/goal/campaign/result/client/special)
+   - Each achievement: icon, name, description, threshold, locked/unlocked state
+
+4. `/gamificacao/resgates` — admin redemption queue:
+   - 4 stat cards (Total, Pendentes, Aprovados, Entregues)
+   - Table with user, reward, cost, status, date, action buttons
+   - RedemptionActions client: Aprovar/Rejeitar (pending) or Entregar (approved)
+
+**Automatic integrations (no manual action needed):**
+- `submitResultAction` (src/lib/actions.ts): awards +10 pts (before 18h)
+  or +5 pts (after 18h) when user submits a result
+- `approveResultAction`: awards +1000 pts (goal_monthly_beat) to result
+  owner when their result is approved
+- `addParticipantAction` (src/lib/campanhas-actions.ts): awards +100 pts
+  (campaign_join) when user joins a campaign
+- `checkAndUnlockAchievements`: runs after every awardPoints; on unlock
+  creates notification + enqueues email with icon + description
+
+**Sidebar updated:** added "Gamificação" item (Gamepad2 icon) in
+Gerenciamento section between Campanhas and Desenvolvimento
+
+**RBAC updated:** `/gamificacao` requires `results:read` permission
+(anyone who can read results can see gamification)
 
 ### Bug fix during testing
 
-First deploy of P7 had `/campanhas/[id]` returning HTTP 500 due to
-passing an async function as a prop from a Server Component to a Client
-Component (React Server Components can't serialize functions). Removed
-the unused `onDelete` prop from `StatusButtons` — the component already
-had its own delete handler with confirm dialog.
-
-### Integration with existing systems
-
-**P6 integrations reused automatically:**
-- **Audit log:** Every create/update/delete on campaigns, participants,
-  awards is logged via `logAudit()` with companyId/userId/recordId
-- **Email notifications:** When campaign status changes to active or
-  finished, all participants receive an email via `enqueueEmail()`
-  (drained immediately by `drainEmailQueue(5).catch(()=>{})`)
-- **Webhooks:** `enqueueWebhook()` fires `campaign.started` and
-  `campaign.ended` events to all configured destinations
-- **Multi-tenant isolation:** All queries filter by `companyId` from
-  the current user's session
-
-### Prisma models reused
-
-No schema changes needed — all 3 models already existed:
-- `Campaign` (status enum: draft/scheduled/active/paused/finished/canceled)
-- `CampaignParticipant` (unique on campaignId+userId, has totalPoints + rank)
-- `Award` (type enum: points/money/product/badge/experience/custom)
-- `Goal.campaignId` (FK already existed — links Goals to Campaigns)
+Initial E2E test failed because Python urllib's NoRedirect handler
+wasn't being applied correctly. Fixed by separating `fetch_no_auth`
+(opener with NoRedirect, no cookies) from `fetch` (opener with cookies,
+follows redirects). The original test was using the authenticated opener
+for the no-auth check, which meant the proxy.ts was seeing the auth
+cookie and returning 200.
 
 ### Build, CI, deploy
 
-- Commit `b1d63d0` (P7 main) + commit `8e34089` (RSC fix) pushed to
-  `origin/main`
-- GitHub Actions CI → **success** on both commits
-- Vercel deploy `dpl_4JVHRi5mpdCm7GVDWoRvhq8eAyGh` → **READY**
+- Commit `469a10a` pushed to `origin/main` (14 files, +1737 lines)
+- GitHub Actions CI → **success**
+- Vercel deploy `dpl_4JyaDPxVyq1ieXcp5zvU9hT7j8Yw` → **READY**
 - URL: https://orion-saas-phi.vercel.app
 
 ### Verification (2026-07-27)
 
-**Smoke test (32 scenarios):**
+**Smoke test (36 scenarios):**
 ```
-1. Public pages (5): /, /login, /login/2fa, /produtos, /deployments -> 200
-2. Protected routes without auth (7): /dashboard, /campanhas,
-   /campanhas/nova, /configuracoes, /notificacoes, /backups, /metas
-   -> 307 to /login
-3. /api/auth/me without cookie -> 401
-4. /api/cron/drain with wrong key -> 401
-5. /api/cron/drain with correct key -> 200
-6. Login -> 303 to /dashboard
-7. Authenticated pages (23): all return 200, including:
-   /dashboard, /metas, /indicadores, /resultados, /aprovacoes, /ranking,
-   /campanhas, /campanhas/nova,
-   /configuracoes, /notificacoes, /backups,
-   /usuarios, /funcoes-permissoes, /logs-auditoria,
-   /clientes, /projetos, /aplicacoes, /licencas, /pagamentos,
-   /assinaturas, /planos, /cupons, /consumo-ia
+Public (5): /, /login, /login/2fa, /produtos, /deployments -> 200
+Protected without auth (7): /dashboard, /campanhas, /campanhas/nova,
+  /gamificacao, /configuracoes, /notificacoes, /backups -> 307 to /login
+API no auth (1): /api/auth/me -> 401
+Cron (2): wrong key -> 401, correct key -> 200
+Login -> 303 to /dashboard
+Authenticated pages (26): all 200, including 4 new gamification pages
 ```
 
-**P7 E2E test (10 scenarios):**
+**P8 E2E test (12 scenarios):**
 ```
 1. Login ✓
-2. /campanhas without auth → 307 ✓
-3. /campanhas with auth → 200 ✓
-4. /campanhas/nova → 200 ✓
-5. Campaign created via Prisma ✓
-6. /campanhas/{id} → 200 ✓
-7. /campanhas list shows new campaign ✓
-8. Award + participant added ✓
-9. Detail page shows award + participant ✓
-10. Cleanup ✓
+2. /gamificacao without auth → 307 ✓
+3. /gamificacao with auth → 200 ✓
+4. /gamificacao/leaderboard → 200 ✓
+5. /gamificacao/conquistas → 200 ✓
+6. /gamificacao/resgates → 200 ✓
+7. Award 10 pts via Prisma (RN-159) ✓
+8. Profile shows awarded points ✓
+9. Unlock achievement (RN-162) ✓
+10. Achievements page works ✓
+11. Create redemption + verify (RN-165) ✓
+12. Cleanup ✓
 ```
 
 ### Current state of the platform
 
-**Total routes:** 46 (up from 43 in P6)
-**Sidebar items:** 29 (up from 27)
-**v1.0 Q4 2025 roadmap progress:** 100% complete
-- ✓ Módulo Resultados + Aprovação (P2)
-- ✓ Módulo Ranking (P2)
-- ✓ Módulo Dashboard (P3)
-- ✓ Módulo Campanhas + Premiações (P7) ← NEW
-- ✓ Módulo Auditoria (P4)
-- ✓ Módulo Licenciamento (P5 — Stripe)
-- ✓ Módulo Backup (P6)
-- ✓ PWA instalável (P3)
-- ⬜ Empacotamento Electron (desktop app — out of scope for SaaS web)
-- ⬜ Painel admin separado (admin.suaempresa.com — not needed for SaaS)
+**Total routes:** 50 (up from 46 in P7)
+**Sidebar items:** 30 (up from 29)
+**v2.0 Q2 2026 roadmap progress:**
+- ✓ Módulo IA Básico (P5)
+- ✓ Notificações (P6 — in-app + email)
+- ✓ Módulo Campanhas + Premiações (P7)
+- ✓ Gamificação Avançada (P8) ← NEW
+- ⬜ Marketplace de Plugins v1 (next big feature)
+- ⬜ Calendário Comercial
 
 ### Next step suggestion
 
-Per `docs/16_Roadmap.md` v2.0 Q1 2026, the next items are:
-- **Marketplace de Plugins v1** (API pública, SDKs, 5 plugins oficiais)
-- **Gamificação Avançada** (medalhas, troféus, níveis, conquistas)
-- **Calendário Comercial** (datas comemorativas, feriados, eventos)
+Per `docs/16_Roadmap.md`, the next major items are:
+1. **Marketplace de Plugins v1** (Q2 2026, 150 SP) — API pública, SDKs,
+   5 plugins oficiais (WhatsApp, Telegram, CRM, Estoque, Comissões)
+2. **Calendário Comercial** (Q2 2026, 30 SP) — datas comemorativas,
+   feriados, eventos
+3. **API Pública v1** (Q3 2026, 80 SP) — REST + Webhooks, OpenAPI
 
-Or v2.0 Q3 2026:
-- **API Pública v1** (REST + Webhooks, documentação OpenAPI)
-- **Integração ERPs** (Totvs, SAP B1, Sankhya)
-- **Painel TV** (smart TVs para ranking em tempo real)
-
-Recommended: **Gamificação Avançada** since it extends the just-completed
-Campanhas module with badges/trophies/levels/achievements — natural
-follow-up that adds visible value to the existing platform.
+Recommended: **Calendário Comercial** — quick win (30 SP, ~1 day)
+that adds visible value (calendar UI showing holidays, company events,
+campaign deadlines) and integrates naturally with the Campanhas module
+just completed.

@@ -306,12 +306,18 @@ export async function addParticipantAction(campaignId: string, userId: string) {
   if (!user) return { data: null, error: "Não autorizado" };
 
   try {
-    const participant = await prisma.campaignParticipant.upsert({
+    // Check if already a participant (upsert no-ops if exists)
+    const existing = await prisma.campaignParticipant.findUnique({
       where: {
         campaignId_userId: { campaignId: BigInt(campaignId), userId: BigInt(userId) },
       },
-      update: {},
-      create: {
+    });
+    if (existing) {
+      return { data: { id: existing.id.toString() }, error: null };
+    }
+
+    const participant = await prisma.campaignParticipant.create({
+      data: {
         campaignId: BigInt(campaignId),
         userId: BigInt(userId),
       },
@@ -325,6 +331,17 @@ export async function addParticipantAction(campaignId: string, userId: string) {
       recordId: participant.id,
       newValue: { campaignId, userId },
     });
+
+    // P8: award points to the user who joined the campaign (RN-159)
+    try {
+      const { awardPointsAction } = await import("./gamification-actions");
+      await awardPointsAction({
+        userId,
+        reasonKey: "campaign_join",
+        referenceId: campaignId,
+        metadata: { addedBy: user.id.toString() },
+      });
+    } catch {}
 
     revalidatePath(`/campanhas/${campaignId}`);
     return { data: { id: participant.id.toString() }, error: null };

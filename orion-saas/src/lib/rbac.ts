@@ -53,6 +53,7 @@ export const ROUTE_PERMISSIONS: Record<string, string[]> = {
   '/aprovacoes': ['results:approve'],
   '/ranking': ['reports:read'],
   '/campanhas': ['goals:read'],
+  '/gamificacao': ['results:read'],
   '/usuarios': ['users:read'],
   '/funcoes-permissoes': ['admin:access'],
   '/logs-auditoria': ['admin:access'],

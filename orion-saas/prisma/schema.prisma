@@ -303,6 +303,9 @@ model Company {
   apiKeys             ApiKey[]
   emailQueue          EmailQueue[]
   webhookDeliveries   WebhookDelivery[]
+  userAchievements    UserAchievement[]
+  pointTransactions   PointTransaction[]
+  pointRedemptions    PointRedemption[]
 
   @@unique([cnpj], map: "udx_companies_cnpj")
   @@unique([email], map: "udx_companies_email")
@@ -469,6 +472,9 @@ model User {
   notifications        Notification[]
   auditLogs            AuditLog[]
   campaignParticipants CampaignParticipant[]
+  achievements         UserAchievement[]
+  pointTransactions    PointTransaction[]
+  redemptions          PointRedemption[]
 
   @@unique([companyId, email], map: "udx_users_company_email")
   @@index([companyId], map: "idx_users_company")
@@ -1262,4 +1268,102 @@ model SaasLicense {
   createdAt       DateTime       @default(now()) @map("created_at")
   updatedAt       DateTime       @updatedAt      @map("updated_at")
   @@map("saas_licenses")
+}
+
+// ================================================================
+// P8 — GAMIFICAÇÃO AVANÇADA
+// ================================================================
+
+enum AchievementCategory {
+  streak
+  goal
+  campaign
+  result
+  client
+  special
+
+  @@map("achievement_category")
+}
+
+enum PointTxType {
+  earned
+  spent
+  bonus
+  penalty
+
+  @@map("point_tx_type")
+}
+
+enum RedemptionStatus {
+  pending
+  approved
+  rejected
+  fulfilled
+
+  @@map("redemption_status")
+}
+
+model UserAchievement {
+  id            BigInt              @id @default(autoincrement())
+  uuid          String              @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId     BigInt              @map("company_id")
+  userId        BigInt              @map("user_id")
+  achievementKey String             @map("achievement_key") @db.VarChar(100)
+  category      AchievementCategory @default(special)
+  unlockedAt    DateTime            @default(now()) @map("unlocked_at") @db.Timestamptz
+  metadata      Json                @default("{}")
+
+  company Company @relation(fields: [companyId], references: [id])
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, achievementKey], map: "udx_user_achievements")
+  @@index([companyId, userId], map: "idx_user_achievements_company_user")
+  @@index([companyId, category], map: "idx_user_achievements_category")
+  @@map("user_achievements")
+}
+
+model PointTransaction {
+  id          BigInt      @id @default(autoincrement())
+  uuid        String      @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId   BigInt      @map("company_id")
+  userId      BigInt      @map("user_id")
+  type        PointTxType @default(earned)
+  points      Int         @default(0)
+  reason      String      @db.VarChar(255)
+  reasonKey   String?     @map("reason_key") @db.VarChar(100)
+  referenceId String?     @map("reference_id") @db.VarChar(100)
+  metadata    Json        @default("{}")
+  createdAt   DateTime    @default(now()) @map("created_at") @db.Timestamptz
+
+  company Company @relation(fields: [companyId], references: [id])
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, userId], map: "idx_point_tx_company_user")
+  @@index([userId, createdAt], map: "idx_point_tx_user_date")
+  @@index([reasonKey], map: "idx_point_tx_reason")
+  @@map("point_transactions")
+}
+
+model PointRedemption {
+  id          BigInt           @id @default(autoincrement())
+  uuid        String           @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId   BigInt           @map("company_id")
+  userId      BigInt           @map("user_id")
+  rewardKey   String           @map("reward_key") @db.VarChar(100)
+  rewardName  String           @map("reward_name") @db.VarChar(255)
+  pointsCost  Int              @map("points_cost")
+  status      RedemptionStatus @default(pending)
+  notes       String?          @db.Text
+  reviewedBy  BigInt?          @map("reviewed_by")
+  reviewedAt  DateTime?        @map("reviewed_at") @db.Timestamptz
+  fulfilledAt DateTime?        @map("fulfilled_at") @db.Timestamptz
+  createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  metadata    Json             @default("{}")
+
+  company Company @relation(fields: [companyId], references: [id])
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, status], map: "idx_redemptions_company_status")
+  @@index([userId], map: "idx_redemptions_user")
+  @@map("point_redemptions")
 }

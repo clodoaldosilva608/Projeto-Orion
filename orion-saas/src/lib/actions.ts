@@ -453,6 +453,19 @@ export async function submitResultAction(data: {
       },
     });
 
+    // P8: award points for submitting a result (on-time or late)
+    try {
+      const hour = new Date().getHours();
+      const reasonKey = hour < 18 ? "result_on_time" : "result_late";
+      const { awardPointsAction } = await import("./gamification-actions");
+      await awardPointsAction({
+        userId: dbUser.id,
+        reasonKey,
+        referenceId: result.id.toString(),
+        metadata: { goalId: data.goalId, value: data.value },
+      });
+    } catch {}
+
     revalidatePath("/resultados");
     revalidatePath("/aprovacoes");
     revalidatePath("/dashboard");
@@ -523,6 +536,18 @@ export async function approveResultAction(resultId: string | number) {
           approvedBy: dbUser.name,
           approvedAt: updated.approvedAt?.toISOString(),
         },
+      });
+    } catch {}
+
+    // P8: award points to the result owner for having their result approved
+    // (this counts toward goal_beat achievements via auto-check)
+    try {
+      const { awardPointsAction } = await import("./gamification-actions");
+      await awardPointsAction({
+        userId: updated.userId,
+        reasonKey: "goal_monthly_beat", // award 1000 points for approved result (counts toward goal_10/50/100)
+        referenceId: updated.id.toString(),
+        metadata: { goalId: updated.goalId.toString(), approvedBy: dbUser.id.toString() },
       });
     } catch {}
 

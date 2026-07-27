@@ -31,6 +31,7 @@ import {
   Bell,
   Database,
   Trophy,
+  Gamepad2,
   ChevronLeft,
   LogOut,
   type LucideIcon,
@@ -63,6 +64,7 @@ const SECTIONS: NavSection[] = [
       { label: "Planos", href: "/planos", icon: Package },
       { label: "Cupons", href: "/cupons", icon: TicketPercent },
       { label: "Campanhas", href: "/campanhas", icon: Trophy },
+      { label: "Gamificação", href: "/gamificacao", icon: Gamepad2 },
     ],
   },
   {
