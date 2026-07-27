@@ -3,6 +3,7 @@ import './globals.css'
 import { ThemeProvider } from './theme-provider'
 
 import { CookieConsent } from "@/components/CookieConsent"
+import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister"
 export const metadata: Metadata = {
   title: 'Orion Platform — A Fábrica Inteligente de Software',
   description: 'Plataforma SaaS para desenvolvimento de aplicações com IA',
@@ -19,6 +20,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body suppressHydrationWarning>
         <ThemeProvider>{children}</ThemeProvider>
         <CookieConsent />
+        <ServiceWorkerRegister />
       </body>
     </html>
   )

@@ -10,7 +10,11 @@ export function Header({ userEmail, userName, onOpenMobile }: { userEmail?: stri
   return (
     <header className="flex items-center justify-between gap-4 px-6 py-3 border-b" style={{ background: "var(--bg-sidebar)", borderBottom: "1px solid var(--border-subtle)", backdropFilter: "blur(20px)" }}>
       <div className="flex items-center gap-3 flex-1 max-w-2xl">
-        <button className="p-2 rounded-lg transition-colors hover:bg-white/5 text-secondary md:hidden">
+        <button
+          onClick={onOpenMobile}
+          className="p-2 rounded-lg transition-colors hover:bg-white/5 text-secondary md:hidden"
+          aria-label="Abrir menu"
+        >
           <Menu className="w-5 h-5" />
         </button>
         <div className="relative flex-1 hidden md:block">

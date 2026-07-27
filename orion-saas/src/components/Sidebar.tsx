@@ -67,6 +67,7 @@ const SECTIONS: NavSection[] = [
       { label: "Campanhas", href: "/campanhas", icon: Trophy },
       { label: "Gamificação", href: "/gamificacao", icon: Gamepad2 },
       { label: "Calendário", href: "/calendario", icon: Calendar },
+      { label: "Marketplace", href: "/plugins", icon: Package },
     ],
   },
   {

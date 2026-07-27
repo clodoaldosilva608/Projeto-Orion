@@ -25,6 +25,10 @@ export function proxy(request: NextRequest) {
   if (pathname.startsWith("/api/cron/")) {
     return NextResponse.next();
   }
+  // Public REST API — auth via Bearer token (API key), not cookie
+  if (pathname.startsWith("/api/v1/public/")) {
+    return NextResponse.next();
+  }
 
   // Look for any cookie matching sb-*-auth-token.
   const hasAuthCookie = request.cookies

@@ -382,3 +382,217 @@ Per `docs/16_Roadmap.md`, the next major items are:
    5 plugins oficiais (WhatsApp, Telegram, CRM, Estoque, Comissões)
 2. **API Pública v1** (Q3 2026, 80 SP) — REST + Webhooks, OpenAPI
 3. **Painel TV** (Q3 2026, 50 SP) — smart TVs para ranking em tempo real
+
+---
+
+## 2026-07-27 (cont.) — Fix dashboard + P10: Marketplace de Plugins v1
+
+### Fix: Dashboard não clicável + menu inacessível
+
+**Sintomas reportados pelo usuário:**
+- Elementos do dashboard não clicáveis
+- Menu não acessível
+
+**Investigação:**
+
+1. Verifiquei o HTML renderizado de `/dashboard` — sidebar presente, mas...
+2. Inspecionei `public/sw.js` — **causa raiz encontrada**:
+   ```js
+   // SW ANTIGO (problemático):
+   self.addEventListener('fetch', (event) => {
+     event.respondWith(caches.match(event.request)
+       .then((response) => response || fetch(event.request)));
+   });
+   ```
+   Estratégia **cache-first para TODAS as requisições** (HTML, JS, CSS, API).
+   Resultado: navegador servia HTML/JS antigos do cache mesmo após novo
+   deploy. Os chunks JS referenciados pelo HTML antigo não existiam mais
+   (porque Vercel gera hashes novos a cada build) → 404 → React não
+   hidratava → página renderizava estática sem interatividade.
+
+3. Verifiquei `src/components/ServiceWorkerRegister.tsx` — **componente
+   definido mas nunca importado em nenhum layout**. SW antigo continuava
+   ativo indefinidamente.
+
+4. Verifiquei `src/components/Header.tsx` — botão hamburger do menu
+   mobile não tinha `onClick={onOpenMobile}` (erro silencioso, sem efeito).
+
+**Correções aplicadas:**
+
+1. **`public/sw.js` reescrito** com estratégia híbrida:
+   - Navegações HTML: **network-first** (fallback cache offline)
+   - Assets estáticos (`_next/static/*`, imagens, fontes): **cache-first**
+     (são content-hashed, sempre válidos)
+   - API routes: **nunca cachear** (sempre network)
+   - Bump `CACHE_VERSION` para `orion-v2-2026-07-27`
+   - Activate handler limpa caches antigos automaticamente
+   - `self.skipWaiting()` + `clients.claim()` para ativação imediata
+
+2. **`src/components/ServiceWorkerRegister.tsx`** reescrito:
+   - Escuta `updatefound` → `statechange` → `installed`
+   - Quando novo SW instala, envia `SKIP_WAITING`
+   - Escuta `controllerchange` → reload da página uma vez
+   - Garante que usuário sempre tenha SW mais recente
+
+3. **`src/app/layout.tsx`** — adicionado `<ServiceWorkerRegister />`
+   no root layout (antes o componente existia mas nunca era renderizado)
+
+4. **`src/components/Header.tsx`** — adicionado `onClick={onOpenMobile}`
+   + `aria-label="Abrir menu"` no botão hamburger
+
+### P10 — Marketplace de Plugins v1
+
+**Documentação:** `docs/16_Roadmap.md` v2.0 Q2 2026 — 150 SP
+
+**Nova tabela Prisma `plugins`:**
+- Campos: slug (único), displayName, description, category, version,
+  author, isOfficial, iconEmoji, iconColor, eventsSupported[], installCount,
+  rating, ratingCount, defaultConfig JSON, configSchema JSON, isFree,
+  priceCents, isActive, timestamps
+- Enum `PluginCategory`: integration, communication, crm, inventory,
+  commissions, analytics, automation, other
+- Aplicado via `prisma db push`
+
+**5 plugins oficiais (seed automático idempotente):**
+1. **WhatsApp Business** (💬 #25D366) — notifica vendedores/clientes
+   Events: result.approved, campaign.started/ended, goal.completed
+2. **Telegram Bot** (✈️ #0088cc) — ranking diário no Telegram
+   Events: ranking.daily, campaign.started, result.approved
+3. **CRM Básico** (👥 #6366f1) — pipeline kanban integrado
+   Events: client.created/updated, deal.won/lost
+4. **Estoque Básico** (📦 #f59e0b) — sincroniza com ERPs
+   (Totvs/SAP B1/Sankhya/Bentry)
+   Events: product.updated, stock.low/out
+5. **Comissões** (💰 #10b981) — cálculo automático por meta/campanha
+   Events: result.approved, campaign.ended, commission.calculated
+
+Cada plugin tem `configSchema` JSON que descreve os campos necessários
+(tipo, label, required, options) — usado para gerar o form de configuração
+dinamicamente.
+
+**2 novos arquivos lib:**
+
+1. `src/lib/plugins-helpers.ts` (non-action):
+   - `PLUGIN_CATEGORIES` (8 categorias com ícone emoji)
+   - `OFFICIAL_PLUGINS` (5 plugins com configSchema completo)
+   - `getCategoryLabel`, `getCategoryIcon`
+
+2. `src/lib/plugins-actions.ts` (~400 linhas, 'use server'):
+   - `seedOfficialPluginsAction()` — idempotente, cria na 1ª visita
+   - `listPluginsAction({ category?, search?, installedOnly? })` — lista
+     com info de instalação da empresa
+   - `getPluginAction(slug)` — detalhes + installation
+   - `installPluginAction(slug, config?)` — upsert + increment installCount
+   - `uninstallPluginAction(slug)` — delete + decrement
+   - `updatePluginConfigAction(slug, config)`
+   - `createApiKeyAction(name, scope)` — gera `orion_live_<40 hex chars>`,
+     hasheia em base64, salva keyHash + keyPrefix
+   - `listApiKeysAction()` — chaves ativas da empresa
+   - `revokeApiKeyAction(id)` — soft revoke (active=false, revokedAt=now)
+   - `authenticateApiKeyAction(bearerToken)` — valida token, retorna
+     companyId/apiKeyId/scope, incrementa requestCount
+
+**API pública REST v1:**
+
+5 endpoints em `/api/v1/public/*`:
+- `GET /api/v1/public/goals` — listar metas (limite 200, filtro por type)
+- `GET /api/v1/public/results` — resultados (default aprovados)
+- `GET /api/v1/public/campaigns` — campanhas (com counts)
+- `GET /api/v1/public/users` — usuários (sem PII como CPF)
+- `GET /api/v1/public/leaderboard?period=month|all` — ranking de pontos
+
+Auth: header `Authorization: Bearer orion_live_xxx`
+
+`proxy.ts` atualizado para permitir `/api/v1/public/*` sem cookie auth
+(a API usa Bearer token, não cookie de sessão).
+
+**3 novas páginas:**
+
+1. **`/plugins`** (marketplace):
+   - 4 stat cards (disponíveis, oficiais, instalados, link para API keys)
+   - Busca por nome + filtro por categoria (8 opções) + toggle "só instalados"
+   - Grid de cards com ícone emoji colorido, nome, autor, descrição,
+     categoria, installCount, rating, eventos suportados (chips)
+   - Botões: Detalhes, Instalar (ou Configurar se instalado)
+
+2. **`/plugins/[slug]`** (detalhe):
+   - Hero com ícone + badges (Oficial, Categoria, Gratuito/Pago)
+   - installCount, rating, links para homepage/docs
+   - Lista de eventos suportados (chips violeta)
+   - Schema de configuração (cada campo com tipo, label, required)
+   - Exemplo de uso via curl com todos os endpoints
+   - Actions: Install / Uninstall / Configure (form dinâmico do configSchema)
+   - Form suporta tipos: string, password, number, boolean, select
+
+3. **`/plugins/api-keys`** (gerenciamento):
+   - Banner com instruções de uso (header Authorization: Bearer)
+   - Tabela com nome, prefixo, escopo, requestCount, último uso, data
+   - Modal de criação: nome + escopo (read/write/admin)
+   - Chave exibida UMA VEZ com aviso + botão copiar
+   - Botão revogar por chave (soft delete)
+
+**Sidebar atualizada:**
+- Adicionado item "Marketplace" (ícone Package) na seção Gerenciamento
+  após Calendário
+
+**RBAC atualizado:**
+- `/plugins` requer permissão `results:read`
+
+### Build, CI, deploy
+
+- Commit `2276ed5` pushed (20 files, +1900+ lines)
+- GitHub Actions CI → **success**
+- Vercel deploy `dpl_7AXqhVYCJbXoVC5KHwWngT5sXPLL` → **READY**
+
+### Verification (2026-07-27)
+
+**Smoke test (40 scenarios):**
+- 5 public, 7 protected (307), 4 API/cron, login, 28 authenticated pages
+- All pass including 2 new plugins pages
+
+**P10 E2E test (12 scenarios):**
+```
+1. Login ✓
+2. /plugins without auth → 307 ✓
+3. /plugins with auth → 200 + 5 plugins seeded ✓
+4. /plugins/api-keys → 200 ✓
+5. /plugins/whatsapp-business detail → 200 ✓
+6. Public API no auth → 401 ✓
+7. Public API invalid key → 401 ✓
+8. Created API key via Prisma ✓
+9. All 5 public endpoints work with valid key ✓
+   - /api/v1/public/goals → 5 records
+   - /api/v1/public/results → 5 records
+   - /api/v1/public/campaigns → 2 records
+   - /api/v1/public/users → 1 record
+   - /api/v1/public/leaderboard → 0 records (month)
+10. API keys page shows test key ✓
+11. Cleanup: revoked test key ✓
+12. Revoked key correctly rejected → 401 ✓
+```
+
+### Current state of the platform
+
+**Total routes:** 60 (up from 52 in P9)
+**Sidebar items:** 32 (up from 31)
+**v2.0 Q2 2026 roadmap progress:**
+- ✓ Módulo IA Básico (P5)
+- ✓ Notificações (P6)
+- ✓ Módulo Campanhas + Premiações (P7)
+- ✓ Gamificação Avançada (P8)
+- ✓ Calendário Comercial (P9)
+- ✓ Marketplace de Plugins v1 (P10) ← NEW
+- ⬜ API Pública v1 — já implementada como parte do P10 (5 endpoints)
+- ⬜ Painel TV (Q3 2026)
+
+### Next step suggestion
+
+Per `docs/16_Roadmap.md`, próximos itens:
+1. **Painel TV** (Q3 2026, 50 SP) — smart TVs (Tizen, webOS) para ranking
+   em tempo real
+2. **Integração ERPs** (Q3 2026, 120 SP) — Totvs, SAP B1, Sankhya
+3. **App Mobile PWA otimizado** (Q3 2026, 80 SP) — offline-first completo
+
+Recommended: **Painel TV** — visualização grande para TVs em salas de
+vendas, mostrando ranking ao vivo + campanhas ativas + metas. Quick win
+que aproveita o módulo de Gamificação já implementado.
