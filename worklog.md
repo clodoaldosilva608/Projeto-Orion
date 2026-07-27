@@ -596,3 +596,159 @@ Per `docs/16_Roadmap.md`, próximos itens:
 Recommended: **Painel TV** — visualização grande para TVs em salas de
 vendas, mostrando ranking ao vivo + campanhas ativas + metas. Quick win
 que aproveita o módulo de Gamificação já implementado.
+
+---
+
+## 2026-07-27 (cont.) — P11: Painel TV (Smart TV)
+
+**Documentação:** `docs/16_Roadmap.md` v2.0 Q3 2026 — 50 SP
+> "Painel TV — Smart TV (Tizen, webOS) para ranking em tempo real"
+
+### Implementation
+
+**Novo arquivo `src/lib/painel-tv-actions.ts` (~280 linhas):**
+- `getTvDataAction(tvToken?)` — agrega tudo em uma chamada:
+  - Top 10 ranking mensal (com nomes, avatares, níveis)
+  - Campanhas ativas (com participantsCount, awardsCount, daysLeft)
+  - KPIs: goals, approvedResultsThisMonth, pendingResults, activeUsers,
+    indicators, totalMonthPoints
+  - Últimos 5 resultados aprovados (com userName, goalName, timeAgo)
+  - Próximos encerramentos (campanhas que terminam em 7 dias)
+- `getTvTokenAction()` — recupera/gera token `tv_xxx` (24 chars)
+  armazenado em `system_settings` key `tv.token` como JSON `{token: "tv_xxx"}`
+- `regenerateTvTokenAction()` — invalida token anterior
+- `getCompanyByTvToken(token)` — busca em system_settings (JSON path match)
+- `resolveCompany(tvToken)` — tenta cookie auth, fallback para TV token
+
+**Layout TV dedicado (`src/app/tv/layout.tsx`):**
+- Full-screen `bg-[#0a0b14]` (mais escuro que o dashboard normal #0f111a)
+- Sem sidebar, sem header normal, sem cookie consent
+- Top bar: logo ORION + relógio que atualiza a cada segundo (data + hora)
+- Bottom bar: links de navegação + "Sair do modo TV"
+- Marcador "AO VIVO" com pulse-dot
+
+**3 páginas TV (todas com auto-refresh 30s via window.location.reload):**
+
+1. **`/tv` — Dashboard principal:**
+   - 6 KPIs gigantes coloridos: Vendedores, Metas, Resultados, Pendentes,
+     Campanhas, Pontos do mês
+   - Pódio Top 3 (gold/silver/bronze) com avatares 64px, nomes, pontos e
+     níveis; 1st lugar com ring dourado + badge "CAMPEÃO"
+   - Lista 4-10 com posições grandes, avatares, pontos, níveis
+   - Painel direito: campanhas ativas (cards âmbar) + últimos resultados
+     aprovados (com timeAgo)
+   - Countdown de próxima atualização (30s → reload)
+
+2. **`/tv/ranking` — Foco no ranking:**
+   - Header com total de pontos do mês
+   - Pódio Top 3 grande (280px altura, avatares 80px, medalhas 6xl)
+   - Lista 4-10 com posições 4xl, avatares 14, pontos 3xl, níveis coloridos
+   - Auto-refresh 30s
+
+3. **`/tv/campanhas` — Foco nas campanhas:**
+   - 4 stat cards (campanhas, prêmios, participantes, vendedores)
+   - Grid 2 colunas de cards de campanha:
+     - Ícone 🏆 colorido (cicla violeta/esmeralda/âmbar/azul/vermelho)
+     - Nome 2xl + descrição
+     - Badge "ENCERRA EM BREVE" (animate-pulse) se daysLeft <= 3
+     - Participants + prêmios + dias restantes (destaque vermelho se ≤3)
+     - Barra de progresso visual
+   - Ticker inferior com próximos encerramentos
+   - Auto-refresh 30s
+
+### Bug fix during testing
+
+**Erro:** TV token não funcionava — ao acessar `/tv?key=tv_xxx` sem
+login, a página retornava 500.
+
+**Causa:** `SystemSetting.value` é campo `Json` no Prisma, não `String`.
+O `findFirst({ where: { value: token } })` falhava porque Prisma não
+suporta filtrar Json por string diretamente.
+
+**Solução:**
+1. Token agora armazenado como objeto JSON `{token: "tv_xxx"}` (não string)
+2. `getCompanyByTvToken` itera `findMany({ key: "tv.token" })` e faz match
+   em memória: `val.token === token`
+3. `getTvTokenAction` extrai token do JSON: `val.token` ou `val` (string)
+4. `regenerateTvTokenAction` faz upsert com `{token}` em vez de string
+
+### proxy.ts atualizado
+
+Adicionado `/tv/*` às rotas liberadas sem cookie auth:
+```ts
+if (pathname.startsWith("/tv")) {
+  return NextResponse.next();
+}
+```
+A página TV valida o token server-side. Se não houver cookie nem token
+válido, mostra mensagem "Acesso restrito" com link para login.
+
+### Modos de acesso
+
+1. **Modo autenticado:** usuário logado acessa `/tv` — usa cookie de
+   sessão, ideal para teste em desktop
+2. **Modo kiosk (TV):** acessa `/tv?key=tv_xxx` — token armazenado em
+   system_settings, ideal para smart TVs (Tizen/webOS) que não podem
+   fazer login manualmente. Token pode ser gerado/regenerado via
+   `getTvTokenAction` (futuro: adicionar tab em /configuracoes)
+
+### Design para TV
+
+- **Fontes 3-4x maiores** que o dashboard normal (text-2xl a text-4xl,
+  KPIs text-3xl, nomes text-xl)
+- **Alto contraste:** bg dark `#0a0b14`, texto branco, cores de nível
+- **Podium com gradientes** gold/silver/bronze + ring dourado no 1st
+- **Animação pulse-dot** em "AO VIVO" e badges de encerramento
+- **Tabular nums** no relógio para não "pular"
+- **Visibilidade a 5+ metros:** elementos grandes, sem texto pequeno
+
+### Build, CI, deploy
+
+- Commit `a18df75` (P11) + commit `2435955` (TV token JSON fix) pushed
+- GitHub Actions CI → **success** em ambos
+- Vercel deploy `dpl_BvoAJpTbvwG6AWfFMqMM88H3HEAX` → **READY**
+
+### Verification (2026-07-27)
+
+**Smoke test (40 scenarios):** all pass, nenhuma regressão
+
+**P11 E2E test (12 scenarios):**
+```
+1. Login ✓
+2. /tv without auth and without token → 200 + "access restricted" ✓
+3. /tv with auth → 200 + TV dashboard ✓
+4. /tv/ranking with auth → 200 ✓
+5. /tv/campanhas with auth → 200 ✓
+6. Generated TV token via Prisma (JSON {token}) ✓
+7. /tv?key=token without login → 200 + dashboard (kiosk mode!) ✓
+8. /tv/ranking?key=token without login → 200 ✓
+9. /tv/campanhas?key=token without login → 200 ✓
+10. /tv?key=invalid → 200 + "access restricted" ✓
+11. Dashboard shows real KPIs (5 found: Vendedores, Metas, Resultados,
+    Campanhas, Pontos) ✓
+12. Clock script present (tv-clock + setInterval) ✓
+```
+
+### Current state of the platform
+
+**Total routes:** 63 (up from 60 in P10)
+**v2.0 Q3 2026 roadmap progress:**
+- ✓ Painel TV (P11) ← NEW
+- ⬜ Integração ERPs (Q3 2026, 120 SP) — Totvs, SAP B1, Sankhya
+- ⬜ App Mobile PWA otimizado (Q3 2026, 80 SP) — offline-first completo
+- ⬜ Checklist Diário (Q4 2026, 40 SP)
+- ⬜ Biblioteca de Treinamentos (Q4 2026, 60 SP)
+
+### Next step suggestion
+
+Próximos itens do roadmap v2.0 Q3-Q4 2026:
+1. **Integração ERPs** (Q3, 120 SP) — Totvs, SAP B1, Sankhya. Já temos
+   o plugin "Estoque Básico" no Marketplace que pode ser expandido
+2. **App Mobile PWA otimizado** (Q3, 80 SP) — offline-first completo,
+   manifest aprimorado, install prompt
+3. **Checklist Diário** (Q4, 40 SP) — quick win, tarefas diárias para
+   vendedores, integra com gamificação
+
+Recommended: **Checklist Diário** — quick win (40 SP, ~1 dia) que se
+integra naturalmente com Gamificação (pontos por tarefa completa) e
+Campanhas (tarefas podem fazer parte de campanhas).

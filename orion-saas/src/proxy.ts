@@ -29,6 +29,12 @@ export function proxy(request: NextRequest) {
   if (pathname.startsWith("/api/v1/public/")) {
     return NextResponse.next();
   }
+  // TV dashboard — accessible via auth cookie OR ?key=<tv_token> query param
+  // The page itself validates the token server-side; we just allow the route
+  // through proxy so the TV can be configured in kiosk mode.
+  if (pathname.startsWith("/tv")) {
+    return NextResponse.next();
+  }
 
   // Look for any cookie matching sb-*-auth-token.
   const hasAuthCookie = request.cookies
