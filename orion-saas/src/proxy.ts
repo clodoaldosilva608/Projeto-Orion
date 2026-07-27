@@ -3,43 +3,29 @@ import { NextResponse, type NextRequest } from "next/server";
 /**
  * Next.js 16 proxy (formerly middleware).
  *
- * SaaS Multi-Tenant + Auth + 2FA:
+ * SaaS Multi-Tenant + Auth + 2FA.
  *
- * 1. TENANT ROUTING: Extracts subdomain from hostname and injects it as
- *    `x-tenant-subdomain` header. Server components read this to look up
- *    the Company (tenant) for white-label customization.
+ * IMPORTANT: We do NOT use `NextResponse.next({ request: { headers } })`
+ * because that pattern breaks cookie forwarding in Next.js 16 — the
+ * modified response object doesn't carry Set-Cookie headers from
+ * downstream handlers, causing the session to be lost on every navigation.
  *
- * 2. AUTH: Cookie-existence check — redirects unauthenticated users to
- *    /login when the Supabase auth cookie is missing.
- *
- * 3. 2FA: Redirects to /login/2fa when the 2FA-verified cookie is missing.
- *
- * 4. SUPER ADMIN: /superadmin/* routes require isSuperAdmin (checked
- *    server-side, not in proxy — proxy just allows the route through).
+ * Instead, we set tenant info in a COOKIE (not a request header), which
+ * is safe and doesn't interfere with session cookies.
  */
 
 // Domains that are "platform" (not tenant-specific)
 const PLATFORM_DOMAINS = ["localhost", "orion-saas-phi.vercel.app", "orion-platform-black.vercel.app"];
 
 function extractSubdomain(hostname: string): string | null {
-  // Remove port if present
   const host = hostname.split(":")[0];
-
-  // Check if it's a platform domain (no subdomain)
-  if (PLATFORM_DOMAINS.some((d) => host === d || host.endsWith("." + d))) {
-    // Extract subdomain from platform domain (e.g., paguemenos.orion-saas-phi.vercel.app)
-    for (const d of PLATFORM_DOMAINS) {
-      if (host.endsWith("." + d)) {
-        const sub = host.slice(0, -(d.length + 1));
-        // Avoid treating "www" as a subdomain
-        if (sub && sub !== "www") return sub;
-      }
+  for (const d of PLATFORM_DOMAINS) {
+    if (host === d) return null; // No subdomain — default tenant
+    if (host.endsWith("." + d)) {
+      const sub = host.slice(0, -(d.length + 1));
+      if (sub && sub !== "www") return sub;
     }
-    return null; // No subdomain — default tenant
   }
-
-  // For custom domains, we can't determine subdomain here
-  // The server-side tenant resolver will look up by customDomain
   return null;
 }
 
@@ -48,72 +34,61 @@ export function proxy(request: NextRequest) {
   const hostname = request.nextUrl.hostname;
 
   // === TENANT ROUTING ===
-  // Extract subdomain and inject as header for server-side tenant resolution
+  // Set tenant subdomain in a response cookie (NOT request headers —
+  // modifying request headers breaks cookie forwarding in Next.js 16).
   const subdomain = extractSubdomain(hostname);
 
-  // Create response with tenant header
-  const requestHeaders = new Headers(request.headers);
-  if (subdomain) {
-    requestHeaders.set("x-tenant-subdomain", subdomain);
+  // Helper: create a response that preserves tenant info via cookie
+  function tenantResponse(response: NextResponse) {
+    if (subdomain) {
+      response.cookies.set("x-tenant-subdomain", subdomain, {
+        path: "/",
+        maxAge: 60 * 60 * 24 * 365, // 1 year
+        sameSite: "lax",
+        httpOnly: true,
+      });
+    }
+    return response;
   }
-  requestHeaders.set("x-tenant-hostname", hostname);
 
   // Public routes that never require auth.
   const publicPaths = ["/", "/login", "/login/2fa", "/produtos", "/deployments", "/superadmin/login"];
   if (publicPaths.some((p) => pathname === p)) {
-    return NextResponse.next({
-      request: { headers: requestHeaders },
-    });
+    return tenantResponse(NextResponse.next());
   }
 
   // Super Admin routes — allow through proxy (server-side checks isSuperAdmin)
   if (pathname.startsWith("/superadmin")) {
-    return NextResponse.next({
-      request: { headers: requestHeaders },
-    });
+    return tenantResponse(NextResponse.next());
   }
 
   if (pathname.startsWith("/api/auth/")) {
-    return NextResponse.next({
-      request: { headers: requestHeaders },
-    });
+    return tenantResponse(NextResponse.next());
   }
   if (pathname.startsWith("/api/cron/")) {
-    return NextResponse.next({
-      request: { headers: requestHeaders },
-    });
+    return tenantResponse(NextResponse.next());
   }
-  // Public REST API — auth via Bearer token (API key), not cookie
   if (pathname.startsWith("/api/v1/public/")) {
-    return NextResponse.next({
-      request: { headers: requestHeaders },
-    });
+    return tenantResponse(NextResponse.next());
   }
-  // TV dashboard
   if (pathname.startsWith("/tv")) {
-    return NextResponse.next({
-      request: { headers: requestHeaders },
-    });
+    return tenantResponse(NextResponse.next());
   }
-  // Workspace do Cliente
   if (pathname.startsWith("/workspace")) {
-    return NextResponse.next({
-      request: { headers: requestHeaders },
-    });
+    return tenantResponse(NextResponse.next());
   }
 
   // === AUTH CHECK ===
+  // Look for any cookie matching sb-*-auth-token (including chunked variants .0, .1, etc.)
   const hasAuthCookie = request.cookies
     .getAll()
-    .some((c) => /^sb-[a-z0-9]+-auth-token$/i.test(c.name));
+    .some((c) => /^sb-[a-z0-9]+-auth-token(\.\d+)?$/i.test(c.name));
 
   if (!hasAuthCookie) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = "/login";
     loginUrl.searchParams.set("redirect", pathname);
-    return NextResponse.redirect(loginUrl, {
-      headers: requestHeaders,
-    });
+    return tenantResponse(NextResponse.redirect(loginUrl));
   }
 
   // === 2FA CHECK ===
@@ -122,14 +97,14 @@ export function proxy(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = "/login/2fa";
     url.searchParams.set("redirect", pathname);
-    return NextResponse.redirect(url, {
-      headers: requestHeaders,
-    });
+    return tenantResponse(NextResponse.redirect(url));
   }
 
-  return NextResponse.next({
-    request: { headers: requestHeaders },
-  });
+  // All checks passed — allow the request through.
+  // CRITICAL: use plain NextResponse.next() WITHOUT modifying request headers.
+  // Modifying request headers ({ request: { headers } }) breaks cookie
+  // forwarding and causes the session to be lost on every page navigation.
+  return tenantResponse(NextResponse.next());
 }
 
 export const config = {

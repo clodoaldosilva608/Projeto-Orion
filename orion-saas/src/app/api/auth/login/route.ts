@@ -33,7 +33,9 @@ export async function POST(request: NextRequest) {
   }
 
   const session = data.session;
-  const maxAge = session.expires_in ? session.expires_in : 60 * 60 * 24 * 7;
+  // Use 7 days for cookie maxAge — session.expires_in is typically 3600s (1h)
+  // which would cause the cookie to expire too quickly and log users out.
+  const maxAge = 60 * 60 * 24 * 7; // 7 days
   const isProd = process.env.NODE_ENV === "production";
 
   // ---- 2FA check ----

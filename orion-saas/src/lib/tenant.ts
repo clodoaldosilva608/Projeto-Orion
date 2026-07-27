@@ -1,18 +1,16 @@
 /**
  * Tenant Resolver — SaaS Multi-Tenant
  *
- * Reads the `x-tenant-subdomain` header (set by proxy.ts) and resolves
+ * Reads the `x-tenant-subdomain` COOKIE (set by proxy.ts) and resolves
  * the Company (tenant) from the database. Falls back to the default
  * tenant (PagueMenos, id=1) when no subdomain is detected.
  *
- * Used by:
- *   - Root layout (white-label CSS injection)
- *   - Login page (tenant-specific branding)
- *   - Sidebar (appName, logoUrl)
- *   - Server components (companyId for data isolation)
+ * NOTE: We use cookies instead of request headers because modifying
+ * request headers in Next.js 16 proxy breaks cookie forwarding,
+ * causing session loss on page navigation.
  */
 import { prisma } from "./db";
-import { headers } from "next/headers";
+import { cookies } from "next/headers";
 
 export type TenantConfig = {
   id: string;
@@ -28,21 +26,11 @@ export type TenantConfig = {
   plan: string;
 };
 
-let cachedTenant: TenantConfig | null = null;
-let cachedSubdomain: string | null | undefined = undefined;
-
 export async function getCurrentTenant(): Promise<TenantConfig | null> {
-  // In Next.js, headers() is async and cached per request, so this is safe
-  const headerStore = await headers();
-  const subdomain = headerStore.get("x-tenant-subdomain");
-  const hostname = headerStore.get("x-tenant-hostname");
-
-  // Return cached if same request
-  if (cachedSubdomain === subdomain && cachedTenant) {
-    return cachedTenant;
-  }
-
   try {
+    const cookieStore = await cookies();
+    const subdomain = cookieStore.get("x-tenant-subdomain")?.value ?? null;
+
     let company: any = null;
 
     // Try by subdomain first
@@ -50,23 +38,6 @@ export async function getCurrentTenant(): Promise<TenantConfig | null> {
       company = await prisma.company.findFirst({
         where: {
           subdomain: { equals: subdomain, mode: "insensitive" },
-          deletedAt: null,
-          active: true,
-        },
-        select: {
-          id: true, tradeName: true, legalName: true, logoUrl: true,
-          appName: true, primaryColor: true, secondaryColor: true,
-          backgroundColor: true, subdomain: true, customDomain: true,
-          plan: true,
-        },
-      });
-    }
-
-    // Try by custom domain (hostname)
-    if (!company && hostname) {
-      company = await prisma.company.findFirst({
-        where: {
-          customDomain: { equals: hostname, mode: "insensitive" },
           deletedAt: null,
           active: true,
         },
@@ -107,22 +78,17 @@ export async function getCurrentTenant(): Promise<TenantConfig | null> {
 
     if (!company) return null;
 
-    cachedSubdomain = subdomain;
-    cachedTenant = {
+    return {
       ...company,
       id: company.id.toString(),
       plan: company.plan as string,
     };
-    return cachedTenant;
   } catch (e) {
     console.error("[tenant] Error resolving tenant:", e);
     return null;
   }
 }
 
-/**
- * Get default tenant config (used when DB is unavailable, e.g., during build)
- */
 export const DEFAULT_TENANT: TenantConfig = {
   id: "1",
   tradeName: "Orion",
