@@ -314,6 +314,7 @@ model Company {
   softwareProjects    SoftwareProject[]
   projectBriefings    ProjectBriefing[]
   projectTemplates    ProjectTemplate[]
+  softwareLicenses    SoftwareLicense[]
 
   @@unique([cnpj], map: "udx_companies_cnpj")
   @@unique([email], map: "udx_companies_email")
@@ -1749,6 +1750,7 @@ model SoftwareProject {
   template ProjectTemplate? @relation(fields: [templateId], references: [id])
   briefing ProjectBriefing?
   stages   ProjectStage[]
+  license  SoftwareLicense?
 
   @@index([companyId, status], map: "idx_sw_projects_company_status")
   @@index([companyId, clientId], map: "idx_sw_projects_client")
@@ -1857,4 +1859,72 @@ model ProjectStage {
   @@index([projectId], map: "idx_stages_project")
   @@index([status], map: "idx_stages_status")
   @@map("project_stages")
+}
+
+// ================================================================
+// P17 — LICENCIAMENTO DE SOFTWARE + WORKSPACE DO CLIENTE
+// ================================================================
+
+enum SoftwareLicenseStatus {
+  active
+  suspended
+  expired
+  revoked
+  pending_activation
+
+  @@map("software_license_status")
+}
+
+// Licença de software entregue ao cliente
+model SoftwareLicense {
+  id              BigInt                @id @default(autoincrement())
+  uuid            String                @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId       BigInt                @map("company_id")
+  projectId       BigInt?               @unique @map("project_id")
+  clientEmail     String                @map("client_email") @db.VarChar(255)
+  clientName      String                @map("client_name") @db.VarChar(255)
+  // The actual license key (e.g., ORION-XXXX-XXXX-XXXX-XXXX)
+  licenseKey      String                @unique @map("license_key") @db.VarChar(100)
+  // For workspace access: a separate token that doesn't expose the license key
+  workspaceToken  String                @unique @map("workspace_token") @db.VarChar(100)
+  status          SoftwareLicenseStatus @default(pending_activation)
+  plan            String                @default("standard") @db.VarChar(50)
+  maxUsers        Int                   @default(10) @map("max_users")
+  // Dates
+  activatedAt     DateTime?             @map("activated_at") @db.Timestamptz
+  expiresAt       DateTime?             @map("expires_at") @db.Timestamptz
+  lastValidatedAt DateTime?             @map("last_validated_at") @db.Timestamptz
+  revokedAt       DateTime?             @map("revoked_at") @db.Timestamptz
+  revokeReason    String?               @map("revoke_reason") @db.Text
+  // Metadata
+  productionUrl   String?               @map("production_url") @db.Text
+  metadata        Json                  @default("{}")
+  createdAt       DateTime              @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime              @updatedAt @map("updated_at") @db.Timestamptz
+
+  company   Company           @relation(fields: [companyId], references: [id])
+  project   SoftwareProject?  @relation(fields: [projectId], references: [id])
+  validations LicenseValidation[]
+
+  @@index([companyId], map: "idx_sw_licenses_company")
+  @@index([licenseKey], map: "idx_sw_licenses_key")
+  @@index([status], map: "idx_sw_licenses_status")
+  @@map("software_licenses")
+}
+
+// Log of license validations (for audit + analytics)
+model LicenseValidation {
+  id            BigInt   @id @default(autoincrement())
+  licenseId     BigInt   @map("license_id")
+  ipAddress     String?  @map("ip_address") @db.VarChar(45)
+  userAgent     String?  @map("user_agent") @db.Text
+  isValid       Boolean
+  reason        String?  @db.VarChar(255)
+  validatedAt   DateTime @default(now()) @map("validated_at") @db.Timestamptz
+
+  license SoftwareLicense @relation(fields: [licenseId], references: [id], onDelete: Cascade)
+
+  @@index([licenseId], map: "idx_license_validations_license")
+  @@index([validatedAt], map: "idx_license_validations_date")
+  @@map("license_validations")
 }

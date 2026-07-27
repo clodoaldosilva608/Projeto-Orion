@@ -35,6 +35,11 @@ export function proxy(request: NextRequest) {
   if (pathname.startsWith("/tv")) {
     return NextResponse.next();
   }
+  // Workspace do Cliente — public page via workspace token
+  // The page validates the token server-side
+  if (pathname.startsWith("/workspace")) {
+    return NextResponse.next();
+  }
 
   // Look for any cookie matching sb-*-auth-token.
   const hasAuthCookie = request.cookies

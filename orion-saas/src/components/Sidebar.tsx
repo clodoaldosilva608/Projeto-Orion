@@ -66,6 +66,7 @@ const SECTIONS: NavSection[] = [
       { label: "Templates", href: "/fabrica/templates", icon: Layers },
       { label: "Clientes", href: "/clientes", icon: Users },
       { label: "Licenças", href: "/licencas", icon: KeyRound, badge: "1.035" },
+      { label: "Licenças SW", href: "/fabrica/licencas", icon: ShieldCheck },
       { label: "Pagamentos", href: "/pagamentos", icon: CreditCard },
       { label: "Assinaturas", href: "/assinaturas", icon: Repeat },
       { label: "Planos", href: "/planos", icon: Package },
