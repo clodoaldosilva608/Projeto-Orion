@@ -28,17 +28,41 @@ export function proxy(request: NextRequest) {
       pathname.startsWith("/api/auth/") ||
       pathname.startsWith("/api/cron/") ||
       pathname.startsWith("/api/v1/public/") ||
+      pathname.startsWith("/api/fabrica/") ||
+      pathname.startsWith("/api/ai/") ||
+      pathname.startsWith("/api/backup/") ||
       pathname.startsWith("/tv") ||
-      pathname.startsWith("/workspace")) {
+      pathname.startsWith("/workspace") ||
+      pathname.startsWith("/_next/")) {
     return NextResponse.next();
   }
 
-  // Check for Supabase auth cookie (including chunked variants .0, .1, etc.)
+  // If no auth cookie, redirect to login (not 404 — let the login page handle it)
   const hasAuthCookie = request.cookies
     .getAll()
     .some((c) => /^sb-[a-z0-9]+-auth-token(\.\d+)?$/i.test(c.name));
 
   if (!hasAuthCookie) {
+    // For unknown routes WITHOUT auth, show 404 instead of redirecting to login
+    // This fixes BUG 65: 404 should show error page, not redirect to login
+    const knownRoutes = [
+      "/dashboard", "/fabrica", "/metas", "/indicadores", "/resultados",
+      "/aprovacoes", "/ranking", "/campanhas", "/gamificacao", "/calendario",
+      "/checklist", "/feedback", "/plugins", "/usuarios", "/funcoes-permissoes",
+      "/notificacoes", "/backups", "/configuracoes", "/logs-auditoria",
+      "/clientes", "/licencas", "/pagamentos", "/assinaturas", "/planos",
+      "/cupons", "/aplicacoes", "/file-projetos", "/builds", "/deploys",
+      "/releases", "/anomalias", "/agentes-ia", "/jobs-ia", "/modelos",
+      "/consumo-ia", "/provedores", "/chatbots", "/base-conhecimento",
+      "/privacidade", "/superadmin",
+    ];
+    const isKnownRoute = knownRoutes.some(r => pathname === r || pathname.startsWith(r + "/"));
+    
+    if (!isKnownRoute) {
+      // Unknown route — let Next.js show the 404 page
+      return NextResponse.next();
+    }
+    
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = "/login";
     loginUrl.searchParams.set("redirect", pathname);
