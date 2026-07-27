@@ -115,18 +115,22 @@ export default async function ProjetosPage({
               </thead>
               <tbody className="divide-y divide-white/[0.04]">
                 {list.map((p: any) => (
-                  <tr key={p.id} className="hover:bg-white/[0.02] cursor-pointer">
+                  <tr key={p.id} className="hover:bg-white/[0.02]">
                     <td className="px-5 py-3">
-                      <div className="text-sm font-medium text-white">{p.name}</div>
-                      {p.template && (
-                        <div className="text-[10px] text-[#6b7280] mt-0.5">
-                          {p.template.emoji} {p.template.name}
-                        </div>
-                      )}
+                      <Link href={`/fabrica/projetos/${p.id}`} className="block">
+                        <div className="text-sm font-medium text-white hover:text-violet-300">{p.name}</div>
+                        {p.template && (
+                          <div className="text-[10px] text-[#6b7280] mt-0.5">
+                            {p.template.emoji} {p.template.name}
+                          </div>
+                        )}
+                      </Link>
                     </td>
                     <td className="px-5 py-3">
-                      <div className="text-sm text-white">{p.client?.name ?? "—"}</div>
-                      <div className="text-[10px] text-[#6b7280]">{p.client?.company ?? ""}</div>
+                      <Link href={`/fabrica/projetos/${p.id}`} className="block">
+                        <div className="text-sm text-white">{p.client?.name ?? "—"}</div>
+                        <div className="text-[10px] text-[#6b7280]">{p.client?.company ?? ""}</div>
+                      </Link>
                     </td>
                     <td className="px-5 py-3">
                       <Badge tone={STATUS_TONE[p.status] ?? "neutral"}>

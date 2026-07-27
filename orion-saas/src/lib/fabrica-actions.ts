@@ -1118,3 +1118,335 @@ ${features.some((f) => f.toLowerCase().includes("email")) ? "- **Nodemailer + SM
     estimatedCostCents,
   };
 }
+
+// ================================================================
+// P16 — PIPELINE DE DESENVOLVIMENTO VISUAL (Kanban)
+// ================================================================
+
+export async function getProjectAction(id: string) {
+  const user = await getCurrentUser();
+  if (!user) return { data: null, error: "Não autorizado" };
+
+  try {
+    const project = await prisma.softwareProject.findFirst({
+      where: { id: BigInt(id), companyId: user.companyId, deletedAt: null },
+      include: {
+        briefing: {
+          select: {
+            clientName: true, clientCompany: true, clientEmail: true,
+            problemStatement: true, keyFeatures: true,
+            aiGeneratedDoc: true, aiArchitectureSuggestion: true,
+            aiStackSuggestion: true, aiEstimatedHours: true, aiEstimatedCostCents: true,
+          },
+        },
+        template: {
+          select: { displayName: true, iconEmoji: true, iconColor: true },
+        },
+        stages: {
+          orderBy: { sortOrder: "asc" },
+        },
+      },
+    });
+    if (!project) return { data: null, error: "Projeto não encontrado" };
+
+    // Get team member details
+    const teamIds = (project.team as any[])?.map((t: any) => BigInt(t.userId)) ?? [];
+    let teamMembers: any[] = [];
+    if (teamIds.length > 0) {
+      const users = await prisma.user.findMany({
+        where: { id: { in: teamIds } },
+        select: { id: true, name: true, email: true, jobTitle: true, avatarUrl: true },
+      });
+      teamMembers = users.map((u) => ({ ...u, id: u.id.toString() }));
+    }
+
+    return {
+      data: {
+        ...project,
+        id: project.id.toString(),
+        companyId: project.companyId.toString(),
+        templateId: project.templateId?.toString() ?? null,
+        stack: project.stack,
+        timeline: project.timeline,
+        team: project.team,
+        keyFeatures: project.keyFeatures,
+        startDate: project.startDate?.toISOString() ?? null,
+        estimatedEndDate: project.estimatedEndDate?.toISOString() ?? null,
+        deliveredAt: project.deliveredAt?.toISOString() ?? null,
+        createdAt: project.createdAt.toISOString(),
+        briefing: project.briefing
+          ? {
+              ...project.briefing,
+              keyFeatures: project.briefing.keyFeatures,
+              aiStackSuggestion: project.briefing.aiStackSuggestion,
+            }
+          : null,
+        template: project.template,
+        stages: project.stages.map((s) => ({
+          ...s,
+          id: s.id.toString(),
+          projectId: s.projectId.toString(),
+          assignedTo: s.assignedTo,
+          deliverables: s.deliverables,
+          startDate: s.startDate?.toISOString() ?? null,
+          endDate: s.endDate?.toISOString() ?? null,
+          completedAt: s.completedAt?.toISOString() ?? null,
+        })),
+        teamMembers,
+      },
+      error: null,
+    };
+  } catch (e) {
+    return { data: null, error: (e as Error).message };
+  }
+}
+
+export async function updateStageStatusAction(stageId: string, status: string) {
+  const user = await getCurrentUser();
+  if (!user) return { data: null, error: "Não autorizado" };
+
+  try {
+    const stage = await prisma.projectStage.findUnique({
+      where: { id: BigInt(stageId) },
+      include: { project: { select: { companyId: true, id: true } } },
+    });
+    if (!stage || stage.project.companyId !== user.companyId) {
+      return { data: null, error: "Estágio não encontrado" };
+    }
+
+    const updateData: any = { status };
+    if (status === "active" && !stage.startDate) {
+      updateData.startDate = new Date();
+    }
+    if (status === "completed") {
+      updateData.completedAt = new Date();
+      updateData.endDate = new Date();
+    }
+
+    await prisma.projectStage.update({
+      where: { id: BigInt(stageId) },
+      data: updateData,
+    });
+
+    // Recalculate project progress
+    await recalculateProjectProgress(stage.project.id);
+
+    await logAudit({
+      companyId: user.companyId,
+      userId: user.id,
+      action: "update",
+      tableName: "project_stages",
+      recordId: BigInt(stageId),
+      newValue: { status, stageName: stage.name },
+    });
+
+    revalidatePath(`/fabrica/projetos/${stage.project.id}`);
+    return { data: { ok: true }, error: null };
+  } catch (e) {
+    return { data: null, error: (e as Error).message };
+  }
+}
+
+export async function assignStageTeamAction(stageId: string, userIds: string[]) {
+  const user = await getCurrentUser();
+  if (!user) return { data: null, error: "Não autorizado" };
+
+  try {
+    const stage = await prisma.projectStage.findUnique({
+      where: { id: BigInt(stageId) },
+      include: { project: { select: { companyId: true, id: true } } },
+    });
+    if (!stage || stage.project.companyId !== user.companyId) {
+      return { data: null, error: "Estágio não encontrado" };
+    }
+
+    await prisma.projectStage.update({
+      where: { id: BigInt(stageId) },
+      data: { assignedTo: userIds as any },
+    });
+
+    revalidatePath(`/fabrica/projetos/${stage.project.id}`);
+    return { data: { ok: true }, error: null };
+  } catch (e) {
+    return { data: null, error: (e as Error).message };
+  }
+}
+
+export async function addStageDeliverableAction(stageId: string, name: string, url?: string) {
+  const user = await getCurrentUser();
+  if (!user) return { data: null, error: "Não autorizado" };
+
+  try {
+    const stage = await prisma.projectStage.findUnique({
+      where: { id: BigInt(stageId) },
+      include: { project: { select: { companyId: true, id: true } } },
+    });
+    if (!stage || stage.project.companyId !== user.companyId) {
+      return { data: null, error: "Estágio não encontrado" };
+    }
+
+    const deliverables = (stage.deliverables as any[]) ?? [];
+    deliverables.push({
+      name: name.trim(),
+      url: url?.trim() || null,
+      completedAt: null,
+      addedAt: new Date().toISOString(),
+    });
+
+    await prisma.projectStage.update({
+      where: { id: BigInt(stageId) },
+      data: { deliverables: deliverables as any },
+    });
+
+    revalidatePath(`/fabrica/projetos/${stage.project.id}`);
+    return { data: { ok: true }, error: null };
+  } catch (e) {
+    return { data: null, error: (e as Error).message };
+  }
+}
+
+export async function toggleDeliverableAction(stageId: string, index: number) {
+  const user = await getCurrentUser();
+  if (!user) return { data: null, error: "Não autorizado" };
+
+  try {
+    const stage = await prisma.projectStage.findUnique({
+      where: { id: BigInt(stageId) },
+      include: { project: { select: { companyId: true, id: true } } },
+    });
+    if (!stage || stage.project.companyId !== user.companyId) {
+      return { data: null, error: "Estágio não encontrado" };
+    }
+
+    const deliverables = (stage.deliverables as any[]) ?? [];
+    if (index < 0 || index >= deliverables.length) {
+      return { data: null, error: "Deliverable não encontrado" };
+    }
+    deliverables[index].completedAt = deliverables[index].completedAt ? null : new Date().toISOString();
+
+    await prisma.projectStage.update({
+      where: { id: BigInt(stageId) },
+      data: { deliverables: deliverables as any },
+    });
+
+    revalidatePath(`/fabrica/projetos/${stage.project.id}`);
+    return { data: { ok: true }, error: null };
+  } catch (e) {
+    return { data: null, error: (e as Error).message };
+  }
+}
+
+export async function removeDeliverableAction(stageId: string, index: number) {
+  const user = await getCurrentUser();
+  if (!user) return { data: null, error: "Não autorizado" };
+
+  try {
+    const stage = await prisma.projectStage.findUnique({
+      where: { id: BigInt(stageId) },
+      include: { project: { select: { companyId: true, id: true } } },
+    });
+    if (!stage || stage.project.companyId !== user.companyId) {
+      return { data: null, error: "Estágio não encontrado" };
+    }
+
+    const deliverables = (stage.deliverables as any[]) ?? [];
+    if (index < 0 || index >= deliverables.length) {
+      return { data: null, error: "Deliverable não encontrado" };
+    }
+    deliverables.splice(index, 1);
+
+    await prisma.projectStage.update({
+      where: { id: BigInt(stageId) },
+      data: { deliverables: deliverables as any },
+    });
+
+    revalidatePath(`/fabrica/projetos/${stage.project.id}`);
+    return { data: { ok: true }, error: null };
+  } catch (e) {
+    return { data: null, error: (e as Error).message };
+  }
+}
+
+export async function updateStageNotesAction(stageId: string, notes: string) {
+  const user = await getCurrentUser();
+  if (!user) return { data: null, error: "Não autorizado" };
+
+  try {
+    const stage = await prisma.projectStage.findUnique({
+      where: { id: BigInt(stageId) },
+      include: { project: { select: { companyId: true, id: true } } },
+    });
+    if (!stage || stage.project.companyId !== user.companyId) {
+      return { data: null, error: "Estágio não encontrado" };
+    }
+
+    await prisma.projectStage.update({
+      where: { id: BigInt(stageId) },
+      data: { notes: notes.trim() || null },
+    });
+
+    revalidatePath(`/fabrica/projetos/${stage.project.id}`);
+    return { data: { ok: true }, error: null };
+  } catch (e) {
+    return { data: null, error: (e as Error).message };
+  }
+}
+
+// Recalculate project progress based on completed stages
+async function recalculateProjectProgress(projectId: bigint) {
+  const stages = await prisma.projectStage.findMany({
+    where: { projectId },
+    orderBy: { sortOrder: "asc" },
+  });
+  if (stages.length === 0) return;
+
+  const completed = stages.filter((s) => s.status === "completed").length;
+  const progress = Math.round((completed / stages.length) * 100);
+
+  // Update project progress
+  const updateData: any = { progress };
+  // If all stages completed, mark project as delivered
+  if (completed === stages.length) {
+    updateData.status = "delivered";
+    updateData.deliveredAt = new Date();
+  } else {
+    // Set status based on current active stage
+    const activeStage = stages.find((s) => s.status === "active");
+    if (activeStage) {
+      const statusMap: Record<string, string> = {
+        "Briefing": "briefing",
+        "Arquitetura": "architecting",
+        "Desenvolvimento": "developing",
+        "Testes": "testing",
+        "Deploy": "deploying",
+        "Entrega": "delivered",
+      };
+      const newStatus = statusMap[activeStage.name];
+      if (newStatus) updateData.status = newStatus;
+    }
+  }
+
+  await prisma.softwareProject.update({
+    where: { id: projectId },
+    data: updateData,
+  });
+}
+
+export async function listCompanyUsersForTeamAction() {
+  const user = await getCurrentUser();
+  if (!user) return { data: null, error: "Não autorizado" };
+
+  try {
+    const users = await prisma.user.findMany({
+      where: { companyId: user.companyId, active: true, deletedAt: null },
+      select: { id: true, name: true, email: true, jobTitle: true, avatarUrl: true },
+      orderBy: { name: "asc" },
+    });
+    return {
+      data: users.map((u) => ({ ...u, id: u.id.toString() })),
+      error: null,
+    };
+  } catch (e) {
+    return { data: null, error: (e as Error).message };
+  }
+}

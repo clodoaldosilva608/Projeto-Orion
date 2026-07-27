@@ -1321,3 +1321,116 @@ Próxima fase (P16): **Pipeline de Desenvolvimento Visual** — kanban com está
 do projeto (Briefing → Arquitetura → Dev → Testes → Deploy → Entrega),
 atribuição de equipe por estágio, drag-and-drop de cards, deliverables por
 estágio. Integra com o que já construímos (ProjectStage model já existe).
+
+---
+
+## 2026-07-27 (cont.) — P16: Pipeline de Desenvolvimento Visual (Kanban)
+
+**Documento:** PIVOT_PLAN.md fase P16
+
+### Implementation
+
+O model `ProjectStage` já existia desde P14. Esta fase cria a UI completa
+de kanban visual + actions para gerenciar estágios.
+
+**Novas actions em `fabrica-actions.ts` (~280 linhas):**
+- `getProjectAction(id)` — detalhe completo com briefing, template,
+  stages (com deliverables e assignedTo), teamMembers
+- `updateStageStatusAction(stageId, status)` — muda status (pending →
+  active → completed → pode reabrir). Atualiza progresso do projeto
+  automaticamente + muda status do projeto com base no estágio ativo
+- `assignStageTeamAction(stageId, userIds[])` — atribui usuários
+- `addStageDeliverableAction(stageId, name, url?)` — adiciona deliverable
+- `toggleDeliverableAction(stageId, index)` — marca concluído/pendente
+- `removeDeliverableAction(stageId, index)` — remove
+- `updateStageNotesAction(stageId, notes)` — salva notas
+- `recalculateProjectProgress(projectId)` — recalcula % com base em
+  estágios completed. Se todos completed → status=delivered + deliveredAt
+- `listCompanyUsersForTeamAction()` — usuários para atribuição
+
+**Nova página `/fabrica/projetos/[id]`** — detalhe do projeto:
+
+Layout 4 colunas:
+- **Coluna 1** (sidebar esquerda): Cliente, Stack (chips), Features (lista
+  com ✓), Equipe do projeto (avatares), Links do projeto (Repo/Demo/
+  Produção com ProjectInfo editável)
+- **Colunas 2-4** (3/4 da largura): KanbanBoard com scroll horizontal
+
+**KanbanBoard — kanban visual de 6 colunas:**
+
+Cada coluna (estágio) tem:
+- Header com ícone emoji (📋 Briefing, 🏗️ Arquitetura, 💻 Dev, 🧪 Testes,
+  🚀 Deploy, ✅ Entrega) + nome + status badge colorido
+- Data de conclusão se completed
+- **Equipe atribuída** (chips com avatar + nome) + picker expansível com
+  checkboxes para todos os usuários da empresa
+- **Deliverables** (lista com checkbox, nome, link externo, botão remover)
+  + form para adicionar (nome + URL opcional)
+- **Notas** (textarea expansível)
+- Footer com botão de avanço de status:
+  - pending → "Iniciar estágio" (violeta)
+  - active → "Marcar como concluído" (verde)
+  - completed → "Reabrir estágio" (cinza)
+
+Cores por status:
+- pending: cinza (#6b7280)
+- active: violeta (#8b5cf6)
+- completed: verde (#10b981)
+- blocked: vermelho (#ef4444)
+
+**Recálculo automático de progresso:**
+
+Ao marcar estágio como completed:
+1. `recalculateProjectProgress()` conta estágios completed
+2. `progress = (completed / total) * 100`
+3. Se todos completed → status=delivered + deliveredAt=now
+4. Senão → status baseado no estágio active atual:
+   Briefing→briefing, Arquitetura→architecting, Desenvolvimento→developing,
+   Testes→testing, Deploy→deploying, Entrega→delivered
+
+**Lista de projetos atualizada:**
+- Linhas da tabela agora são clicáveis (Link) → `/fabrica/projetos/[id]`
+- Nome do projeto e cliente mudam de cor no hover (violeta)
+
+### Build, CI, deploy
+
+- Commit `7ccd91f` pushed (4 files, +1138 lines)
+- GitHub Actions CI → **success**
+- Vercel deploy `dpl_4Xwh91WXYoSKVSJGM4d3hweSdGUR` → **READY**
+
+### Verification (2026-07-27)
+
+**P16 E2E test (12 scenarios):**
+```
+1. Login ✓
+2. Created project + briefing + 6 stages via Prisma ✓
+3. /fabrica/projetos/[id] without auth → 307 ✓
+4. /fabrica/projetos/[id] with auth → 200 ✓
+5. Kanban with 6 stages visible (Briefing, Arquitetura, Dev, Testes, Deploy, Entrega) ✓
+6. Stage statuses visible (completed + active) ✓
+7. Progress bar visible (16% = 1/6 completed) ✓
+8. Deliverables visible (Documento de Arquitetura, Modelo de Dados) ✓
+9. Team assignment section visible ✓
+10. Client info from briefing visible (Carlos Teste) ✓
+11. Stack chips visible (nextjs, prisma, supabase, tailwind) ✓
+12. Cleanup ✓
+```
+
+### Current state of the platform
+
+**Total routes:** 78 (up from 77 in P15)
+**MVP Equilibrado progress:**
+- ✅ Foundation (P14): SoftwareProject, Briefings, Templates, Dashboard
+- ✅ Briefing IA (P15): form estruturado + geração PRD/arquitetura/estimativas
+- ✅ Pipeline dev visual (P16) ← NEW: kanban + team + deliverables + progress
+- ⬜ Workspace do Cliente (P17): cliente acompanha projeto em tempo real
+- ⬜ Licenciamento (P17): activation key + validação
+
+### Next step suggestion
+
+Próxima fase (P17): **Workspace do Cliente + Licenciamento** —
+1. Workspace do Cliente: página pública onde o cliente acompanha o
+   progresso do seu projeto em tempo real (timeline, milestones,
+   deliverables, mensagens)
+2. Licenciamento de Software: activation key gerada após entrega,
+   validação online, expiração, revogação
