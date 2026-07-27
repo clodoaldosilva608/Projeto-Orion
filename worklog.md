@@ -752,3 +752,142 @@ Próximos itens do roadmap v2.0 Q3-Q4 2026:
 Recommended: **Checklist Diário** — quick win (40 SP, ~1 dia) que se
 integra naturalmente com Gamificação (pontos por tarefa completa) e
 Campanhas (tarefas podem fazer parte de campanhas).
+
+---
+
+## 2026-07-27 (cont.) — P12: Checklist Diário
+
+**Documentação:** `docs/16_Roadmap.md` v2.0 Q4 2026 — 40 SP
+> "Checklist Diário — Para vendedores (tarefas do dia)"
+
+### Implementation
+
+**3 novas tabelas Prisma:**
+- `checklist_templates` — define quais tarefas aparecem a cada dia
+  (companyId, name, scope, roleId, branchId, startsAt, endsAt, weekdays,
+  isActive, timestamps, soft delete)
+- `checklist_items` — tarefas dentro de um template
+  (templateId, title, description, sortOrder, points, isRequired,
+  estimatedMin, timestamps, soft delete)
+- `checklist_tasks` — instância diária por usuário
+  (companyId, templateId, itemId, userId, date, status, completedAt,
+  notes, metadata; unique em [userId, itemId, date])
+
+**2 novos enums:**
+- `ChecklistTemplateScope`: personal, role, team, company
+- `ChecklistTaskStatus`: pending, done, skipped, overdue
+
+**Novo arquivo `src/lib/checklist-actions.ts` (~430 linhas):**
+- `listTemplatesAction / getTemplateAction / createTemplateAction /
+  deleteTemplateAction` (CRUD de modelos)
+- `generateDailyTasksForUser(userId, companyId)` — busca templates ativos
+  da empresa, filtra pelo dia da semana atual (ISO 1=Mon..7=Sun), e
+  cria uma task por item. Idempotente via unique constraint.
+- `getTodayChecklistAction` — chama `generateDailyTasksForUser`, retorna
+  tasks do dia + stats (total/done/skipped/pending/points/progressPct)
+- `completeTaskAction(taskId)` — marca como done + chama `awardPoints`
+  da gamificação com pontos configuráveis por item (default 10)
+- `uncompleteTaskAction(taskId)` — reverte para pending
+- `skipTaskAction(taskId, notes?)` — marca como skipped com motivo
+- `getChecklistHistoryAction(days=7)` — histórico agrupado por data
+
+**2 novas páginas:**
+
+1. **`/checklist`** — checklist do dia:
+   - Hero com progresso (barra + percentual), 4 stats (concluídas,
+     pendentes, puladas, pontos ganhos/possíveis)
+   - Lista de tarefas com checkbox clicável, pontos, tempo estimado,
+     horário de conclusão
+   - Botão "Pular" com form de motivo (opcional)
+   - Botão "Reabrir" para tarefas puladas (RotateCcw)
+   - 2 stat cards (pontos hoje, concluídas) + histórico 7 dias com
+     barras de progresso mini
+
+2. **`/checklist/modelos`** — CRUD de modelos:
+   - Form inline expansível com:
+     - Nome + descrição + escopo (4 opções) + horário início/fim
+     - Picker de dias da semana (7 botões toggle: Seg-Dom)
+     - Lista dinâmica de itens (adicionar/remover) com título, pontos,
+       minutos estimados, checkbox obrigatória
+   - Lista de modelos existentes com badge ativo/inativo, escopo, dias,
+     horário, count de itens, botão excluir
+
+**Integração com Gamificação (P8):**
+- `completeTaskAction` chama `awardPointsAction` com:
+  - `reasonKey='result_on_time'` (reaproveita regra existente)
+  - `points=item.points` (default 10, configurável por item)
+  - `referenceId=task.id`
+  - `metadata={type:'checklist_task_completed', itemId, itemTitle}`
+- Pontos aparecem no perfil `/gamificacao` e no ranking mensal
+- E2E test confirma: ao marcar task como done, +10 pontos aparecem
+  no perfil de gamificação
+
+**Sidebar atualizada:**
+- Adicionado item "Checklist" (ícone CheckSquare) na seção
+  Gerenciamento entre Calendário e Marketplace
+
+**RBAC atualizado:**
+- `/checklist` requer permissão `results:read`
+
+### Auto-geração inteligente
+
+Ao acessar `/checklist`, se não existirem tasks para hoje, o sistema:
+1. Busca todos os templates ativos da empresa
+2. Filtra pelo dia da semana atual (ISO 1=Mon..7=Sun)
+3. Para cada item de cada template aplicável, cria uma task
+   `status=pending` para o usuário atual
+4. Idempotente: tasks já existentes não são recriadas (unique constraint)
+5. Templates desativados (`isActive=false`) não geram novas tasks
+
+### Build, CI, deploy
+
+- Commit `5d0dddd` pushed (8 files, +1409 lines)
+- GitHub Actions CI → **success**
+- Vercel deploy `dpl_774B5XEtgxL3SeGw66TU533xgE4X` → **READY**
+
+### Verification (2026-07-27)
+
+**Smoke test (42 scenarios):**
+- 5 public, 7 protected (307), 4 API/cron, login, 30 authenticated pages
+- All pass including 2 new checklist pages
+
+**P12 E2E test (12 scenarios):**
+```
+1. Login ✓
+2. /checklist without auth → 307 ✓
+3. /checklist with auth → 200 (empty state) ✓
+4. /checklist/modelos → 200 ✓
+5. Created template with 3 items via Prisma ✓
+6. /checklist auto-generated 3 tasks for today ✓
+   (titles visible: "Revisar e-mails", "Ligar para 5 clientes", "Atualizar CRM")
+7. /checklist/modelos shows the test template ✓
+8. Tasks created in DB (all pending status) ✓
+9. Marked first task as done + awarded 10 points ✓
+10. /checklist shows updated progress (33% = 1/3 done) ✓
+11. /gamificacao shows awarded checklist points ✓
+12. Cleanup: deleted test template + items + tasks + point transaction ✓
+```
+
+### Current state of the platform
+
+**Total routes:** 65 (up from 63 in P11)
+**Sidebar items:** 33 (up from 32)
+**v2.0 Q4 2026 roadmap progress:**
+- ✓ Checklist Diário (P12) ← NEW
+- ⬜ Biblioteca de Treinamentos (Q4, 60 SP)
+- ⬜ Central de Documentos (Q4, 40 SP)
+- ⬜ Sistema de Feedback (Q4, 50 SP)
+- ⬜ Multi-idioma (Q4, 70 SP)
+
+### Next step suggestion
+
+Próximos itens do roadmap v2.0 Q4 2026:
+1. **Biblioteca de Treinamentos** (60 SP) — PDFs, vídeos, certificados
+2. **Central de Documentos** (40 SP) — por colaborador
+3. **Sistema de Feedback** (50 SP) — estruturado, anônimo opcional
+4. **Multi-idioma** (70 SP) — Português + Inglês
+
+Recommended: **Sistema de Feedback** — se integra naturalmente com
+Gamificação (pesquisa de satisfação pode dar pontos), Checklist
+(pode ser item recorrente) e Notificações (lembretes de feedback).
+É quick win (50 SP) com alto valor para RH e gestores.

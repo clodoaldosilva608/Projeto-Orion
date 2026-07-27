@@ -55,6 +55,7 @@ export const ROUTE_PERMISSIONS: Record<string, string[]> = {
   '/campanhas': ['goals:read'],
   '/gamificacao': ['results:read'],
   '/calendario': ['results:read'],
+  '/checklist': ['results:read'],
   '/plugins': ['results:read'],
   '/usuarios': ['users:read'],
   '/funcoes-permissoes': ['admin:access'],

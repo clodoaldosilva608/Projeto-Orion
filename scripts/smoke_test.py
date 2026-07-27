@@ -84,6 +84,7 @@ all_pages = [
     "/campanhas", "/campanhas/nova",
     "/gamificacao", "/gamificacao/leaderboard", "/gamificacao/conquistas", "/gamificacao/resgates",
     "/calendario", "/calendario/nova",
+    "/checklist", "/checklist/modelos",
     "/plugins", "/plugins/api-keys",
     "/configuracoes", "/notificacoes", "/backups",
     "/usuarios", "/funcoes-permissoes", "/logs-auditoria",

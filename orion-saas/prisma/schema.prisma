@@ -307,6 +307,8 @@ model Company {
   pointTransactions   PointTransaction[]
   pointRedemptions    PointRedemption[]
   calendarEvents      CalendarEvent[]
+  checklistTemplates  ChecklistTemplate[]
+  checklistTasks      ChecklistTask[]
 
   @@unique([cnpj], map: "udx_companies_cnpj")
   @@unique([email], map: "udx_companies_email")
@@ -478,6 +480,7 @@ model User {
   pointTransactions    PointTransaction[]
   redemptions          PointRedemption[]
   calendarEvents       CalendarEvent[]
+  checklistTasks       ChecklistTask[]
 
   @@unique([companyId, email], map: "udx_users_company_email")
   @@index([companyId], map: "idx_users_company")
@@ -1481,4 +1484,106 @@ model Plugin {
   @@index([isOfficial], map: "idx_plugins_official")
   @@index([isActive], map: "idx_plugins_active")
   @@map("plugins")
+}
+
+// ================================================================
+// P12 — CHECKLIST DIÁRIO
+// ================================================================
+
+enum ChecklistTemplateScope {
+  personal
+  role
+  team
+  company
+
+  @@map("checklist_template_scope")
+}
+
+enum ChecklistTaskStatus {
+  pending
+  done
+  skipped
+  overdue
+
+  @@map("checklist_task_status")
+}
+
+// Template: define which tasks should appear each day
+model ChecklistTemplate {
+  id          BigInt                  @id @default(autoincrement())
+  uuid        String                  @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId   BigInt                  @map("company_id")
+  name        String                  @db.VarChar(255)
+  description String?                 @db.Text
+  scope       ChecklistTemplateScope  @default(personal)
+  roleId      BigInt?                 @map("role_id")
+  branchId    BigInt?                 @map("branch_id")
+  isActive    Boolean                 @default(true) @map("is_active")
+  startsAt    String                  @default("09:00") @map("starts_at") @db.VarChar(5)
+  endsAt      String                  @default("18:00") @map("ends_at") @db.VarChar(5)
+  weekdays    String                  @default("1,2,3,4,5") @db.VarChar(20) // ISO: 1=Mon ... 7=Sun
+  metadata    Json                    @default("{}")
+  createdAt   DateTime                @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime                @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt   DateTime?               @map("deleted_at") @db.Timestamptz
+  createdBy   BigInt?                 @map("created_by")
+
+  company Company           @relation(fields: [companyId], references: [id])
+  items   ChecklistItem[]
+  tasks   ChecklistTask[]
+
+  @@index([companyId, isActive], map: "idx_checklist_templates_active")
+  @@index([companyId, scope], map: "idx_checklist_templates_scope")
+  @@map("checklist_templates")
+}
+
+// Item: a task definition that belongs to a template
+model ChecklistItem {
+  id           BigInt   @id @default(autoincrement())
+  templateId   BigInt   @map("template_id")
+  title        String   @db.VarChar(255)
+  description  String?  @db.Text
+  sortOrder    Int      @default(0) @map("sort_order")
+  points       Int      @default(10) // points awarded when completed
+  isRequired   Boolean  @default(true) @map("is_required")
+  estimatedMin Int?     @map("estimated_min") // estimated duration in minutes
+  metadata     Json     @default("{}")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt    DateTime? @map("deleted_at") @db.Timestamptz
+
+  template ChecklistTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  tasks    ChecklistTask[]
+
+  @@index([templateId], map: "idx_checklist_items_template")
+  @@index([sortOrder], map: "idx_checklist_items_sort")
+  @@map("checklist_items")
+}
+
+// Task: an instance of an item for a specific user on a specific date
+model ChecklistTask {
+  id          BigInt             @id @default(autoincrement())
+  uuid        String             @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId   BigInt             @map("company_id")
+  templateId  BigInt             @map("template_id")
+  itemId      BigInt             @map("item_id")
+  userId      BigInt             @map("user_id")
+  date        DateTime           @db.Date // the day this task belongs to
+  status      ChecklistTaskStatus @default(pending)
+  completedAt DateTime?          @map("completed_at") @db.Timestamptz
+  notes       String?            @db.Text
+  metadata    Json               @default("{}")
+  createdAt   DateTime           @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime           @updatedAt @map("updated_at") @db.Timestamptz
+
+  company  Company           @relation(fields: [companyId], references: [id])
+  template ChecklistTemplate @relation(fields: [templateId], references: [id])
+  item     ChecklistItem     @relation(fields: [itemId], references: [id])
+  user     User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, itemId, date], map: "udx_checklist_tasks_user_item_date")
+  @@index([companyId, date], map: "idx_checklist_tasks_company_date")
+  @@index([userId, date], map: "idx_checklist_tasks_user_date")
+  @@index([userId, status], map: "idx_checklist_tasks_user_status")
+  @@map("checklist_tasks")
 }
