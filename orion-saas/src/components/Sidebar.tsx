@@ -42,6 +42,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTenant } from "@/components/TenantProvider";
 
 type NavItem = {
   label: string;
@@ -138,6 +139,7 @@ export function Sidebar({
   onCloseMobile: () => void;
 }) {
   const pathname = usePathname();
+  const tenant = useTenant();
 
   return (
     <>
@@ -172,9 +174,9 @@ export function Sidebar({
           </div>
           {!collapsed && (
             <div className="leading-tight">
-              <p className="text-lg font-bold tracking-wide brand-text">ORION</p>
+              <p className="text-lg font-bold tracking-wide brand-text">{tenant.appName.toUpperCase()}</p>
               <p className="text-[10px] uppercase tracking-[0.2em] text-muted-2">
-                SaaS Platform
+                {tenant.tradeName}
               </p>
             </div>
           )}

@@ -283,6 +283,14 @@ model Company {
   externalId          String?     @map("external_id") @db.VarChar(100)
   metadata            Json        @default("{}")
 
+  // SaaS Multi-Tenant fields (White-Label)
+  subdomain           String?     @unique @map("subdomain") @db.VarChar(50)
+  customDomain        String?     @unique @map("custom_domain") @db.VarChar(255)
+  primaryColor        String      @default("#8b5cf6") @map("primary_color") @db.Char(7)
+  secondaryColor      String      @default("#6366f1") @map("secondary_color") @db.Char(7)
+  backgroundColor     String      @default("#0f111a") @map("background_color") @db.Char(7)
+  appName             String      @default("Orion") @map("app_name") @db.VarChar(100)
+
   license             License?             @relation(fields: [licenseId], references: [id])
   branches            Branch[]
   users               User[]
@@ -456,6 +464,7 @@ model User {
   lastLoginAt      DateTime?  @map("last_login_at") @db.Timestamptz
   lastLoginIp      String?    @map("last_login_ip") @db.VarChar(45)
   twoFactorEnabled Boolean    @default(false) @map("two_factor_enabled")
+  isSuperAdmin     Boolean    @default(false) @map("is_super_admin")
   twoFactorSecret  String?    @map("two_factor_secret") @db.Text
   preferences      Json       @default("{}")
   createdAt        DateTime   @default(now()) @map("created_at") @db.Timestamptz
