@@ -1195,3 +1195,129 @@ apenas movidos para a seção "Módulos de Vendas (Extras)" no sidebar.
 - **P16**: Templates reutilizáveis + Pipeline dev visual
 - **P17**: Workspace do Cliente + Licenciamento
 - **P18+**: Distribuição & Atualizações
+
+---
+
+## 2026-07-27 (cont.) — P15: Briefing Inteligente com IA
+
+**Documento:** PIVOT_PLAN.md fase P15 — coração do diferencial "Equilibrado"
+
+### Implementation
+
+**Novas actions em `src/lib/fabrica-actions.ts` (~430 linhas adicionais):**
+- `listBriefingsAction(filter?)` — lista com include project
+- `getBriefingAction(id)` — detalhe com project + todos campos IA
+- `createBriefingAction({clientName, clientEmail, problemStatement, keyFeatures, budgetCents, timelineWeeks, ...})`
+- `generateIaBriefingAction(briefingId)` — chama `askAI()` com prompt estruturado
+- `approveBriefingAction(briefingId, {projectName, templateId})` — cria SoftwareProject + 6 estágios padrão
+- `rejectBriefingAction(briefingId, notes)`
+- `deleteBriefingAction(briefingId)`
+
+### IA Prompt estruturado (IA_SYSTEM_PROMPT)
+
+Instrui o GPT-4o-mini a gerar:
+1. **PRD em Markdown** com: visão geral, problema, público-alvo, user stories (5+), critérios de aceite, requisitos não funcionais, escopo MVP vs futuras
+2. **Sugestão de Arquitetura em Markdown** com: stack, estrutura de pastas, modelo de dados, integrações, deploy
+3. **Estimativas em JSON** entre marcadores `<estimativas>`:
+   `{estimatedHours, estimatedCostCents, stackSuggestion[]}`
+
+A função parseia o JSON de estimativas, separa PRD de Arquitetura, salva tudo no briefing.
+
+### Fallback gracioso (sem OPENAI_API_KEY)
+
+Quando `OPENAI_API_KEY` não está configurada, `generateTemplateBriefing()` gera um PRD estruturado baseado em regras:
+- Calcula horas estimadas por tipo de projeto (e-commerce 120h, SaaS 200h, landing-page 20h, etc.) + 8h por feature
+- Custo = horas × R$ 150/h
+- Stack padrão: nextjs, react, typescript, prisma, supabase, tailwind + stripe (se houver feature de pagamento) + nodemailer (se houver feature de notificação)
+- PRD template completo com: Visão geral, Problema, Público-alvo, Features, 5 User Stories com critérios de aceite, Requisitos não funcionais, Escopo MVP vs Fases, Critérios de sucesso, Estimativas
+- Arquitetura template com: Stack, Estrutura de pastas, Modelo de dados, Integrações, Considerações de deploy
+
+### 4 novas páginas
+
+1. **`/fabrica/briefings`** (atualizada) — lista de briefings:
+   - 5 stat cards (total, rascunhos, IA processando, IA gerou, aprovados)
+   - Tabela com cliente, tipo, status badge, indicador IA, estimativas (horas + custo), data, ações
+   - Botão "IA" por briefing para gerar PRD
+   - Empty state com CTA
+
+2. **`/fabrica/briefings/novo`** — formulário estruturado:
+   - Dados do cliente (nome*, empresa, email*, telefone)
+   - Tipo de projeto (10 opções: e-commerce, CRM, dashboard, blog, SaaS, mobile, marketplace, landing-page, ERP, outro)
+   - Prazo desejado (semanas)
+   - Problema a resolver* (textarea)
+   - Público-alvo (textarea)
+   - Critérios de sucesso (textarea)
+   - Orçamento (R$)
+   - Features: 16 chips clicáveis + input para features customizadas
+
+3. **`/fabrica/briefings/[id]`** — detalhe do briefing:
+   - Status banner colorido (draft/processing/reviewed/approved/rejected)
+   - 3 colunas esquerda: Cliente, Problema, Features + Estimativas cliente
+   - 2 colunas direita: IA estimativas (horas, custo, stack) + PRD gerado (pre formatado com botão copiar) + Arquitetura gerada
+   - Form de aprovação: nome do projeto + template opcional → cria SoftwareProject + 6 estágios padrão
+   - Modal de rejeição com motivo
+   - Estado "processing" com animação de 3 pontos pulsantes
+   - Estado "sem IA" com CTA para gerar
+
+4. **`/api/fabrica/briefing/generate-ia`** — endpoint POST para trigger async:
+   - Body: `{briefingId}`
+   - Verifica auth + propriedade do briefing
+   - Dispara `generateIaBriefingAction` em background (non-blocking)
+   - Retorna 200 imediatamente
+
+### Bug fix during testing
+
+Mesmo bug da P7 (StatusButtons): `onClick` handlers em Server Components causam erro de serialização RSC. Criado `CopyButton` client component com `useState` para feedback "Copiado" após 2s. Substituído 2 botões `onClick` inline (PRD + Arquitetura) por `<CopyButton />`.
+
+### Fluxo completo
+
+1. Admin acessa `/fabrica/briefings/novo`
+2. Preenche form estruturado (cliente, problema, features, budget)
+3. Salva → briefing criado com status=draft
+4. Redireciona para `/fabrica/briefings/[id]`
+5. Clica "Gerar via IA" → status=ai_processing
+6. IA (ou fallback template) gera PRD + Arquitetura + Estimativas
+7. status=reviewed, conteúdo visível na página
+8. Admin revisa → "Aprovar e criar projeto"
+9. SoftwareProject criado + 6 estágios padrão (Briefing completed, Arquitetura active, Dev/Testes/Deploy/Entrega pending)
+10. status=approved, link para `/fabrica/projetos`
+
+### Build, CI, deploy
+
+- Commits `4fc162d` (P15) + `878baee` (CopyButton fix) pushed
+- GitHub Actions CI → **success** em ambos
+- Vercel deploy `dpl_3JqhzYxS2K7UwXyaz47QpQNHrPCQ` → **READY**
+
+### Verification (2026-07-27)
+
+**P15 E2E test (10 scenarios):**
+```
+1. Login ✓
+2. /fabrica/briefings without auth → 307 ✓
+3. /fabrica/briefings with auth → 200 ✓
+4. /fabrica/briefings/novo → 200 (form) ✓
+5. Created briefing via Prisma ✓
+6. /fabrica/briefings shows briefing ✓
+7. /fabrica/briefings/[id] detail page ✓
+8. IA content generated (template fallback): 168h, R$ 25.200, 7 techs ✓
+9. /fabrica/briefings/[id] shows PRD + Arquitetura + Approve button ✓
+10. Cleanup ✓
+```
+
+### Current state of the platform
+
+**Total routes:** 77 (up from 72 in P14)
+**Posicionamento:** Plataforma Inteligente de Desenvolvimento de Software
+**MVP Equilibrado progress:**
+- ✅ Foundation (P14): SoftwareProject, Briefings, Templates, Dashboard
+- ✅ Briefing IA (P15) ← NEW: form estruturado + geração PRD/arquitetura/estimativas
+- ⬜ Pipeline dev visual (P16): kanban de estágios, atribuição de equipe
+- ⬜ Workspace do Cliente (P17): cliente acompanha projeto
+- ⬜ Licenciamento (P17): activation key + validação
+
+### Next step suggestion
+
+Próxima fase (P16): **Pipeline de Desenvolvimento Visual** — kanban com estágios
+do projeto (Briefing → Arquitetura → Dev → Testes → Deploy → Entrega),
+atribuição de equipe por estágio, drag-and-drop de cards, deliverables por
+estágio. Integra com o que já construímos (ProjectStage model já existe).

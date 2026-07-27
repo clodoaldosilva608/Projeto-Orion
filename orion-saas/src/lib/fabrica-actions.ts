@@ -403,3 +403,718 @@ async function seedOfficialTemplatesAction() {
     console.error("seedOfficialTemplates error:", e);
   }
 }
+
+// ================================================================
+// BRIEFINGS — CRUD + IA generation
+// ================================================================
+
+export async function listBriefingsAction(filter?: {
+  status?: string;
+}) {
+  const user = await getCurrentUser();
+  if (!user) return { data: null, error: "Não autorizado" };
+
+  try {
+    const where: any = { companyId: user.companyId };
+    if (filter?.status && filter.status !== "all") where.status = filter.status;
+
+    const briefings = await prisma.projectBriefing.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      include: {
+        project: {
+          select: { id: true, name: true, status: true, progress: true },
+        },
+      },
+    });
+
+    return {
+      data: briefings.map((b) => ({
+        id: b.id.toString(),
+        clientName: b.clientName,
+        clientCompany: b.clientCompany,
+        clientEmail: b.clientEmail,
+        clientPhone: b.clientPhone,
+        projectType: b.projectType,
+        problemStatement: b.problemStatement,
+        keyFeatures: b.keyFeatures,
+        budgetCents: b.budgetCents,
+        timelineWeeks: b.timelineWeeks,
+        status: b.status,
+        aiGeneratedDoc: b.aiGeneratedDoc,
+        aiArchitectureSuggestion: b.aiArchitectureSuggestion,
+        aiStackSuggestion: b.aiStackSuggestion,
+        aiEstimatedHours: b.aiEstimatedHours,
+        aiEstimatedCostCents: b.aiEstimatedCostCents,
+        reviewNotes: b.reviewNotes,
+        createdAt: b.createdAt.toISOString(),
+        reviewedAt: b.reviewedAt?.toISOString() ?? null,
+        project: b.project
+          ? {
+              id: b.project.id.toString(),
+              name: b.project.name,
+              status: b.project.status,
+              progress: b.project.progress,
+            }
+          : null,
+      })),
+      error: null,
+    };
+  } catch (e) {
+    return { data: null, error: (e as Error).message };
+  }
+}
+
+export async function getBriefingAction(id: string) {
+  const user = await getCurrentUser();
+  if (!user) return { data: null, error: "Não autorizado" };
+
+  try {
+    const briefing = await prisma.projectBriefing.findFirst({
+      where: { id: BigInt(id), companyId: user.companyId },
+      include: {
+        project: {
+          select: {
+            id: true, name: true, status: true, progress: true,
+            stack: true, keyFeatures: true, estimatedEndDate: true,
+          },
+        },
+      },
+    });
+    if (!briefing) return { data: null, error: "Briefing não encontrado" };
+
+    return {
+      data: {
+        ...briefing,
+        id: briefing.id.toString(),
+        companyId: briefing.companyId.toString(),
+        projectId: briefing.projectId?.toString() ?? null,
+        keyFeatures: briefing.keyFeatures,
+        aiStackSuggestion: briefing.aiStackSuggestion,
+        reviewedAt: briefing.reviewedAt?.toISOString() ?? null,
+        createdAt: briefing.createdAt.toISOString(),
+        project: briefing.project
+          ? {
+              ...briefing.project,
+              id: briefing.project.id.toString(),
+              estimatedEndDate: briefing.project.estimatedEndDate?.toISOString() ?? null,
+            }
+          : null,
+      },
+      error: null,
+    };
+  } catch (e) {
+    return { data: null, error: (e as Error).message };
+  }
+}
+
+export async function createBriefingAction(data: {
+  clientName: string;
+  clientCompany?: string;
+  clientEmail: string;
+  clientPhone?: string;
+  projectType?: string;
+  problemStatement: string;
+  targetAudience?: string;
+  keyFeatures: string[];
+  successCriteria?: string;
+  budgetCents?: number;
+  timelineWeeks?: number;
+}) {
+  const user = await getCurrentUser();
+  if (!user) return { data: null, error: "Não autorizado" };
+
+  try {
+    if (!data.clientName?.trim() || !data.clientEmail?.trim() || !data.problemStatement?.trim()) {
+      return { data: null, error: "Nome do cliente, e-mail e declaração do problema são obrigatórios" };
+    }
+
+    const briefing = await prisma.projectBriefing.create({
+      data: {
+        companyId: user.companyId,
+        clientName: data.clientName.trim(),
+        clientCompany: data.clientCompany?.trim() || null,
+        clientEmail: data.clientEmail.trim(),
+        clientPhone: data.clientPhone?.trim() || null,
+        projectType: data.projectType?.trim() || null,
+        problemStatement: data.problemStatement.trim(),
+        targetAudience: data.targetAudience?.trim() || null,
+        keyFeatures: (data.keyFeatures ?? []) as any,
+        successCriteria: data.successCriteria?.trim() || null,
+        budgetCents: data.budgetCents ?? null,
+        timelineWeeks: data.timelineWeeks ?? null,
+        status: "draft",
+      },
+    });
+
+    await logAudit({
+      companyId: user.companyId,
+      userId: user.id,
+      action: "create",
+      tableName: "project_briefings",
+      recordId: briefing.id,
+      newValue: { clientName: briefing.clientName, projectType: briefing.projectType },
+    });
+
+    revalidatePath("/fabrica/briefings");
+    return { data: { id: briefing.id.toString() }, error: null };
+  } catch (e) {
+    return { data: null, error: (e as Error).message };
+  }
+}
+
+// ================================================================
+// IA — generateIaBriefingAction
+// ================================================================
+
+const IA_SYSTEM_PROMPT = `Você é o arquiteto de software sênior da plataforma Orion, uma Plataforma Inteligente de Desenvolvimento de Software.
+
+Sua tarefa: receber um briefing de projeto do cliente e gerar:
+
+1. **PRD (Product Requirements Document)** em Markdown — incluindo:
+   - Visão geral do produto
+   - Problema que resolve
+   - Público-alvo
+   - User stories (pelo menos 5)
+   - Critérios de aceite
+   - Requisitos não funcionais (segurança, performance, escalabilidade)
+   - Escopo da MVP vs fases futuras
+
+2. **Sugestão de Arquitetura** em Markdown — incluindo:
+   - Stack tecnológica recomendada (justificada)
+   - Estrutura de pastas
+   - Modelo de dados principal (entidades e relacionamentos)
+   - Integrações necessárias
+   - Considerações de deploy
+
+3. **Estimativas** (formato JSON no final, entre marcadores <estimativas>...</estimativas>):
+   - estimatedHours: número total de horas estimadas
+   - estimatedCostCents: custo em centavos de Real (R$ 1.000 = 100000)
+   - stackSuggestion: array de strings com tecnologias recomendadas
+
+Use português brasileiro. Seja específico e prático. Foque em tecnologias modernas: Next.js 14+, React 19, TypeScript, Prisma, PostgreSQL/Supabase, Tailwind, Stripe para pagamentos.
+
+Formato de resposta:
+## PRD
+[conteúdo em markdown]
+
+## Arquitetura
+[conteúdo em markdown]
+
+<estimativas>
+{"estimatedHours": 120, "estimatedCostCents": 2500000, "stackSuggestion": ["nextjs", "prisma", "supabase", "tailwind", "stripe"]}
+</estimativas>`;
+
+export async function generateIaBriefingAction(briefingId: string) {
+  const user = await getCurrentUser();
+  if (!user) return { data: null, error: "Não autorizado" };
+
+  try {
+    const briefing = await prisma.projectBriefing.findFirst({
+      where: { id: BigInt(briefingId), companyId: user.companyId },
+    });
+    if (!briefing) return { data: null, error: "Briefing não encontrado" };
+
+    // Update status to ai_processing
+    await prisma.projectBriefing.update({
+      where: { id: briefing.id },
+      data: { status: "ai_processing" },
+    });
+    revalidatePath(`/fabrica/briefings/${briefingId}`);
+
+    // Build the user message from briefing data
+    const features = (briefing.keyFeatures as string[]) ?? [];
+    const userMessage = `# Briefing do Projeto
+
+**Cliente:** ${briefing.clientName}
+${briefing.clientCompany ? `**Empresa:** ${briefing.clientCompany}` : ""}
+${briefing.projectType ? `**Tipo de projeto:** ${briefing.projectType}` : ""}
+
+## Problema a resolver
+${briefing.problemStatement}
+
+${briefing.targetAudience ? `## Público-alvo\n${briefing.targetAudience}` : ""}
+
+## Funcionalidades-chave solicitadas
+${features.length > 0 ? features.map((f, i) => `${i + 1}. ${f}`).join("\n") : "(cliente não especificou)"}
+
+${briefing.successCriteria ? `## Critérios de sucesso\n${briefing.successCriteria}` : ""}
+
+${briefing.budgetCents ? `## Orçamento: R$ ${(briefing.budgetCents / 100).toLocaleString("pt-BR")}` : ""}
+
+${briefing.timelineWeeks ? `## Prazo desejado: ${briefing.timelineWeeks} semanas` : ""}
+
+---
+
+Com base nesse briefing, gere o PRD, a sugestão de arquitetura e as estimativas conforme as instruções.`;
+
+    // Call IA
+    const { askAI } = await import("./ai");
+    const result = await askAI(IA_SYSTEM_PROMPT, userMessage);
+
+    let aiGeneratedDoc = result.text;
+    let aiArchitectureSuggestion: string | null = null;
+    let aiStackSuggestion: any[] = [];
+    let aiEstimatedHours: number | null = null;
+    let aiEstimatedCostCents: number | null = null;
+
+    // If IA fallback was used, generate a template-based PRD instead
+    if (result.usedFallback) {
+      const templateResult = generateTemplateBriefing(briefing, features);
+      aiGeneratedDoc = templateResult.prd;
+      aiArchitectureSuggestion = templateResult.architecture;
+      aiStackSuggestion = templateResult.stack;
+      aiEstimatedHours = templateResult.estimatedHours;
+      aiEstimatedCostCents = templateResult.estimatedCostCents;
+    } else {
+      // Extract estimativas JSON from response
+      const estimativasMatch = result.text.match(/<estimativas>([\s\S]*?)<\/estimativas>/);
+      if (estimativasMatch) {
+        try {
+          const est = JSON.parse(estimativasMatch[1].trim());
+          aiEstimatedHours = est.estimatedHours ?? null;
+          aiEstimatedCostCents = est.estimatedCostCents ?? null;
+          aiStackSuggestion = est.stackSuggestion ?? [];
+          // Remove the estimativas block from the doc
+          aiGeneratedDoc = aiGeneratedDoc.replace(/<estimativas>[\s\S]*?<\/estimativas>/, "").trim();
+        } catch {}
+      }
+
+      // Split PRD from Architecture
+      const archMatch = aiGeneratedDoc.match(/##\s+Arquitetura\s*\n([\s\S]*?)(?=\n##\s+|$)/i);
+      if (archMatch) {
+        aiArchitectureSuggestion = `## Arquitetura\n${archMatch[1].trim()}`;
+        aiGeneratedDoc = aiGeneratedDoc.replace(/##\s+Arquitetura\s*\n[\s\S]*?(?=\n##\s+|$)/i, "").trim();
+      }
+    }
+
+    // Update briefing with IA-generated content
+    await prisma.projectBriefing.update({
+      where: { id: briefing.id },
+      data: {
+        aiGeneratedDoc,
+        aiArchitectureSuggestion,
+        aiStackSuggestion: aiStackSuggestion as any,
+        aiEstimatedHours,
+        aiEstimatedCostCents,
+        status: "reviewed",
+        reviewedAt: new Date(),
+        reviewedBy: user.id,
+      },
+    });
+
+    await logAudit({
+      companyId: user.companyId,
+      userId: user.id,
+      action: "update",
+      tableName: "project_briefings",
+      recordId: briefing.id,
+      newValue: {
+        status: "reviewed",
+        iaGenerated: !result.usedFallback,
+        estimatedHours: aiEstimatedHours,
+        estimatedCostCents: aiEstimatedCostCents,
+      },
+    });
+
+    revalidatePath(`/fabrica/briefings/${briefingId}`);
+    revalidatePath("/fabrica/briefings");
+
+    return {
+      data: {
+        ok: true,
+        usedFallback: result.usedFallback,
+        estimatedHours: aiEstimatedHours,
+        estimatedCostCents: aiEstimatedCostCents,
+        stackSuggestion: aiStackSuggestion,
+      },
+      error: null,
+    };
+  } catch (e) {
+    console.error("generateIaBriefingAction error:", e);
+    // Reset status on error
+    try {
+      await prisma.projectBriefing.update({
+        where: { id: BigInt(briefingId) },
+        data: { status: "draft" },
+      });
+    } catch {}
+    return { data: null, error: (e as Error).message };
+  }
+}
+
+// ================================================================
+// BRIEFING — approve (convert to project) + reject
+// ================================================================
+
+export async function approveBriefingAction(briefingId: string, data: {
+  projectName: string;
+  templateId?: string;
+}) {
+  const user = await getCurrentUser();
+  if (!user) return { data: null, error: "Não autorizado" };
+
+  try {
+    const briefing = await prisma.projectBriefing.findFirst({
+      where: { id: BigInt(briefingId), companyId: user.companyId },
+    });
+    if (!briefing) return { data: null, error: "Briefing não encontrado" };
+
+    // Calculate estimated end date
+    let estimatedEndDate: Date | null = null;
+    if (briefing.timelineWeeks) {
+      estimatedEndDate = new Date();
+      estimatedEndDate.setDate(estimatedEndDate.getDate() + briefing.timelineWeeks * 7);
+    } else if (briefing.aiEstimatedHours) {
+      // ~40h/week = ~5h/day, so estimated_weeks = hours / 40
+      const weeks = Math.ceil(briefing.aiEstimatedHours / 40);
+      estimatedEndDate = new Date();
+      estimatedEndDate.setDate(estimatedEndDate.getDate() + weeks * 7);
+    }
+
+    // Create the SoftwareProject linked to this briefing
+    const project = await prisma.softwareProject.create({
+      data: {
+        companyId: user.companyId,
+        templateId: data.templateId ? BigInt(data.templateId) : null,
+        name: data.projectName.trim(),
+        description: briefing.problemStatement,
+        status: "briefing", // start at briefing stage
+        stack: (briefing.aiStackSuggestion ?? []) as any,
+        keyFeatures: briefing.keyFeatures as any,
+        successCriteria: briefing.successCriteria,
+        budgetCents: briefing.aiEstimatedCostCents ?? briefing.budgetCents,
+        startDate: new Date(),
+        estimatedEndDate,
+        createdBy: user.id,
+        briefing: {
+          connect: { id: briefing.id },
+        },
+      },
+    });
+
+    // Update briefing status
+    await prisma.projectBriefing.update({
+      where: { id: briefing.id },
+      data: {
+        status: "approved",
+        reviewedAt: new Date(),
+        reviewedBy: user.id,
+      },
+    });
+
+    // Create default pipeline stages
+    const defaultStages = [
+      { name: "Briefing", sortOrder: 0, status: "completed", completedAt: new Date() },
+      { name: "Arquitetura", sortOrder: 1, status: "active" },
+      { name: "Desenvolvimento", sortOrder: 2, status: "pending" },
+      { name: "Testes", sortOrder: 3, status: "pending" },
+      { name: "Deploy", sortOrder: 4, status: "pending" },
+      { name: "Entrega", sortOrder: 5, status: "pending" },
+    ];
+    for (const stage of defaultStages) {
+      await prisma.projectStage.create({
+        data: {
+          projectId: project.id,
+          name: stage.name,
+          sortOrder: stage.sortOrder,
+          status: stage.status as any,
+          completedAt: stage.completedAt ?? null,
+        },
+      });
+    }
+
+    await logAudit({
+      companyId: user.companyId,
+      userId: user.id,
+      action: "create",
+      tableName: "software_projects",
+      recordId: project.id,
+      newValue: { name: project.name, fromBriefing: briefing.id.toString() },
+    });
+
+    revalidatePath("/fabrica/briefings");
+    revalidatePath("/fabrica/projetos");
+    revalidatePath(`/fabrica/briefings/${briefingId}`);
+    return { data: { projectId: project.id.toString() }, error: null };
+  } catch (e) {
+    return { data: null, error: (e as Error).message };
+  }
+}
+
+export async function rejectBriefingAction(briefingId: string, notes: string) {
+  const user = await getCurrentUser();
+  if (!user) return { data: null, error: "Não autorizado" };
+
+  try {
+    await prisma.projectBriefing.update({
+      where: { id: BigInt(briefingId) },
+      data: {
+        status: "rejected",
+        reviewNotes: notes,
+        reviewedAt: new Date(),
+        reviewedBy: user.id,
+      },
+    });
+
+    revalidatePath("/fabrica/briefings");
+    revalidatePath(`/fabrica/briefings/${briefingId}`);
+    return { data: { ok: true }, error: null };
+  } catch (e) {
+    return { data: null, error: (e as Error).message };
+  }
+}
+
+export async function deleteBriefingAction(briefingId: string) {
+  const user = await getCurrentUser();
+  if (!user) return { data: null, error: "Não autorizado" };
+
+  try {
+    await prisma.projectBriefing.delete({
+      where: { id: BigInt(briefingId) },
+    });
+
+    revalidatePath("/fabrica/briefings");
+    return { data: { ok: true }, error: null };
+  } catch (e) {
+    return { data: null, error: (e as Error).message };
+  }
+}
+
+// ================================================================
+// TEMPLATE-BASED FALLBACK — used when OPENAI_API_KEY is not configured
+// Generates a structured PRD + architecture + estimativas from the briefing
+// data using rule-based logic (no IA call).
+// ================================================================
+
+function generateTemplateBriefing(briefing: any, features: string[]): {
+  prd: string;
+  architecture: string;
+  stack: string[];
+  estimatedHours: number;
+  estimatedCostCents: number;
+} {
+  const projectType = briefing.projectType || "aplicação web";
+  const featuresList = features.length > 0
+    ? features.map((f, i) => `${i + 1}. ${f}`).join("\n")
+    : "(cliente não especificou funcionalidades)";
+
+  // Default stack
+  const stack = ["nextjs", "react", "typescript", "prisma", "supabase", "tailwind"];
+  if (features.some((f) => f.toLowerCase().includes("pagamento") || f.toLowerCase().includes("stripe"))) {
+    stack.push("stripe");
+  }
+  if (features.some((f) => f.toLowerCase().includes("notifica") || f.toLowerCase().includes("push"))) {
+    stack.push("nodemailer");
+  }
+
+  // Estimate hours based on features count and project type
+  const baseHours: Record<string, number> = {
+    "e-commerce": 120,
+    "crm": 80,
+    "dashboard": 60,
+    "blog": 40,
+    "saas": 200,
+    "mobile": 100,
+    "marketplace": 150,
+    "landing-page": 20,
+    "erp": 180,
+  };
+  let estimatedHours = baseHours[briefing.projectType] ?? 80;
+  estimatedHours += features.length * 8; // +8h per feature
+  if (features.some((f) => f.toLowerCase().includes("multi-tenant"))) estimatedHours += 40;
+  if (features.some((f) => f.toLowerCase().includes("api pública"))) estimatedHours += 30;
+
+  // Cost: R$ 150/hora
+  const estimatedCostCents = estimatedHours * 150 * 100;
+
+  const prd = `# PRD — ${briefing.clientName}
+
+> ⚠️ **Nota:** Este PRD foi gerado automaticamente pela plataforma Orion
+> em modo fallback (sem OPENAI_API_KEY configurada). Para gerar PRDs
+> personalizados com IA, configure a variável OPENAI_API_KEY no Vercel.
+
+## 1. Visão Geral do Produto
+
+**Cliente:** ${briefing.clientName}
+${briefing.clientCompany ? `**Empresa:** ${briefing.clientCompany}` : ""}
+**Tipo de projeto:** ${projectType}
+
+Este projeto visa desenvolver uma ${projectType} para ${briefing.clientName}.
+${briefing.clientCompany ? `A empresa ${briefing.clientCompany} ` : "O cliente "}precisa de uma solução
+que resolva o problema descrito abaixo.
+
+## 2. Problema que Resolve
+
+${briefing.problemStatement}
+
+## 3. Público-alvo
+
+${briefing.targetAudience || "Público-alvo a ser definido em conjunto com o cliente durante a fase de arquitetura."}
+
+## 4. Funcionalidades-chave
+
+${featuresList}
+
+## 5. User Stories (MVP)
+
+### US-01: Autenticação
+**Como** usuário
+**Quero** fazer login no sistema
+**Para** acessar minhas informações privadas
+
+**Critérios de aceite:**
+- Login com e-mail e senha
+- Recuperação de senha por e-mail
+- Sessão persistente (7 dias)
+
+### US-02: Painel Administrativo
+**Como** administrador
+**Quero** acessar um painel de controle
+**Para** gerenciar os dados do sistema
+
+**Critérios de aceite:**
+- Dashboard com KPIs principais
+- CRUD de entidades principais
+- Filtros e busca
+
+### US-03: ${features[0] || "Funcionalidade principal"}
+**Como** usuário
+**Quero** ${features[0]?.toLowerCase() || "usar a funcionalidade principal"}
+**Para** atingir meu objetivo
+
+**Critérios de aceite:**
+- Interface intuitiva
+- Validação de dados
+- Feedback visual
+
+${features.slice(1, 4).map((f, i) => `### US-${String(i + 4).padStart(2, "0")}: ${f}
+**Como** usuário
+**Quero** ${f.toLowerCase()}
+**Para** melhorar minha experiência
+
+**Critérios de aceite:**
+- Implementação completa
+- Testes automatizados
+- Documentação`).join("\n\n")}
+
+## 6. Requisitos Não Funcionais
+
+### Segurança
+- Autenticação obrigatória (exceto landing page)
+- Criptografia SSL em todas as camadas
+- Validação de input em todos os endpoints
+- Rate limiting em endpoints sensíveis
+
+### Performance
+- Tempo de carregamento inicial < 2s
+- API p95 < 500ms
+- Cache de consultas frequentes
+
+### Escalabilidade
+- Arquitetura multi-tenant (se aplicável)
+- Banco de dados com índices otimizados
+- CDN para assets estáticos
+
+### LGPD
+- Consentimento de cookies
+- Política de privacidade
+- Direito de acesso e exclusão de dados
+
+## 7. Escopo da MVP vs Fases Futuras
+
+### MVP (8 semanas)
+${features.slice(0, 5).map((f, i) => `- ${f}`).join("\n") || "- Funcionalidades principais"}
+
+### Fase 2 (semanas 9-14)
+${features.slice(5).map((f) => `- ${f}`).join("\n") || "- Features avançadas"}
+- Relatórios e analytics
+- Integrações externas
+
+### Fase 3 (futuro)
+- App mobile
+- Marketplace de plugins
+- IA e automações
+
+## 8. Critérios de Sucesso
+
+${briefing.successCriteria || "Critérios de sucesso a serem definidos em conjunto com o cliente."}
+
+## 9. Estimativas
+
+- **Horas estimadas:** ${estimatedHours}h
+- **Custo estimado:** R$ ${(estimatedCostCents / 100).toLocaleString("pt-BR")}
+- **Prazo estimado:** ${Math.ceil(estimatedHours / 40)} semanas (considerando 40h/semana)
+
+---
+
+*Gerado automaticamente pela Plataforma Orion em ${new Date().toLocaleString("pt-BR")}*`;
+
+  const architecture = `## Arquitetura Técnica
+
+### Stack Tecnológica Recomendada
+
+${stack.map((s) => `- **${s}**`).join("\n")}
+
+### Estrutura de Pastas
+
+\`\`\`
+src/
+├── app/                    # Next.js App Router
+│   ├── (auth)/            # Layout de autenticação
+│   ├── (dashboard)/       # Layout autenticado
+│   ├── api/               # API Routes
+│   └── layout.tsx
+├── components/            # Componentes React reutilizáveis
+├── lib/                   # Setup de libs (prisma, supabase, etc)
+├── modules/               # Módulos de domínio
+└── types/                 # Tipos TypeScript
+\`\`\`
+
+### Modelo de Dados Principal
+
+\`\`\`
+model User {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  name        String
+  role        Role     @default(USER)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Company {
+  id          String   @id @default(cuid())
+  name        String
+  cnpj        String?  @unique
+  users       User[]
+  createdAt   DateTime @default(now())
+}
+\`\`\`
+
+### Integrações Necessárias
+
+${features.some((f) => f.toLowerCase().includes("pagamento")) ? "- **Stripe** — processamento de pagamentos" : "- **Supabase Auth** — autenticação"}
+${features.some((f) => f.toLowerCase().includes("email")) ? "- **Nodemailer + SMTP** — envio de e-mails" : "- **Supabase** — banco de dados PostgreSQL"}
+- **Vercel** — deploy e hospedagem
+
+### Considerações de Deploy
+
+- Deploy automático via Vercel (git push → production)
+- Variáveis de ambiente no Vercel Dashboard
+- Banco de dados: Supabase (PostgreSQL gerenciado)
+- CDN: Vercel Edge Network (automático)
+- Monitoramento: Vercel Analytics + logs
+
+---
+
+*Gerado automaticamente pela Plataforma Orion*`;
+
+  return {
+    prd,
+    architecture,
+    stack,
+    estimatedHours,
+    estimatedCostCents,
+  };
+}
