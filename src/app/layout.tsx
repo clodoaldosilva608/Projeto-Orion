@@ -9,6 +9,22 @@ export const metadata: Metadata = {
   title: 'Orion Platform — A Fábrica Inteligente de Software',
   description: 'Plataforma SaaS para desenvolvimento de aplicações com IA',
   manifest: '/manifest.json',
+  icons: {
+    icon: '/favicon.svg',
+    shortcut: '/favicon.svg',
+  },
+  openGraph: {
+    title: 'Orion Platform — A Fábrica Inteligente de Software',
+    description: 'Plataforma SaaS para desenvolvimento de aplicações com IA',
+    url: 'https://orion-saas-platform.vercel.app',
+    siteName: 'Orion Platform',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Orion Platform',
+    description: 'Plataforma SaaS para desenvolvimento de aplicações com IA',
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /dashboard
+Disallow: /fabrica
+Disallow: /superadmin
+Disallow: /tv
+Disallow: /workspace
+
+Sitemap: https://orion-saas-platform.vercel.app/sitemap.xml

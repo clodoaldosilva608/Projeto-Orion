@@ -250,8 +250,12 @@ export function Sidebar({
 
         {/* Footer: logout + collapse */}
         <div className="border-t border-soft p-3 space-y-1 shrink-0">
-          <Link
-            href="/api/auth/logout"
+          <button
+            onClick={() => {
+              fetch("/api/auth/logout", { method: "POST" }).then(() => {
+                window.location.href = "/login";
+              });
+            }}
             className={cn(
               "w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-fg hover:text-fg hover:bg-chip-hover transition-colors",
               collapsed && "justify-center px-0",
@@ -260,7 +264,7 @@ export function Sidebar({
           >
             <LogOut className="h-[18px] w-[18px]" />
             {!collapsed && <span>Sair</span>}
-          </Link>
+          </button>
           <button
             onClick={onToggleCollapse}
             className={cn(
