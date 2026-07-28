@@ -6,10 +6,13 @@
     "dev": "next dev -p 3000",
     "build": "prisma generate && next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
-    "@prisma/client": "^6.19.3",
+    "@prisma/client": "^6.11.1",
+    "@stripe/react-stripe-js": "^6.8.0",
+    "@stripe/stripe-js": "^9.12.1",
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.50.0",
     "@types/nodemailer": "^8.0.1",
@@ -33,7 +36,7 @@
     "@types/react-dom": "^19.0.0",
     "eslint": "^9.15.0",
     "eslint-config-next": "^16.1.1",
-    "prisma": "^6.19.3",
+    "prisma": "^6.11.1",
     "tailwindcss": "^4.0.0",
     "typescript": "^5.7.0"
   }

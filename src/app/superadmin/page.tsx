@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
-import { Sparkles, Building2, Users, FolderKanban, KeyRound, TrendingUp, AlertTriangle, ShieldCheck } from "lucide-react";
+import { Sparkles, Building2, Users, FolderKanban, KeyRound, TrendingUp, AlertTriangle, ShieldCheck, Boxes } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { createSupabaseServerClient } from "@/lib/supabase";
 import { getSuperAdminStatsAction, listAllCompaniesAction } from "@/lib/superadmin-actions";
@@ -47,12 +47,20 @@ export default async function SuperAdminPage() {
               </p>
             </div>
           </div>
-          <Link
-            href="/dashboard"
-            className="inline-flex items-center gap-2 h-9 px-3 rounded-lg border border-white/10 bg-white/5 text-xs font-medium text-[#c4c8d8] hover:text-white"
-          >
-            ← Voltar ao painel
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/superadmin/modules"
+              className="inline-flex items-center gap-2 h-9 px-3 rounded-lg border border-violet-500/30 bg-violet-500/10 text-xs font-medium text-violet-200 hover:bg-violet-500/20"
+            >
+              <Boxes className="h-3.5 w-3.5" /> Gerenciar Módulos
+            </Link>
+            <Link
+              href="/dashboard"
+              className="inline-flex items-center gap-2 h-9 px-3 rounded-lg border border-white/10 bg-white/5 text-xs font-medium text-[#c4c8d8] hover:text-white"
+            >
+              ← Voltar ao painel
+            </Link>
+          </div>
         </div>
 
         {/* Stats */}

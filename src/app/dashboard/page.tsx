@@ -9,12 +9,67 @@ import { AlertsPanel } from "@/components/AlertsPanel";
 import { AIUsageChart } from "@/components/AIUsageChart";
 import { AppDistribution } from "@/components/AppDistribution";
 import { ResourceUsage } from "@/components/ResourceUsage";
+import { MyProductsCard } from "@/components/MyProductsCard";
 import { getDashboardData } from "@/lib/queries";
+import { prisma } from "@/lib/db";
+import { createSupabaseServerClient } from "@/lib/supabase";
+import { AVAILABLE_MODULES } from "@/lib/modules-catalog";
 
 export const dynamic = "force-dynamic";
 
+async function getCurrentUserCompany() {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+  const dbUser = await prisma.user.findUnique({
+    where: { supabaseId: user.id },
+    select: {
+      id: true,
+      isSuperAdmin: true,
+      companyId: true,
+      company: {
+        select: {
+          id: true,
+          tradeName: true,
+          plan: true,
+          stripeCustomerId: true,
+          active: true,
+        },
+      },
+    },
+  });
+  return dbUser;
+}
+
 export default async function DashboardPage() {
-  const data = await getDashboardData();
+  const [data, dbUser] = await Promise.all([
+    getDashboardData(),
+    getCurrentUserCompany(),
+  ]);
+
+  // Busca módulos habilitados para a empresa
+  let enabledModulesMap: Record<string, boolean> = {};
+  if (dbUser?.companyId) {
+    const records = await prisma.enabledModule.findMany({
+      where: { companyId: dbUser.companyId },
+      select: { moduleKey: true, enabled: true },
+    });
+    enabledModulesMap = records.reduce((acc, r) => {
+      acc[r.moduleKey] = r.enabled;
+      return acc;
+    }, {} as Record<string, boolean>);
+  }
+
+  // Monta lista de produtos para o card
+  const products = AVAILABLE_MODULES.map((m) => ({
+    moduleKey: m.key,
+    moduleName: m.name,
+    moduleDescription: m.description,
+    moduleIcon: m.icon,
+    moduleColor: m.color,
+    deployUrl: m.deployUrl,
+    enabled: enabledModulesMap[m.key] ?? false,
+  }));
 
   return (
     <div className="space-y-5 lg:space-y-6 max-w-[1600px] mx-auto">
@@ -41,6 +96,17 @@ export default async function DashboardPage() {
           </button>
         </div>
       </div>
+
+      {/* Meus Produtos — Card de produtos habilitados para a empresa */}
+      {dbUser?.company && (
+        <MyProductsCard
+          companyId={dbUser.company.id.toString()}
+          companyTradeName={dbUser.company.tradeName}
+          plan={dbUser.company.plan}
+          stripeCustomerId={dbUser.company.stripeCustomerId}
+          products={products}
+        />
+      )}
 
       {/* Row 1 — 6 KPI cards (2 / 3 / 6 responsive cols) */}
       <KpiGrid kpis={data.kpis} />

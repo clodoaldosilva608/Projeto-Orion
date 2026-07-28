@@ -291,7 +291,14 @@ model Company {
   backgroundColor     String      @default("#0f111a") @map("background_color") @db.Char(7)
   appName             String      @default("Orion") @map("app_name") @db.VarChar(100)
 
+  // Stripe customer ID — armazena o ID do customer no Stripe para billing portal
+  stripeCustomerId    String?     @unique @map("stripe_customer_id") @db.VarChar(100)
+
   license             License?             @relation(fields: [licenseId], references: [id])
+  enabledModules      EnabledModule[]
+  erpIntegrations     ErpIntegration[]
+  trainings           Training[]
+  userDocuments       UserDocument[]
   branches            Branch[]
   users               User[]
   roles               Role[]
@@ -323,9 +330,6 @@ model Company {
   projectBriefings    ProjectBriefing[]
   projectTemplates    ProjectTemplate[]
   softwareLicenses    SoftwareLicense[]
-  trainings           Training[]
-  erpIntegrations    ErpIntegration[]
-  userDocuments      UserDocument[]
 
   @@unique([cnpj], map: "udx_companies_cnpj")
   @@unique([email], map: "udx_companies_email")
@@ -500,8 +504,8 @@ model User {
   calendarEvents       CalendarEvent[]
   checklistTasks       ChecklistTask[]
   feedbackResponses    FeedbackResponse[]
-  trainingProgress    TrainingProgress[]
-  userDocuments      UserDocument[]
+  trainingProgress     TrainingProgress[]
+  documents            UserDocument[]
 
   @@unique([companyId, email], map: "udx_users_company_email")
   @@index([companyId], map: "idx_users_company")
@@ -1944,140 +1948,126 @@ model LicenseValidation {
 }
 
 // ================================================================
-// P19 — BIBLIOTECA DE TREINAMENTOS + CENTRAL DE DOCUMENTOS
+// ENABLED MODULES — N:N Company ↔ Modules
+// Controla quais módulos cada empresa (tenant) pode acessar.
+// Exemplos: paguemenos, vendas, fabrica, ia, deploy, calendario
 // ================================================================
+model EnabledModule {
+  id          BigInt   @id @default(autoincrement())
+  companyId   BigInt   @map("company_id")
+  moduleKey   String   @map("module_key") @db.VarChar(50)
+  enabled     Boolean  @default(true)
+  grantedAt   DateTime @default(now()) @map("granted_at") @db.Timestamptz
+  grantedBy   BigInt?  @map("granted_by")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-enum TrainingCategory {
-  onboarding
-  sales
-  product
-  compliance
-  technical
-  soft_skills
-  other
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
-  @@map("training_category")
+  @@unique([companyId, moduleKey], map: "udx_enabled_modules_company_key")
+  @@index([companyId], map: "idx_enabled_modules_company")
+  @@index([moduleKey], map: "idx_enabled_modules_key")
+  @@map("enabled_modules")
 }
 
-enum TrainingFormat {
-  video
-  pdf
-  presentation
-  interactive
-  external_link
+// ================================================================
+// ERP INTEGRATIONS — Integrações externas (N:N com Company)
+// Ex: Sankhya, Totvs, SAP, Bling, etc.
+// ================================================================
+model ErpIntegration {
+  id          BigInt   @id @default(autoincrement())
+  companyId   BigInt   @map("company_id")
+  erpType     String   @map("erp_type") @db.VarChar(50)
+  name        String   @db.VarChar(255)
+  apiUrl      String?  @map("api_url") @db.VarChar(500)
+  apiKey      String?  @map("api_key") @db.Text
+  status      String   @default("active") @db.VarChar(20)
+  lastSyncAt  DateTime? @map("last_sync_at") @db.Timestamptz
+  metadata    Json     @default("{}")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  @@map("training_format")
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId], map: "idx_erp_integrations_company")
+  @@index([erpType], map: "idx_erp_integrations_type")
+  @@map("erp_integrations")
 }
 
+// ================================================================
+// TRAININGS — Biblioteca de treinamentos por empresa
+// ================================================================
 model Training {
-  id          BigInt           @id @default(autoincrement())
-  uuid        String           @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  companyId   BigInt           @map("company_id")
-  title       String           @db.VarChar(255)
-  description String?          @db.Text
-  category    TrainingCategory @default(other)
-  format      TrainingFormat   @default(video)
-  contentUrl  String?          @map("content_url") @db.Text
-  durationMin Int?             @map("duration_min")
-  tags        String[]         @default([])
-  isRequired  Boolean          @default(false) @map("is_required")
-  isActive    Boolean          @default(true) @map("is_active")
-  sortOrder   Int              @default(0) @map("sort_order")
-  metadata    Json             @default("{}")
-  createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt   DateTime         @updatedAt @map("updated_at") @db.Timestamptz
-  deletedAt   DateTime?        @map("deleted_at") @db.Timestamptz
-  createdBy   BigInt?          @map("created_by")
+  id            BigInt    @id @default(autoincrement())
+  uuid          String    @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId     BigInt    @map("company_id")
+  title         String    @db.VarChar(255)
+  description   String?   @db.Text
+  category      String    @default("other") @db.VarChar(50)
+  format        String    @default("video") @db.VarChar(20)
+  contentUrl    String?   @map("content_url") @db.VarChar(500)
+  durationMin   Int?      @map("duration_min")
+  isRequired    Boolean   @default(false) @map("is_required")
+  isActive      Boolean   @default(true) @map("is_active")
+  sortOrder     Int       @default(0) @map("sort_order")
+  createdBy     BigInt?   @map("created_by")
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt     DateTime? @map("deleted_at") @db.Timestamptz
 
-  company   Company           @relation(fields: [companyId], references: [id])
-  progress  TrainingProgress[]
+  company  Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  progress TrainingProgress[]
 
-  @@index([companyId, isActive], map: "idx_trainings_active")
+  @@index([companyId], map: "idx_trainings_company")
+  @@index([category], map: "idx_trainings_category")
   @@map("trainings")
 }
 
 model TrainingProgress {
-  id          BigInt   @id @default(autoincrement())
-  trainingId  BigInt   @map("training_id")
-  userId      BigInt   @map("user_id")
-  companyId   BigInt   @map("company_id")
-  status      String   @default("not_started") @db.VarChar(20) // not_started, in_progress, completed
-  progress    Int      @default(0) // 0-100
-  startedAt   DateTime? @map("started_at") @db.Timestamptz
-  completedAt DateTime? @map("completed_at") @db.Timestamptz
-  score       Int?     // 0-100 for quizzes
-  certificate String?  @db.Text // certificate URL/ID
-  metadata    Json     @default("{}")
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  id           BigInt    @id @default(autoincrement())
+  trainingId   BigInt    @map("training_id")
+  userId       BigInt    @map("user_id")
+  companyId    BigInt    @map("company_id")
+  status       String    @default("not_started") @db.VarChar(30)
+  progress     Int       @default(0)
+  startedAt    DateTime? @map("started_at") @db.Timestamptz
+  completedAt  DateTime? @map("completed_at") @db.Timestamptz
+  certificate  String?   @db.VarChar(255)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz
 
   training Training @relation(fields: [trainingId], references: [id], onDelete: Cascade)
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([trainingId, userId], map: "udx_training_progress")
-  @@index([userId, status], map: "idx_training_progress_user")
+  @@unique([trainingId, userId], map: "udx_training_progress_training_user")
+  @@index([userId], map: "idx_training_progress_user")
   @@map("training_progress")
 }
 
-enum DocumentType {
-  contract
-  id_document
-  certificate
-  resume
-  policy
-  manual
-  other
-
-  @@map("document_type")
-}
-
+// ================================================================
+// USER DOCUMENTS — Documentos pessoais dos usuários
+// ================================================================
 model UserDocument {
-  id          BigInt       @id @default(autoincrement())
-  uuid        String       @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  companyId   BigInt       @map("company_id")
-  userId      BigInt       @map("user_id")
-  title       String       @db.VarChar(255)
-  description String?      @db.Text
-  type        DocumentType @default(other)
-  fileUrl     String       @map("file_url") @db.Text
-  fileName    String       @map("file_name") @db.VarChar(255)
-  fileSize    Int?         @map("file_size")
-  mimeType    String?      @map("mime_type") @db.VarChar(100)
-  tags        String[]     @default([])
-  isShared    Boolean      @default(false) @map("is_shared")
-  expiresAt   DateTime?    @map("expires_at") @db.Timestamptz
-  metadata    Json         @default("{}")
-  createdAt   DateTime     @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt   DateTime     @updatedAt @map("updated_at") @db.Timestamptz
-  deletedAt   DateTime?    @map("deleted_at") @db.Timestamptz
+  id          BigInt    @id @default(autoincrement())
+  uuid        String    @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId   BigInt    @map("company_id")
+  userId      BigInt    @map("user_id")
+  title       String    @db.VarChar(255)
+  description String?   @db.Text
+  type        String    @default("other") @db.VarChar(50)
+  fileUrl     String    @map("file_url") @db.VarChar(500)
+  fileName    String    @map("file_name") @db.VarChar(255)
+  fileSize    Int?      @map("file_size")
+  mimeType    String?   @map("mime_type") @db.VarChar(100)
+  expiresAt   DateTime? @map("expires_at") @db.Timestamptz
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz
 
-  company Company @relation(fields: [companyId], references: [id])
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([companyId, userId], map: "idx_user_docs_company_user")
-  @@index([userId], map: "idx_user_docs_user")
+  @@index([companyId, userId], map: "idx_user_documents_company_user")
+  @@index([userId], map: "idx_user_documents_user")
   @@map("user_documents")
-}
-
-model ErpIntegration {
-  id          BigInt   @id @default(autoincrement())
-  uuid        String   @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  companyId   BigInt   @map("company_id")
-  erpType     String   @map("erp_type") @db.VarChar(50)
-  name        String   @db.VarChar(255)
-  apiUrl      String?  @map("api_url") @db.Text
-  apiKey      String?  @map("api_key") @db.Text
-  apiSecret   String?  @map("api_secret") @db.Text
-  status      String   @default("inactive") @db.VarChar(20)
-  lastSyncAt  DateTime? @map("last_sync_at") @db.Timestamptz
-  syncInterval String @default("hourly") @map("sync_interval") @db.VarChar(20)
-  config      Json     @default("{}")
-  metadata    Json     @default("{}")
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
-
-  company Company @relation(fields: [companyId], references: [id])
-
-  @@index([companyId], map: "idx_erp_company")
-  @@map("erp_integrations")
 }

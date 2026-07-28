@@ -3,82 +3,113 @@ import { NextResponse, type NextRequest } from "next/server";
 /**
  * Next.js 16 proxy (formerly middleware).
  *
- * MINIMAL — only checks for auth cookie existence on page navigations.
- * Does NOT check 2FA (handled by login route).
- * Does NOT modify request headers or response cookies.
- * Does NOT run on RSC data requests (Next-Router fetches).
+ * SaaS Multi-Tenant + Auth + 2FA:
+ *
+ * 1. TENANT ROUTING: Extracts subdomain from hostname and injects it as
+ *    `x-tenant-subdomain` header. Server components read this to look up
+ *    the Company (tenant) for white-label customization.
+ *
+ * 2. AUTH: Cookie-existence check — redirects unauthenticated users to
+ *    /login when the Supabase auth cookie is missing.
+ *
+ * 3. 2FA: Redirects to /login/2fa when the 2FA-verified cookie is missing.
+ *
+ * 4. LICENSE CHECK: Done server-side in dashboard layout (not in proxy,
+ *    because proxy runs on edge runtime and can't easily query Prisma).
+ *
+ * 5. SUPER ADMIN: /superadmin/* routes require isSuperAdmin (checked
+ *    server-side, not in proxy — proxy just allows the route through).
  */
+
+// Domains that are "platform" (not tenant-specific)
+const PLATFORM_DOMAINS = ["localhost", "orion-saas-phi.vercel.app", "orion-platform-black.vercel.app", "orion-saas-platform.vercel.app"];
+
+function extractSubdomain(hostname: string): string | null {
+  const host = hostname.split(":")[0];
+
+  if (PLATFORM_DOMAINS.some((d) => host === d || host.endsWith("." + d))) {
+    for (const d of PLATFORM_DOMAINS) {
+      if (host.endsWith("." + d)) {
+        const sub = host.slice(0, -(d.length + 1));
+        if (sub && sub !== "www") return sub;
+      }
+    }
+    return null;
+  }
+
+  return null;
+}
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const hostname = request.nextUrl.hostname;
 
-  // Public routes — no auth required
-  const publicPaths = ["/", "/login", "/login/2fa", "/produtos", "/deployments", "/clear-sw", "/kill-sw", "/robots.txt", "/sitemap.xml", "/favicon.svg", "/favicon.ico", "/manifest.json", "/sw.js"];
-  if (publicPaths.some((p) => pathname === p)) {
-    return NextResponse.next();
+  // === TENANT ROUTING ===
+  const subdomain = extractSubdomain(hostname);
+  const requestHeaders = new Headers(request.headers);
+  if (subdomain) {
+    requestHeaders.set("x-tenant-subdomain", subdomain);
+  }
+  requestHeaders.set("x-tenant-hostname", hostname);
+
+  // Public routes that never require auth.
+  const publicPaths = ["/", "/login", "/login/2fa", "/produtos", "/deployments", "/superadmin/login", "/kill-sw", "/clear-sw"];
+  if (publicPaths.some((p) => pathname === p || pathname.startsWith(p + "/"))) {
+    return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
-  // Static assets — always public
-  if (pathname.startsWith("/_next/") || pathname.startsWith("/public/")) {
-    return NextResponse.next();
+  // Stripe webhook — assinatura propria, não precisa de cookie
+  if (pathname.startsWith("/api/stripe/webhook")) {
+    return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
-  // Routes that bypass auth check entirely
-  if (pathname.startsWith("/superadmin") ||
-      pathname.startsWith("/api/auth/") ||
-      pathname.startsWith("/api/tenant") ||
-      pathname.startsWith("/api/cron/") ||
-      pathname.startsWith("/api/v1/public/") ||
-      pathname.startsWith("/api/fabrica/") ||
-      pathname.startsWith("/api/ai/") ||
-      pathname.startsWith("/api/backup/") ||
-      pathname.startsWith("/tv") ||
-      pathname.startsWith("/workspace") ||
-      pathname.startsWith("/_next/")) {
-    return NextResponse.next();
+  // Super Admin routes — allow through proxy (server-side checks isSuperAdmin)
+  if (pathname.startsWith("/superadmin")) {
+    return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
-  // If no auth cookie, redirect to login (not 404 — let the login page handle it)
+  if (pathname.startsWith("/api/auth/")) {
+    return NextResponse.next({ request: { headers: requestHeaders } });
+  }
+  if (pathname.startsWith("/api/cron/")) {
+    return NextResponse.next({ request: { headers: requestHeaders } });
+  }
+  if (pathname.startsWith("/api/v1/public/")) {
+    return NextResponse.next({ request: { headers: requestHeaders } });
+  }
+  if (pathname.startsWith("/tv")) {
+    return NextResponse.next({ request: { headers: requestHeaders } });
+  }
+  if (pathname.startsWith("/workspace")) {
+    return NextResponse.next({ request: { headers: requestHeaders } });
+  }
+
+  // === AUTH CHECK ===
   const hasAuthCookie = request.cookies
     .getAll()
-    .some((c) => /^sb-[a-z0-9]+-auth-token(\.\d+)?$/i.test(c.name));
+    .some((c) => /^sb-[a-z0-9]+-auth-token$/i.test(c.name));
 
   if (!hasAuthCookie) {
-    // For unknown routes WITHOUT auth, show 404 instead of redirecting to login
-    // This fixes BUG 65: 404 should show error page, not redirect to login
-    const knownRoutes = [
-      "/dashboard", "/fabrica", "/metas", "/indicadores", "/resultados",
-      "/aprovacoes", "/ranking", "/campanhas", "/gamificacao", "/calendario",
-      "/checklist", "/feedback", "/plugins", "/usuarios", "/funcoes-permissoes",
-      "/notificacoes", "/backups", "/configuracoes", "/logs-auditoria",
-      "/clientes", "/licencas", "/pagamentos", "/assinaturas", "/planos",
-      "/cupons", "/aplicacoes", "/file-projetos", "/builds", "/deploys",
-      "/releases", "/anomalias", "/agentes-ia", "/jobs-ia", "/modelos",
-      "/consumo-ia", "/provedores", "/chatbots", "/base-conhecimento",
-      "/privacidade", "/superadmin",
-    ];
-    const isKnownRoute = knownRoutes.some(r => pathname === r || pathname.startsWith(r + "/"));
-    
-    if (!isKnownRoute) {
-      // Unknown route — let Next.js show the 404 page
-      return NextResponse.next();
-    }
-    
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = "/login";
     loginUrl.searchParams.set("redirect", pathname);
-    return NextResponse.redirect(loginUrl);
+    return NextResponse.redirect(loginUrl, { headers: requestHeaders });
   }
 
-  // Auth cookie exists — allow through with ZERO modifications.
-  return NextResponse.next();
+  // === 2FA CHECK ===
+  const twoFactorVerified = request.cookies.get("orion-2fa-verified")?.value === "1";
+  if (!twoFactorVerified) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/login/2fa";
+    url.searchParams.set("redirect", pathname);
+    return NextResponse.redirect(url, { headers: requestHeaders });
+  }
+
+  return NextResponse.next({ request: { headers: requestHeaders } });
 }
 
 export const config = {
   matcher: [
-    // Exclude: static assets, SW, AND RSC data requests
-    // RSC requests have header "RSC: 1" but we can't filter by header
-    // in the matcher. Instead, we exclude common RSC patterns.
     "/((?!_next/static|_next/image|favicon.ico|manifest.json|sw.js|.*\\.(?:css|js|map|woff|woff2|ttf|otf|eot|png|jpg|jpeg|gif|svg|ico|webp|avif)$).*)",
   ],
 };
