@@ -66,6 +66,10 @@ export async function POST(request: NextRequest) {
           authMethod = "admin";
           console.log("[register] ✓ User criado via admin.createUser (sem email)");
         } else if (adminError) {
+          // Se email já existe, retornar erro 409 imediatamente
+          if (adminError.message.includes("already") || adminError.message.includes("registered") || adminError.message.includes("exists")) {
+            return NextResponse.json({ error: "Email já cadastrado. Faça login." }, { status: 409 });
+          }
           console.warn("[register] admin.createUser falhou:", adminError.message, "- tentando signUp");
         }
       } catch (adminErr: any) {
@@ -243,6 +247,10 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: any) {
     console.error("[register] Error:", error);
+    // Tratar unique constraint violation (email já cadastrado)
+    if (error?.code === "P2002" || error?.message?.includes("Unique constraint")) {
+      return NextResponse.json({ error: "Email já cadastrado. Faça login." }, { status: 409 });
+    }
     return NextResponse.json({ error: error.message || "Erro interno" }, { status: 500 });
   }
 }
