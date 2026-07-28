@@ -11,3 +11,4 @@ upload/
 scripts/
 *.tgz
 tsconfig.tsbuildinfo
+.env*

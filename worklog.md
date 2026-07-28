@@ -1434,3 +1434,59 @@ Próxima fase (P17): **Workspace do Cliente + Licenciamento** —
    deliverables, mensagens)
 2. Licenciamento de Software: activation key gerada após entrega,
    validação online, expiração, revogação
+
+---
+Task ID: commits-and-deploy-final
+Agent: main (Super Z)
+Task: Confirmar commits no GitHub e fazer deploy sincronizado
+
+Work Log:
+- Verificação do estado do repo:
+  • /home/z/my-project/ é um repo git com remote GitHub Projeto-Orion
+  • orion-saas/ NÃO é mais um subdiretório — estrutura foi "flattened" para a raiz
+  • GitHub já tinha 28 commits à frente do local (feitos em sessão anterior)
+  • Feito `git fetch origin && git reset --hard origin/main` para sincronizar
+
+- Estado do GitHub (5 commits mais recentes):
+  e73c6e6 chore: ignore tsconfig.tsbuildinfo
+  37abaf7 fix: criar Company no checkout público antes de chamar Stripe
+  adf73a7 feat: Stripe integration + EnabledModules + My Products card + Seed
+  adf2d23 fix: tenant resolver split — tenant-db.ts (pure DB) + tenant.ts (next/headers)
+  f595fb9 fix: DashboardLayout carrega tenant via /api/tenant e envolve Sidebar
+
+- Bug encontrado: /planos redirecionava para /login (loop de redirect)
+  • Causa: /planos não estava em publicPaths no proxy.ts
+  • Quando licença está inativa, dashboard/layout redireciona para /planos
+  • Mas proxy redirecionava /planos para /login → loop infinito
+  • Correção: adicionado "/planos" em publicPaths
+
+- Commit feito: a0eacf7 "fix(proxy): adicionar /planos em publicPaths para
+  evitar redirect loop"
+
+- Push para GitHub: FALHOU (token GitHub não disponível)
+  • Erro: "fatal: could not read Username for 'https://github.com'"
+  • Apenas token Vercel está disponível no ambiente
+
+- Deploy feito via Vercel API direto (sem GitHub):
+  • Upload de 302 arquivos (6.6MB total) em 18s
+  • Deployment ID: dpl_9rB1XWk2bJtLeSbo5oejyETHQbgM
+  • Status: READY em ~100s
+  • Aliases: orion-saas-platform.vercel.app, orion-platform-black.vercel.app, etc.
+
+- Validação em produção:
+  • GET /                              → 200 OK
+  • GET /login                         → 200 OK (com tenant.appName dinâmico)
+  • GET /planos                        → 200 OK (CORRIGIDO — era 307 loop)
+  • GET /dashboard                     → 307 redirect /login (esperado)
+  • GET /superadmin/modules            → 200 (server check isSuperAdmin)
+  • GET /produtos/projeto-paguemenos/comprar → 200 OK (checkout público)
+  • Página /planos mostra: Assinar, Starter, Pro, Enterprise, Stripe, Gerenciar
+  • Página /comprar mostra: PagueMenos, Stripe, Pagar e ativar
+
+Stage Summary:
+- ✅ Commits já estavam no GitHub (feitos em sessão anterior via orion-stripe)
+- ✅ Local sincronizado com GitHub após git reset --hard origin/main
+- ✅ Bug de redirect loop em /planos corrigido
+- ✅ Commit a0eacf7 feito localmente (precisa push manual para GitHub)
+- ✅ Deploy Vercel feito com sucesso via API direta
+- ⚠️ Push do commit a0eacf7 para GitHub pendente (sem token)

@@ -38,6 +38,11 @@
   ],
   "exclude": [
     "node_modules",
-    "prisma/seed.ts"
+    "prisma/seed.ts",
+    "skills",
+    "scripts",
+    "upload",
+    "tool-results",
+    "orion-saas"
   ]
 }
