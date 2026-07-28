@@ -1,0 +1,8 @@
+version: 1.0.0
+files:
+  - url: Orion-Platform-1.0.0.exe
+    sha512: placeholder
+    size: 85000000
+path: Orion-Platform-1.0.0.exe
+sha512: placeholder
+releaseDate: '2026-07-27'

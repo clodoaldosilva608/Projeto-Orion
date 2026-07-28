@@ -324,6 +324,7 @@ model Company {
   projectTemplates    ProjectTemplate[]
   softwareLicenses    SoftwareLicense[]
   trainings           Training[]
+  erpIntegrations    ErpIntegration[]
   userDocuments      UserDocument[]
 
   @@unique([cnpj], map: "udx_companies_cnpj")
@@ -2056,4 +2057,27 @@ model UserDocument {
   @@index([companyId, userId], map: "idx_user_docs_company_user")
   @@index([userId], map: "idx_user_docs_user")
   @@map("user_documents")
+}
+
+model ErpIntegration {
+  id          BigInt   @id @default(autoincrement())
+  uuid        String   @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId   BigInt   @map("company_id")
+  erpType     String   @map("erp_type") @db.VarChar(50)
+  name        String   @db.VarChar(255)
+  apiUrl      String?  @map("api_url") @db.Text
+  apiKey      String?  @map("api_key") @db.Text
+  apiSecret   String?  @map("api_secret") @db.Text
+  status      String   @default("inactive") @db.VarChar(20)
+  lastSyncAt  DateTime? @map("last_sync_at") @db.Timestamptz
+  syncInterval String @default("hourly") @map("sync_interval") @db.VarChar(20)
+  config      Json     @default("{}")
+  metadata    Json     @default("{}")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@index([companyId], map: "idx_erp_company")
+  @@map("erp_integrations")
 }

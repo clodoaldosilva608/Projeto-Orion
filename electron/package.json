@@ -1,0 +1,23 @@
+{
+  "name": "orion-desktop",
+  "version": "1.0.0",
+  "description": "Orion Platform Desktop App",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build:win": "electron-builder --win --x64",
+    "build:mac": "electron-builder --mac --arm64 --x64",
+    "build:linux": "electron-builder --linux --x64"
+  },
+  "build": {
+    "appId": "com.orion.platform",
+    "productName": "Orion Platform",
+    "directories": { "output": "dist" },
+    "files": ["main.js", "preload.js", "../public/favicon.svg"],
+    "win": { "target": "nsis", "icon": "../public/favicon.svg" },
+    "mac": { "target": "dmg", "icon": "../public/favicon.svg", "category": "public.app-category.business" },
+    "linux": { "target": "AppImage", "icon": "../public/favicon.svg", "category": "Office" },
+    "publish": { "provider": "generic", "url": "https://orion-saas-platform.vercel.app/releases/" }
+  },
+  "devDependencies": { "electron": "^33.0.0", "electron-builder": "^25.0.0" }
+}

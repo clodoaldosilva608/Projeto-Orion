@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import { ThemeProvider } from './theme-provider'
+import { I18nProvider } from '@/lib/i18n'
 
 import { CookieConsent } from "@/components/CookieConsent"
 import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister"
@@ -35,7 +36,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="manifest" href="/manifest.json" />
       </head>
       <body suppressHydrationWarning>
-        <ThemeProvider>{children}</ThemeProvider>
+        <I18nProvider><ThemeProvider>{children}</ThemeProvider></I18nProvider>
         <CookieConsent />
         <ServiceWorkerRegister />
       </body>
