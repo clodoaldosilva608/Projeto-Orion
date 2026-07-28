@@ -3,6 +3,7 @@ import './globals.css'
 import { ThemeProvider } from './theme-provider'
 import { I18nProvider } from '@/lib/i18n'
 import { getCurrentTenant, DEFAULT_TENANT } from '@/lib/tenant'
+import { TenantProvider } from '@/components/TenantProvider'
 
 import { CookieConsent } from "@/components/CookieConsent"
 import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister"
@@ -58,7 +59,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         `}} />
       </head>
       <body suppressHydrationWarning>
-        <I18nProvider><ThemeProvider>{children}</ThemeProvider></I18nProvider>
+        <TenantProvider tenant={tenant}>
+          <I18nProvider><ThemeProvider>{children}</ThemeProvider></I18nProvider>
+        </TenantProvider>
         <CookieConsent />
         <ServiceWorkerRegister />
       </body>
