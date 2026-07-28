@@ -39,49 +39,89 @@ export async function POST(request: NextRequest) {
     }
 
     // === 1. Cria Supabase Auth user ===
+    // Estratégia: tentar admin.createUser PRIMEIRO (não envia email, sem rate limit)
+    // Se a service_role key estiver inválida, cair para signUp (envia email, sujeito a rate limit)
     const supabase = await createSupabaseServerClient();
+    const { createClient } = await import("@supabase/supabase-js");
 
-    // Usa signUp (anon key) em vez de admin.createUser (service role)
-    // porque a service role key pode não estar configurada corretamente.
-    // O signUp cria o usuário e o Supabase envia email de confirmação.
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email: email.toLowerCase().trim(),
-      password,
-      options: {
-        data: { name, company_name: companyName, role: "admin" },
-      },
-    });
+    let supabaseId: string | null = null;
+    let authMethod: "admin" | "signup" | null = null;
 
-    if (authError) {
-      console.error("[register] Supabase auth error:", authError.message);
-      if (authError.message.includes("already")) {
-        return NextResponse.json({ error: "Email já cadastrado. Faça login." }, { status: 409 });
+    // TENTATIVA 1: admin.createUser (preferencial — não tem rate limit de email)
+    if (process.env.SUPABASE_SECRET_KEY) {
+      try {
+        const supabaseAdmin = createClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.SUPABASE_SECRET_KEY!,
+          { auth: { autoRefreshToken: false, persistSession: false } }
+        );
+        const { data: adminData, error: adminError } = await supabaseAdmin.auth.admin.createUser({
+          email: email.toLowerCase().trim(),
+          password,
+          email_confirm: true, // já confirmado — não envia email
+          user_metadata: { name, company_name: companyName, role: "admin" },
+        });
+        if (!adminError && adminData.user) {
+          supabaseId = adminData.user.id;
+          authMethod = "admin";
+          console.log("[register] ✓ User criado via admin.createUser (sem email)");
+        } else if (adminError) {
+          console.warn("[register] admin.createUser falhou:", adminError.message, "- tentando signUp");
+        }
+      } catch (adminErr: any) {
+        console.warn("[register] admin API exception:", adminErr.message, "- tentando signUp");
       }
-      return NextResponse.json({ error: authError.message }, { status: 400 });
     }
 
-    if (!authData.user) {
-      return NextResponse.json({ error: "Erro ao criar usuário" }, { status: 500 });
-    }
-
-    const supabaseId = authData.user.id;
-
-    // Tenta confirmar email automaticamente via admin API (se service role estiver OK)
-    // Se falhar, não bloqueia — usuário confirma via link por email
-    try {
-      const { createClient } = await import("@supabase/supabase-js");
-      const supabaseAdmin = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SECRET_KEY!,
-        { auth: { autoRefreshToken: false, persistSession: false } }
-      );
-      await supabaseAdmin.auth.admin.updateUserById(supabaseId, {
-        email_confirm: true,
+    // TENTATIVA 2: signUp (fallback — envia email, sujeito a rate limit)
+    if (!supabaseId) {
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email: email.toLowerCase().trim(),
+        password,
+        options: {
+          data: { name, company_name: companyName, role: "admin" },
+        },
       });
-      console.log("[register] ✓ Email confirmado automaticamente");
-    } catch (confirmErr: any) {
-      console.warn("[register] Não foi possível confirmar email automaticamente:", confirmErr.message);
-      // Não bloqueia — usuário confirma via email
+
+      if (signUpError) {
+        console.error("[register] signUp error:", signUpError.message);
+        if (signUpError.message.includes("already")) {
+          return NextResponse.json({ error: "Email já cadastrado. Faça login." }, { status: 409 });
+        }
+        if (signUpError.message.includes("rate limit") || signUpError.message.includes("over_email_send_rate_limit")) {
+          return NextResponse.json({
+            error: "Muitas tentativas de cadastro nas últimas horas. Aguarde alguns minutos e tente novamente, ou entre em contato com o suporte.",
+          }, { status: 429 });
+        }
+        return NextResponse.json({ error: signUpError.message }, { status: 400 });
+      }
+
+      if (!signUpData.user) {
+        return NextResponse.json({ error: "Erro ao criar usuário" }, { status: 500 });
+      }
+
+      supabaseId = signUpData.user.id;
+      authMethod = "signup";
+      console.log("[register] ✓ User criado via signUp (com email de confirmação)");
+    }
+
+    if (!supabaseId) {
+      return NextResponse.json({ error: "Falha ao criar usuário" }, { status: 500 });
+    }
+
+    // Se foi via signUp, tenta confirmar email automaticamente via admin API
+    if (authMethod === "signup" && process.env.SUPABASE_SECRET_KEY) {
+      try {
+        const supabaseAdmin = createClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.SUPABASE_SECRET_KEY!,
+          { auth: { autoRefreshToken: false, persistSession: false } }
+        );
+        await supabaseAdmin.auth.admin.updateUserById(supabaseId, { email_confirm: true });
+        console.log("[register] ✓ Email confirmado automaticamente via admin API");
+      } catch (confirmErr: any) {
+        console.warn("[register] Confirmação automática falhou:", confirmErr.message);
+      }
     }
 
     // === 2. Cria Company (tenant) ===
