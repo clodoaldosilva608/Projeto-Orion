@@ -1,0 +1,728 @@
+     1→import Link from "next/link";
+     2→import {
+     3→  Sparkles,
+     4→  ArrowRight,
+     5→  Play,
+     6→  Check,
+     7→  X,
+     8→  Star,
+     9→  Rocket,
+    10→  ShieldCheck,
+    11→  Lock,
+    12→  RefreshCw,
+    13→  Users,
+    14→  Cloud,
+    15→  Database,
+    16→  Layout,
+    17→  KeyRound,
+    18→  Bell,
+    19→  TrendingUp,
+    20→} from "lucide-react";
+    21→
+    22→export const dynamic = "force-dynamic";
+    23→
+    24→const TRUST_ICONS = [
+    25→  "Desenvolvido com IA",
+    26→  "Aplicações Web e Mobile",
+    27→  "Licenciamento automático",
+    28→  "Hospedagem e manutenção",
+    29→  "Painel exclusivo de clientes",
+    30→  "Suporte especializado",
+    31→];
+    32→
+    33→const STEPS = [
+    34→  { n: "1", emoji: "🛒", title: "Escolha seu plano", desc: "Selecione a licença que melhor atende ao seu negócio." },
+    35→  { n: "2", emoji: "📝", title: "Conte sua ideia", desc: "Responda um briefing simples sobre o que você precisa." },
+    36→  { n: "3", emoji: "🤖", title: "Nossa IA inicia o projeto", desc: "Arquitetura, planejamento e desenvolvimento com Inteligência Artificial." },
+    37→  { n: "4", emoji: "✅", title: "Especialistas validam tudo", desc: "Cada projeto passa por revisão e testes antes da entrega." },
+    38→  { n: "5", emoji: "🚀", title: "Receba seu aplicativo", desc: "Seu aplicativo fica disponível na sua Dashboard." },
+    39→  { n: "6", emoji: "📈", title: "Continue evoluindo", desc: "Atualizações, métricas e novas funcionalidades sempre que precisar." },
+    40→];
+    41→
+    42→const SOLUTIONS = [
+    43→  { emoji: "❤️", title: "Saúde" },
+    44→  { emoji: "💰", title: "Finanças" },
+    45→  { emoji: "🎓", title: "Educação" },
+    46→  { emoji: "🛒", title: "Comércio" },
+    47→  { emoji: "💪", title: "Fitness" },
+    48→  { emoji: "🚚", title: "Logística" },
+    49→  { emoji: "🏢", title: "Empresas" },
+    50→];
+    51→
+    52→const INCLUDED = [
+    53→  { icon: Layout, title: "Arquitetura profissional", desc: "Estrutura robusta, escalável e segura." },
+    54→  { icon: Sparkles, title: "Interface moderna", desc: "Design responsivo e experiência incrível." },
+    55→  { icon: Users, title: "Painel administrativo", desc: "Gestão completa do seu aplicativo." },
+    56→  { icon: Lock, title: "Login seguro", desc: "Autenticação segura e controle de acesso." },
+    57→  { icon: KeyRound, title: "Licenciamento automático", desc: "Controle de uso e renovações automáticas." },
+    58→  { icon: RefreshCw, title: "Atualizações contínuas", desc: "Seu sistema sempre moderno e atualizado." },
+    59→  { icon: Cloud, title: "Hospedagem em nuvem", desc: "Alta disponibilidade, performance e SLA." },
+    60→  { icon: Database, title: "Backup & segurança", desc: "Seus dados sempre protegidos." },
+    61→];
+    62→
+    63→const DASHBOARD_CHECKS = [
+    64→  "Downloads e instalações",
+    65→  "Projetos e aplicações",
+    66→  "Licenças e validade",
+    67→  "Suporte e chamados",
+    68→  "Pagamentos e faturas",
+    69→  "Relatórios e métricas",
+    70→  "Atualizações e versões",
+    71→  "Histórico completo",
+    72→];
+    73→
+    74→const SECURITY = [
+    75→  { icon: Lock, label: "Criptografia SSL em todas as camadas" },
+    76→  { icon: RefreshCw, label: "Backups automáticos e redundantes" },
+    77→  { icon: Users, label: "Controle de acesso e permissões" },
+    78→  { icon: ShieldCheck, label: "Downloads protegidos e monitorados" },
+    79→  { icon: Database, label: "Auditoria completa e relatórios seguros" },
+    80→  { icon: Check, label: "Conformidade com as melhores práticas" },
+    81→];
+    82→
+    83→const COMPARISON = {
+    84→  trad: [
+    85→    "Alto custo e prazos longos",
+    86→    "Processos manuais e burocráticos",
+    87→    "Pouca transparência",
+    88→    "Sem acompanhamento contínuo",
+    89→    "Dificuldade para escalar",
+    90→  ],
+    91→  orion: [
+    92→    "IA especializada acelerando tudo",
+    93→    "Processos automatizados e inteligentes",
+    94→    "Total transparência e controle",
+    95→    "Acompanhamento completo na Dashboard",
+    96→    "Licenciamento, atualizações e escalabilidade",
+    97→  ],
+    98→};
+    99→
+   100→const TESTIMONIALS = [
+   101→  {
+   102→    text: "O Orion entregou nosso aplicativo 3x mais rápido do que imaginávamos. A IA realmente faz a diferença no desenvolvimento.",
+   103→    name: "Juliana Ferreira",
+   104→    role: "CEO, HealthPlus",
+   105→  },
+   106→  {
+   107→    text: "A plataforma é completa! Dashboard incrível, suporte rápido e atualizações constantes. Superou nossas expectativas.",
+   108→    name: "Rafael Mendes",
+   109→    role: "Diretor, LogiTech",
+   110→  },
+   111→  {
+   112→    text: "Profissionais altamente qualificados e tecnologia de ponta. Nosso projeto ficou perfeito!",
+   113→    name: "Carla Souza",
+   114→    role: "Fundadora, EduSmart",
+   115→  },
+   116→];
+   117→
+   118→const FAQ = [
+   119→  {
+   120→    q: "Quanto tempo leva para meu aplicativo ficar pronto?",
+   121→    a: "Na maioria dos casos, uma aplicação fica pronta para homologação em poucas horas após o briefing inicial. O deploy em produção é feito em 1 clique assim que você aprova.",
+   122→  },
+   123→  {
+   124→    q: "Como funciona o pagamento e a renovação?",
+   125→    a: "O pagamento é processado de forma segura via Stripe. A renovação da licença é automática e você pode cancelar a qualquer momento pelo painel.",
+   126→  },
+   127→  {
+   128→    q: "Meu código-fonte é meu?",
+   129→    a: "Sim. O código-fonte gerado para o seu projeto é seu. Você pode solicitar exportação a qualquer momento.",
+   130→  },
+   131→  {
+   132→    q: "Posso solicitar alterações após a entrega?",
+   133→    a: "Sim. O plano inclui atualizações contínuas e você pode solicitar novas funcionalidades pela Dashboard a qualquer momento.",
+   134→  },
+   135→  {
+   136→    q: "Como funciona a licença do meu aplicativo?",
+   137→    a: "A Orion emite licenças por cliente, com validade e limites de uso configuráveis. A renovação pode ser manual ou automática.",
+   138→  },
+   139→];
+   140→
+   141→export default function LandingPage() {
+   142→  return (
+   143→    // force-dark: landing page is always dark (per spec) regardless of theme toggle
+   144→    <div className="force-dark min-h-screen bg-[#0a0b1e]">
+   145→      {/* Nav */}
+   146→      <header className="sticky top-0 z-40 backdrop-blur-xl bg-[#0a0b1e]/80 border-b border-white/5">
+   147→        <div className="max-w-7xl mx-auto px-4 lg:px-8 h-16 flex items-center justify-between">
+   148→          <Link href="/" className="flex items-center gap-2.5">
+   149→            <div className="flex h-9 w-9 items-center justify-center rounded-xl brand-gradient">
+   150→              <Sparkles className="h-5 w-5 text-white" />
+   151→            </div>
+   152→            <span className="text-lg font-bold brand-text">ORION</span>
+   153→          </Link>
+   154→          <nav className="hidden lg:flex items-center gap-6 text-sm text-[#8b8fa3]">
+   155→            <a href="#recursos" className="hover:text-white transition-colors">Recursos</a>
+   156→            <a href="#como-funciona" className="hover:text-white transition-colors">Como funciona</a>
+   157→            <a href="#solucoes" className="hover:text-white transition-colors">Soluções</a>
+   158→            <a href="#diferenciais" className="hover:text-white transition-colors">Diferenciais</a>
+   159→            <a href="#depoimentos" className="hover:text-white transition-colors">Depoimentos</a>
+   160→            <a href="#faq" className="hover:text-white transition-colors">FAQ</a>
+   161→          </nav>
+   162→          <div className="flex items-center gap-3">
+   163→            <Link
+   164→              href="/login"
+   165→              className="hidden sm:inline-flex items-center rounded-lg border border-white/10 bg-white/5 px-4 h-9 text-sm font-medium text-white hover:bg-white/10"
+   166→            >
+   167→              Entrar
+   168→            </Link>
+   169→            <Link
+   170→              href="/signup"
+   171→              className="inline-flex items-center gap-2 rounded-lg brand-gradient px-4 h-9 text-sm font-semibold text-white hover:opacity-95"
+   172→            >
+   173→              Teste 14 dias grátis
+   174→              <ArrowRight className="h-4 w-4" />
+   175→            </Link>
+   176→          </div>
+   177→        </div>
+   178→      </header>
+   179→
+   180→      {/* Hero */}
+   181→      <section className="relative overflow-hidden">
+   182→        <div className="absolute inset-0 pointer-events-none">
+   183→          <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-violet-600/20 rounded-full blur-[120px]" />
+   184→          <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-indigo-600/15 rounded-full blur-[120px]" />
+   185→        </div>
+   186→        <div className="max-w-7xl mx-auto px-4 lg:px-8 py-16 lg:py-24 relative">
+   187→          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-12 items-center">
+   188→            {/* Left text */}
+   189→            <div className="fade-in-up">
+   190→              <div className="inline-flex items-center gap-2 rounded-full border border-violet-500/30 bg-violet-500/10 px-3 py-1 text-xs font-semibold text-violet-300 mb-6">
+   191→                <Sparkles className="h-3.5 w-3.5" />
+   192→                PLATAFORMA INTELIGENTE DE DESENVOLVIMENTO DE SOFTWARE
+   193→              </div>
+   194→              <h1 className="text-4xl md:text-5xl lg:text-[3.5rem] font-bold leading-[1.1] tracking-tight">
+   195→                <span className="text-white">Gerenciamos todo o ciclo de vida do seu </span>
+   196→                <span className="hero-text-gradient">software</span>
+   197→                <span className="text-white"> — da ideia à </span>
+   198→                <span className="hero-text-gradient">evolução contínua</span>
+   199→                <span className="text-white">.</span>
+   200→              </h1>
+   201→              <p className="mt-6 text-base lg:text-lg text-[#8b8fa3] leading-relaxed max-w-xl">
+   202→                Briefing inteligente com IA. Arquitetura gerada automaticamente.
+   203→                Templates reutilizáveis. Pipeline de desenvolvimento parcialmente
+   204→                automatizado. Especialistas garantem a qualidade final.
+   205→                Tudo em uma plataforma unificada.
+   206→              </p>
+   207→              <div className="mt-8 flex flex-col sm:flex-row gap-3">
+   208→                <Link
+   209→                  href="/signup"
+   210→                  className="inline-flex items-center justify-center gap-2 rounded-lg brand-gradient-strong px-6 h-12 text-sm font-semibold text-white shadow-lg shadow-violet-500/30 hover:opacity-95"
+   211→                >
+   212→                  <Rocket className="h-4 w-4" />
+   213→                  Começar 14 dias grátis
+   214→                </Link>
+   215→                <Link
+   216→                  href="/produtos"
+   217→                  className="inline-flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 px-6 h-12 text-sm font-semibold text-white hover:bg-white/10"
+   218→                >
+   219→                  <Play className="h-4 w-4" />
+   220→                  Ver demonstração
+   221→                </Link>
+   222→              </div>
+   223→              {/* Trust icons */}
+   224→              <div className="mt-8 grid grid-cols-2 sm:grid-cols-3 gap-y-2 gap-x-4">
+   225→                {TRUST_ICONS.map((t) => (
+   226→                  <div key={t} className="flex items-center gap-2 text-xs text-[#8b8fa3]">
+   227→                    <Check className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+   228→                    <span className="truncate">{t}</span>
+   229→                  </div>
+   230→                ))}
+   231→              </div>
+   232→              {/* Social proof */}
+   233→              <div className="mt-8 flex items-center gap-5">
+   234→                <div>
+   235→                  <div className="flex items-center gap-0.5">
+   236→                    {Array.from({ length: 5 }).map((_, i) => (
+   237→                      <Star key={i} className="h-4 w-4 fill-amber-400 text-amber-400" />
+   238→                    ))}
+   239→                  </div>
+   240→                  <p className="text-xs text-[#8b8fa3] mt-1">
+   241→                    <span className="text-white font-semibold">4.9/5</span> média de avaliações
+   242→                  </p>
+   243→                </div>
+   244→                <div className="h-10 w-px bg-white/10" />
+   245→                <div>
+   246→                  <p className="text-lg font-bold text-white">+1.200</p>
+   247→                  <p className="text-xs text-[#8b8fa3]">ideias criadas</p>
+   248→                </div>
+   249→                <div className="flex -space-x-2">
+   250→                  {["JM", "RA", "CS", "LF"].map((n, i) => (
+   251→                    <div
+   252→                      key={n}
+   253→                      className={`flex h-9 w-9 items-center justify-center rounded-full text-[11px] font-bold text-white border-2 border-[#0a0b1e] ${
+   254→                        ["bg-violet-500", "bg-indigo-500", "bg-fuchsia-500", "bg-sky-500"][i]
+   255→                      }`}
+   256→                    >
+   257→                      {n}
+   258→                    </div>
+   259→                  ))}
+   260→                </div>
+   261→              </div>
+   262→            </div>
+   263→
+   264→            {/* Right — dashboard mockup */}
+   265→            <div className="relative fade-in-up" style={{ animationDelay: "0.1s" }}>
+   266→              <div className="absolute -inset-4 bg-gradient-to-tr from-violet-600/20 via-fuchsia-500/10 to-indigo-600/20 rounded-3xl blur-2xl" />
+   267→              <div className="relative glass-card p-4 shadow-2xl">
+   268→                {/* fake header */}
+   269→                <div className="flex items-center justify-between mb-4">
+   270→                  <div className="flex items-center gap-2">
+   271→                    <div className="flex h-7 w-7 items-center justify-center rounded-lg brand-gradient">
+   272→                      <Sparkles className="h-4 w-4 text-white" />
+   273→                    </div>
+   274→                    <span className="text-sm font-bold text-white">ORION</span>
+   275→                  </div>
+   276→                  <div className="flex items-center gap-1.5">
+   277→                    <div className="h-7 w-7 rounded-md bg-white/5 flex items-center justify-center">
+   278→                      <Bell className="h-3.5 w-3.5 text-[#8b8fa3]" />
+   279→                    </div>
+   280→                    <div className="h-7 w-7 rounded-full brand-gradient flex items-center justify-center text-[10px] font-bold text-white">
+   281→                      AO
+   282→                    </div>
+   283→                  </div>
+   284→                </div>
+   285→                {/* KPI mini row */}
+   286→                <div className="grid grid-cols-3 gap-2 mb-3">
+   287→                  {[
+   288→                    { l: "Clientes", v: "1.248", c: "text-emerald-400" },
+   289→                    { l: "Projetos", v: "342", c: "text-emerald-400" },
+   290→                    { l: "MRR", v: "R$ 286k", c: "text-emerald-400" },
+   291→                  ].map((k) => (
+   292→                    <div key={k.l} className="rounded-lg bg-white/[0.03] border border-white/5 p-2.5">
+   293→                      <p className="text-[10px] text-[#6b7280]">{k.l}</p>
+   294→                      <p className="text-sm font-bold text-white">{k.v}</p>
+   295→                      <p className={`text-[9px] ${k.c}`}>▲ +12%</p>
+   296→                    </div>
+   297→                  ))}
+   298→                </div>
+   299→                {/* Chart */}
+   300→                <div className="rounded-lg bg-white/[0.03] border border-white/5 p-3 mb-3">
+   301→                  <div className="flex items-center justify-between mb-2">
+   302→                    <span className="text-[11px] font-medium text-white">Receita 12 meses</span>
+   303→                    <TrendingUp className="h-3 w-3 text-emerald-400" />
+   304→                  </div>
+   305→                  <svg viewBox="0 0 280 80" className="w-full h-16">
+   306→                    <defs>
+   307→                      <linearGradient id="heroArea" x1="0" y1="0" x2="0" y2="1">
+   308→                        <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.5" />
+   309→                        <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0" />
+   310→                      </linearGradient>
+   311→                    </defs>
+   312→                    <path
+   313→                      d="M 0 60 C 30 55, 50 45, 80 42 C 110 39, 130 48, 160 38 C 190 28, 210 22, 240 18 C 260 15, 270 12, 280 10 L 280 80 L 0 80 Z"
+   314→                      fill="url(#heroArea)"
+   315→                    />
+   316→                    <path
+   317→                      d="M 0 60 C 30 55, 50 45, 80 42 C 110 39, 130 48, 160 38 C 190 28, 210 22, 240 18 C 260 15, 270 12, 280 10"
+   318→                      fill="none"
+   319→                      stroke="#a78bfa"
+   320→                      strokeWidth="2"
+   321→                    />
+   322→                  </svg>
+   323→                </div>
+   324→                {/* App list */}
+   325→                <div className="space-y-1.5">
+   326→                  {[
+   327→                    { n: "PagueMenos", s: "Publicado", t: "bg-emerald-500/15 text-emerald-300" },
+   328→                    { n: "BioSaúde", s: "Em Testes", t: "bg-amber-500/15 text-amber-300" },
+   329→                    { n: "FIManager", s: "Homologação", t: "bg-sky-500/15 text-sky-300" },
+   330→                  ].map((a) => (
+   331→                    <div key={a.n} className="flex items-center justify-between rounded-md bg-white/[0.02] px-2.5 py-1.5">
+   332→                      <span className="text-[11px] text-white font-medium">{a.n}</span>
+   333→                      <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded ${a.t}`}>{a.s}</span>
+   334→                    </div>
+   335→                  ))}
+   336→                </div>
+   337→              </div>
+   338→            </div>
+   339→          </div>
+   340→        </div>
+   341→      </section>
+   342→
+   343→      {/* Como funciona */}
+   344→      <section id="como-funciona" className="max-w-7xl mx-auto px-4 lg:px-8 py-20">
+   345→        <div className="text-center max-w-2xl mx-auto mb-14">
+   346→          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-violet-300 mb-2">Como funciona</p>
+   347→          <h2 className="text-3xl md:text-4xl font-bold text-white">
+   348→            Apenas 6 passos para tirar sua ideia do papel
+   349→          </h2>
+   350→        </div>
+   351→        <div className="relative">
+   352→          {/* horizontal connecting line */}
+   353→          <div className="hidden lg:block absolute top-[44px] left-[8%] right-[8%] h-px bg-gradient-to-r from-transparent via-violet-500/30 to-transparent" />
+   354→          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-5 stagger">
+   355→            {STEPS.map((s) => (
+   356→              <div key={s.n} className="relative flex flex-col items-center text-center">
+   357→                <div className="relative flex h-[88px] w-[88px] items-center justify-center rounded-full border-2 border-violet-500/30 bg-[#0f111a] mb-4">
+   358→                  <span className="text-3xl">{s.emoji}</span>
+   359→                  <span className="absolute -top-2 -right-2 flex h-7 w-7 items-center justify-center rounded-full brand-gradient text-xs font-bold text-white shadow-lg">
+   360→                    {s.n}
+   361→                  </span>
+   362→                </div>
+   363→                <h3 className="text-sm font-semibold text-white">{s.title}</h3>
+   364→                <p className="mt-1.5 text-xs text-[#8b8fa3] leading-relaxed">{s.desc}</p>
+   365→              </div>
+   366→            ))}
+   367→          </div>
+   368→        </div>
+   369→      </section>
+   370→
+   371→      {/* Soluções */}
+   372→      <section id="solucoes" className="max-w-7xl mx-auto px-4 lg:px-8 py-20">
+   373→        <div className="text-center max-w-2xl mx-auto mb-14">
+   374→          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-violet-300 mb-2">O que desenvolvemos</p>
+   375→          <h2 className="text-3xl md:text-4xl font-bold text-white">
+   376→            Soluções para todos os nichos
+   377→          </h2>
+   378→          <p className="mt-3 text-[#8b8fa3]">Modelos prontos para os principais mercados — e muito mais.</p>
+   379→        </div>
+   380→        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-4 stagger">
+   381→          {SOLUTIONS.map((s) => (
+   382→            <div
+   383→              key={s.title}
+   384→              className="glass-card glass-card-hover p-5 flex flex-col items-center text-center gap-3"
+   385→            >
+   386→              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/[0.04] text-2xl">
+   387→                {s.emoji}
+   388→              </div>
+   389→              <p className="text-sm font-medium text-white">{s.title}</p>
+   390→            </div>
+   391→          ))}
+   392→        </div>
+   393→      </section>
+   394→
+   395→      {/* Tudo incluído */}
+   396→      <section id="recursos" className="max-w-7xl mx-auto px-4 lg:px-8 py-20">
+   397→        <div className="text-center max-w-2xl mx-auto mb-14">
+   398→          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-violet-300 mb-2">Tudo incluído no seu projeto</p>
+   399→          <h2 className="text-3xl md:text-4xl font-bold text-white">
+   400→            Tudo que você precisa em um único lugar
+   401→          </h2>
+   402→        </div>
+   403→        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 stagger">
+   404→          {INCLUDED.map((f) => {
+   405→            const Icon = f.icon;
+   406→            return (
+   407→              <div key={f.title} className="glass-card glass-card-hover p-6">
+   408→                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-violet-500/15 text-violet-300 mb-4">
+   409→                  <Icon className="h-5 w-5" />
+   410→                </div>
+   411→                <h3 className="text-base font-semibold text-white">{f.title}</h3>
+   412→                <p className="mt-2 text-sm text-[#8b8fa3] leading-relaxed">{f.desc}</p>
+   413→              </div>
+   414→            );
+   415→          })}
+   416→        </div>
+   417→      </section>
+   418→
+   419→      {/* Dashboard showcase */}
+   420→      <section className="max-w-7xl mx-auto px-4 lg:px-8 py-20">
+   421→        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
+   422→          <div className="relative order-2 lg:order-1">
+   423→            <div className="absolute -inset-4 bg-gradient-to-tr from-violet-600/20 to-fuchsia-500/10 rounded-3xl blur-2xl" />
+   424→            <div className="relative glass-card p-5 shadow-2xl">
+   425→              <div className="flex items-center gap-1.5 mb-4">
+   426→                <div className="h-3 w-3 rounded-full bg-red-400/70" />
+   427→                <div className="h-3 w-3 rounded-full bg-amber-400/70" />
+   428→                <div className="h-3 w-3 rounded-full bg-emerald-400/70" />
+   429→              </div>
+   430→              <div className="grid grid-cols-3 gap-2 mb-3">
+   431→                {[
+   432→                  { l: "Licenças", v: "1.035" },
+   433→                  { l: "Apps", v: "278" },
+   434→                  { l: "Uso IA", v: "24.5k" },
+   435→                ].map((k) => (
+   436→                  <div key={k.l} className="rounded-lg bg-white/[0.03] border border-white/5 p-3">
+   437→                    <p className="text-[10px] text-[#6b7280]">{k.l}</p>
+   438→                    <p className="text-lg font-bold text-white">{k.v}</p>
+   439→                  </div>
+   440→                ))}
+   441→              </div>
+   442→              <div className="rounded-lg bg-white/[0.03] border border-white/5 p-3">
+   443→                <div className="flex items-end justify-between gap-1 h-24">
+   444→                  {[40, 55, 48, 70, 62, 85, 75, 92, 80, 100, 88, 95].map((h, i) => (
+   445→                    <div
+   446→                      key={i}
+   447→                      className="flex-1 rounded-t bg-gradient-to-t from-violet-600 to-fuchsia-400"
+   448→                      style={{ height: `${h}%` }}
+   449→                    />
+   450→                  ))}
+   451→                </div>
+   452→              </div>
+   453→            </div>
+   454→          </div>
+   455→          <div className="order-1 lg:order-2">
+   456→            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-violet-300 mb-2">Sua operação, em um único lugar</p>
+   457→            <h2 className="text-3xl md:text-4xl font-bold text-white">
+   458→              Acompanhe tudo na sua Dashboard exclusiva
+   459→            </h2>
+   460→            <p className="mt-4 text-[#8b8fa3] leading-relaxed">
+   461→              Depois de entregue, você tem total controle do seu projeto e do seu
+   462→              aplicativo em um painel completo e intuitivo.
+   463→            </p>
+   464→            <ul className="mt-6 grid grid-cols-2 gap-y-2.5 gap-x-6">
+   465→              {DASHBOARD_CHECKS.map((c) => (
+   466→                <li key={c} className="flex items-center gap-2 text-sm text-white/90">
+   467→                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-400 shrink-0">
+   468→                    <Check className="h-3 w-3" />
+   469→                  </span>
+   470→                  {c}
+   471→                </li>
+   472→              ))}
+   473→            </ul>
+   474→            <Link
+   475→              href="/login"
+   476→              className="mt-8 inline-flex items-center gap-2 rounded-lg brand-gradient px-6 h-12 text-sm font-semibold text-white shadow-lg shadow-violet-500/25 hover:opacity-95"
+   477→            >
+   478→              Ver dashboard ao vivo
+   479→              <ArrowRight className="h-4 w-4" />
+   480→            </Link>
+   481→          </div>
+   482→        </div>
+   483→      </section>
+   484→
+   485→      {/* Segurança */}
+   486→      <section className="max-w-7xl mx-auto px-4 lg:px-8 py-20">
+   487→        <div className="glass-card p-8 lg:p-12">
+   488→          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-center">
+   489→            <div className="lg:col-span-1 text-center">
+   490→              <div className="inline-flex h-20 w-20 items-center justify-center rounded-2xl brand-gradient shadow-lg shadow-violet-500/30 mb-4">
+   491→                <ShieldCheck className="h-10 w-10 text-white" />
+   492→              </div>
+   493→              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-violet-300 mb-2">Segurança é prioridade</p>
+   494→              <h2 className="text-2xl font-bold text-white">
+   495→                Seu projeto protegido desde o primeiro dia
+   496→              </h2>
+   497→            </div>
+   498→            <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+   499→              {SECURITY.map((s) => {
+   500→                const Icon = s.icon;
+   501→                return (
+   502→                  <div key={s.label} className="flex items-center gap-3">
+   503→                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-500/15 text-violet-300 shrink-0">
+   504→                      <Icon className="h-4 w-4" />
+   505→                    </div>
+   506→                    <span className="text-sm text-white/90">{s.label}</span>
+   507→                  </div>
+   508→                );
+   509→              })}
+   510→            </div>
+   511→          </div>
+   512→        </div>
+   513→      </section>
+   514→
+   515→      {/* Diferenciais / Comparação */}
+   516→      <section id="diferenciais" className="max-w-5xl mx-auto px-4 lg:px-8 py-20">
+   517→        <div className="text-center max-w-2xl mx-auto mb-12">
+   518→          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-violet-300 mb-2">Por que escolher o Orion?</p>
+   519→          <h2 className="text-3xl md:text-4xl font-bold text-white">
+   520→            A diferença que faz seu projeto acontecer
+   521→          </h2>
+   522→        </div>
+   523→        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 relative">
+   524→          {/* VS badge */}
+   525→          <div className="hidden md:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 h-12 w-12 items-center justify-center rounded-full brand-gradient-strong text-sm font-bold text-white shadow-lg">
+   526→            VS
+   527→          </div>
+   528→          {/* Tradicional */}
+   529→          <div className="glass-card p-6 lg:p-8 border-red-500/20">
+   530→            <div className="flex items-center gap-3 mb-6">
+   531→              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-500/15 text-red-400">
+   532→                <X className="h-5 w-5" />
+   533→              </div>
+   534→              <h3 className="text-lg font-semibold text-white">Desenvolvimento tradicional</h3>
+   535→            </div>
+   536→            <ul className="space-y-3">
+   537→              {COMPARISON.trad.map((c) => (
+   538→                <li key={c} className="flex items-start gap-2.5 text-sm">
+   539→                  <X className="mt-0.5 h-4 w-4 text-red-400 shrink-0" />
+   540→                  <span className="text-[#8b8fa3]">{c}</span>
+   541→                </li>
+   542→              ))}
+   543→            </ul>
+   544→          </div>
+   545→          {/* Orion */}
+   546→          <div className="glass-card p-6 lg:p-8 border-violet-500/30 relative">
+   547→            <span className="absolute -top-3 right-6 inline-flex items-center gap-1 rounded-full brand-gradient px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white shadow-lg">
+   548→              <Sparkles className="h-3 w-3" />
+   549→              Recomendado
+   550→            </span>
+   551→            <div className="flex items-center gap-3 mb-6">
+   552→              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-400">
+   553→                <Check className="h-5 w-5" />
+   554→              </div>
+   555→              <h3 className="text-lg font-semibold text-white">Projeto Orion</h3>
+   556→            </div>
+   557→            <ul className="space-y-3">
+   558→              {COMPARISON.orion.map((c) => (
+   559→                <li key={c} className="flex items-start gap-2.5 text-sm">
+   560→                  <Check className="mt-0.5 h-4 w-4 text-emerald-400 shrink-0" />
+   561→                  <span className="text-white/90">{c}</span>
+   562→                </li>
+   563→              ))}
+   564→            </ul>
+   565→          </div>
+   566→        </div>
+   567→      </section>
+   568→
+   569→      {/* Depoimentos */}
+   570→      <section id="depoimentos" className="max-w-7xl mx-auto px-4 lg:px-8 py-20">
+   571→        <div className="text-center max-w-2xl mx-auto mb-14">
+   572→          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-violet-300 mb-2">Quem já transformou ideias em realidade</p>
+   573→          <h2 className="text-3xl md:text-4xl font-bold text-white">
+   574→            Clientes que confiam no Orion
+   575→          </h2>
+   576→        </div>
+   577→        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 stagger">
+   578→          {TESTIMONIALS.map((t) => (
+   579→            <div key={t.name} className="glass-card p-6 flex flex-col">
+   580→              <div className="flex gap-0.5 mb-4">
+   581→                {Array.from({ length: 5 }).map((_, i) => (
+   582→                  <Star key={i} className="h-4 w-4 fill-amber-400 text-amber-400" />
+   583→                ))}
+   584→              </div>
+   585→              <p className="text-sm text-white/90 leading-relaxed flex-1">“{t.text}”</p>
+   586→              <div className="mt-5 flex items-center gap-3">
+   587→                <div className="flex h-10 w-10 items-center justify-center rounded-full brand-gradient text-sm font-bold text-white">
+   588→                  {t.name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
+   589→                </div>
+   590→                <div>
+   591→                  <p className="text-sm font-semibold text-white">{t.name}</p>
+   592→                  <p className="text-xs text-[#8b8fa3]">{t.role}</p>
+   593→                </div>
+   594→              </div>
+   595→            </div>
+   596→          ))}
+   597→        </div>
+   598→      </section>
+   599→
+   600→      {/* FAQ + CTA */}
+   601→      <section id="faq" className="max-w-7xl mx-auto px-4 lg:px-8 py-20">
+   602→        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+   603→          {/* FAQ */}
+   604→          <div>
+   605→            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-violet-300 mb-2">Dúvidas frequentes</p>
+   606→            <h2 className="text-3xl md:text-4xl font-bold text-white mb-8">
+   607→              Perguntas frequentes
+   608→            </h2>
+   609→            <div className="space-y-3">
+   610→              {FAQ.map((f) => (
+   611→                <details key={f.q} className="glass-card p-5 group">
+   612→                  <summary className="cursor-pointer list-none flex items-center justify-between gap-4 text-sm font-semibold text-white">
+   613→                    {f.q}
+   614→                    <span className="text-violet-300 group-open:rotate-45 transition-transform text-lg leading-none">
+   615→                      +
+   616→                    </span>
+   617→                  </summary>
+   618→                  <p className="mt-3 text-sm text-[#8b8fa3] leading-relaxed">{f.a}</p>
+   619→                </details>
+   620→              ))}
+   621→            </div>
+   622→          </div>
+   623→
+   624→          {/* CTA card */}
+   625→          <div className="relative">
+   626→            <div className="glass-card p-8 lg:p-10 h-full flex flex-col justify-center relative overflow-hidden">
+   627→              <div className="absolute inset-0 brand-gradient opacity-10" />
+   628→              <div className="absolute -top-10 -right-10 text-[120px] opacity-10">🚀</div>
+   629→              <div className="relative">
+   630→                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-violet-300 mb-2">Pronto para começar?</p>
+   631→                <h2 className="text-3xl font-bold text-white">
+   632→                  Sua próxima aplicação começa agora.
+   633→                </h2>
+   634→                <p className="mt-4 text-[#8b8fa3]">
+   635→                  Você traz a ideia. O Orion cuida de todo o resto.
+   636→                </p>
+   637→                <ul className="mt-6 space-y-2.5">
+   638→                  {["Processo 100% online", "Assinatura segura via Stripe", "Suporte especializado"].map((c) => (
+   639→                    <li key={c} className="flex items-center gap-2 text-sm text-white/90">
+   640→                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-400">
+   641→                        <Check className="h-3 w-3" />
+   642→                      </span>
+   643→                      {c}
+   644→                    </li>
+   645→                  ))}
+   646→                </ul>
+   647→                <Link
+   648→                  href="/login"
+   649→                  className="mt-8 inline-flex items-center gap-2 rounded-lg brand-gradient-strong px-6 h-12 text-sm font-semibold text-white shadow-lg shadow-violet-500/30 hover:opacity-95"
+   650→                >
+   651→                  <Rocket className="h-4 w-4" />
+   652→                  Começar meu projeto agora
+   653→                </Link>
+   654→              </div>
+   655→            </div>
+   656→          </div>
+   657→        </div>
+   658→      </section>
+   659→
+   660→      {/* Footer */}
+   661→      <footer className="border-t border-white/5 mt-10">
+   662→        <div className="max-w-7xl mx-auto px-4 lg:px-8 py-12">
+   663→          <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
+   664→            <div className="col-span-2">
+   665→              <div className="flex items-center gap-2.5 mb-3">
+   666→                <div className="flex h-8 w-8 items-center justify-center rounded-lg brand-gradient">
+   667→                  <Sparkles className="h-4 w-4 text-white" />
+   668→                </div>
+   669→                <span className="text-sm font-bold brand-text">ORION</span>
+   670→              </div>
+   671→              <p className="text-sm text-[#8b8fa3] max-w-xs leading-relaxed">
+   672→                A plataforma inteligente para desenvolver, publicar e gerenciar
+   673→                aplicações com Inteligência Artificial.
+   674→              </p>
+   675→              <div className="flex items-center gap-3 mt-5">
+   676→                {["in", "gh", "tw"].map((s) => (
+   677→                  <a
+   678→                    key={s}
+   679→                    href="#"
+   680→                    className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-xs font-bold text-[#8b8fa3] hover:text-white hover:bg-white/10"
+   681→                  >
+   682→                    {s}
+   683→                  </a>
+   684→                ))}
+   685→              </div>
+   686→            </div>
+   687→            <div>
+   688→              <p className="text-sm font-semibold text-white mb-3">Plataforma</p>
+   689→              <ul className="space-y-2 text-sm text-[#8b8fa3]">
+   690→                <li><a href="#recursos" className="hover:text-white">Recursos</a></li>
+   691→                <li><a href="#como-funciona" className="hover:text-white">Como funciona</a></li>
+   692→                <li><a href="#" className="hover:text-white">Documentação</a></li>
+   693→                <li><a href="#" className="hover:text-white">API</a></li>
+   694→              </ul>
+   695→            </div>
+   696→            <div>
+   697→              <p className="text-sm font-semibold text-white mb-3">Soluções</p>
+   698→              <ul className="space-y-2 text-sm text-[#8b8fa3]">
+   699→                <li><a href="#solucoes" className="hover:text-white">Para nichos</a></li>
+   700→                <li><a href="#" className="hover:text-white">Para empresas</a></li>
+   701→                <li><a href="#" className="hover:text-white">Agências</a></li>
+   702→                <li><a href="#" className="hover:text-white">IA & Automação</a></li>
+   703→              </ul>
+   704→            </div>
+   705→            <div>
+   706→              <p className="text-sm font-semibold text-white mb-3">Suporte</p>
+   707→              <ul className="space-y-2 text-sm text-[#8b8fa3]">
+   708→                <li><a href="#" className="hover:text-white">Central de ajuda</a></li>
+   709→                <li><a href="#" className="hover:text-white">Documentação</a></li>
+   710→                <li><a href="#" className="hover:text-white">Contato</a></li>
+   711→                <li><a href="#" className="hover:text-white">Status do sistema</a></li>
+   712→              </ul>
+   713→            </div>
+   714→          </div>
+   715→          <div className="mt-10 pt-6 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-3">
+   716→            <p className="text-xs text-[#6b7280]">
+   717→              © {new Date().getFullYear()} Projeto Orion. Todos os direitos reservados.
+   718→            </p>
+   719→            <p className="text-xs text-[#6b7280]">
+   720→              Feito com <span className="text-red-400">❤</span> para transformar ideias em realidade
+   721→            </p>
+   722→          </div>
+   723→        </div>
+   724→      </footer>
+   725→    </div>
+   726→  );
+   727→}
+   728→

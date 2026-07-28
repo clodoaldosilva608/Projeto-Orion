@@ -15,7 +15,7 @@ const COLOR_PRESETS = [
   { name: "Rosa", primary: "#ec4899", secondary: "#f472b6" },
 ];
 
-export function OnboardingClient({ companyId, initial }: { companyId: string; initial: any }) {
+export function OnboardingClient({ companyId, initial, nextUrl }: { companyId: string; initial: any; nextUrl?: string }) {
   const router = useRouter();
   const tenant = useTenant();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -75,7 +75,12 @@ export function OnboardingClient({ companyId, initial }: { companyId: string; in
           setError(data.error || "Erro ao salvar");
           return;
         }
-        router.push("/dashboard?onboarding=completed");
+        // Se veio de uma página de produto (next=), volta para ela
+        if (nextUrl) {
+          router.push(nextUrl);
+        } else {
+          router.push("/dashboard?onboarding=completed");
+        }
         router.refresh();
       } catch (e: any) {
         setError(e.message);

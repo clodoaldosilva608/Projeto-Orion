@@ -112,10 +112,10 @@ export default async function ProdutosPage() {
                         Ver demonstração
                       </a>
                     )}
-                    <Link href={`/produtos/${p.slug}/comprar`}
+                    <Link href={`/produtos/${p.slug}`}
                       className="inline-flex items-center justify-center gap-2 rounded-lg brand-gradient px-5 h-11 text-sm font-semibold text-white shadow-lg shadow-violet-500/20 hover:opacity-95">
                       <ShoppingCart className="h-4 w-4" />
-                      Adquirir agora
+                      Ver detalhes e assinar
                     </Link>
                   </div>
                   {p.demoUrl && (

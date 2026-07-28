@@ -21,6 +21,7 @@ export function SignupClient() {
   const params = useSearchParams();
   const tenant = useTenant();
   const presetProduct = params.get("produto") || "projeto-paguemenos";
+  const nextUrl = params.get("next"); // ex: /produtos/x/comprar
 
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -84,7 +85,13 @@ export function SignupClient() {
           }).toString(),
         });
         if (loginRes.ok) {
-          router.push("/onboarding");
+          // Se veio de uma página de produto (next=), vai para onboarding
+          // e depois onboarding redireciona para next
+          if (nextUrl) {
+            router.push(`/onboarding?next=${encodeURIComponent(nextUrl)}`);
+          } else {
+            router.push("/onboarding");
+          }
         } else {
           router.push(`/login?registered=1&email=${encodeURIComponent(form.email)}`);
         }

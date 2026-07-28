@@ -217,7 +217,7 @@ export default function LandingPage() {
                   className="inline-flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 px-6 h-12 text-sm font-semibold text-white hover:bg-white/10"
                 >
                   <Play className="h-4 w-4" />
-                  Ver demonstração
+                  Ver produtos disponíveis
                 </Link>
               </div>
               {/* Trust icons */}

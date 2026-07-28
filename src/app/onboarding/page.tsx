@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { createSupabaseServerClient } from "@/lib/supabase";
 import { OnboardingClient } from "./OnboardingClient";
+import { headers } from "next/headers";
 
 export const dynamic = "force-dynamic";
 
@@ -28,15 +29,16 @@ async function getCurrentUserCompany() {
   return dbUser;
 }
 
-export default async function OnboardingPage() {
+export default async function OnboardingPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
+  const { next } = await searchParams;
   const user = await getCurrentUserCompany();
   if (!user) redirect("/login?redirect=/onboarding");
 
   // Super Admin não precisa de onboarding
-  if (user.isSuperAdmin) redirect("/dashboard");
+  if (user.isSuperAdmin) redirect(next || "/dashboard");
 
-  // Se já completou, vai direto pro dashboard
-  if (user.company?.onboardingCompleted) redirect("/dashboard");
+  // Se já completou, vai direto pro next ou dashboard
+  if (user.company?.onboardingCompleted) redirect(next || "/dashboard");
 
-  return <OnboardingClient companyId={user.companyId.toString()} initial={user.company || {}} />;
+  return <OnboardingClient companyId={user.companyId.toString()} initial={user.company || {}} nextUrl={next} />;
 }

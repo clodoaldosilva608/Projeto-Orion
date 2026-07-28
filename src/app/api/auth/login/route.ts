@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
   // and redirects to the original `redirectTo`.
   const dbUser = await prisma.user.findUnique({
     where: { supabaseId: data.user.id },
-    select: { id: true, twoFactorEnabled: true, lastLoginAt: true },
+    select: { id: true, twoFactorEnabled: true, lastLoginAt: true, isSuperAdmin: true },
   });
 
   const cookieValue = JSON.stringify({
@@ -79,7 +79,15 @@ export async function POST(request: NextRequest) {
     data: { lastLoginAt: new Date() },
   }).catch(() => null);
 
-  const dashboardUrl = new URL(redirectTo, request.url);
+  // Determina redirect final:
+  // - Se é Super Admin e não tem redirect explícito → /superadmin
+  // - Se é usuário comum → redirectTo (default /dashboard)
+  let finalRedirect = redirectTo;
+  if (dbUser?.isSuperAdmin && redirectTo === "/dashboard") {
+    finalRedirect = "/superadmin";
+  }
+
+  const dashboardUrl = new URL(finalRedirect, request.url);
   const res = NextResponse.redirect(dashboardUrl, 303);
 
   res.cookies.set(AUTH_COOKIE_NAME, cookieValue, {

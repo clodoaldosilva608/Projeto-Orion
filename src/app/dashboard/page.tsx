@@ -10,7 +10,8 @@ import { AIUsageChart } from "@/components/AIUsageChart";
 import { AppDistribution } from "@/components/AppDistribution";
 import { ResourceUsage } from "@/components/ResourceUsage";
 import { MyProductsCard } from "@/components/MyProductsCard";
-import { getDashboardData } from "@/lib/queries";
+import { TenantKpiGrid } from "@/components/TenantKpiGrid";
+import { getDashboardData, getDashboardDataTenant } from "@/lib/queries";
 import { prisma } from "@/lib/db";
 import { createSupabaseServerClient } from "@/lib/supabase";
 import { AVAILABLE_MODULES } from "@/lib/modules-catalog";
@@ -27,6 +28,7 @@ async function getCurrentUserCompany() {
       id: true,
       isSuperAdmin: true,
       companyId: true,
+      name: true,
       company: {
         select: {
           id: true,
@@ -34,6 +36,7 @@ async function getCurrentUserCompany() {
           plan: true,
           stripeCustomerId: true,
           active: true,
+          onboardingCompleted: true,
         },
       },
     },
@@ -42,25 +45,82 @@ async function getCurrentUserCompany() {
 }
 
 export default async function DashboardPage() {
-  const [data, dbUser] = await Promise.all([
-    getDashboardData(),
-    getCurrentUserCompany(),
-  ]);
+  const dbUser = await getCurrentUserCompany();
 
-  // Busca módulos habilitados para a empresa
-  let enabledModulesMap: Record<string, boolean> = {};
-  if (dbUser?.companyId) {
-    const records = await prisma.enabledModule.findMany({
-      where: { companyId: dbUser.companyId },
-      select: { moduleKey: true, enabled: true },
-    });
-    enabledModulesMap = records.reduce((acc, r) => {
-      acc[r.moduleKey] = r.enabled;
-      return acc;
-    }, {} as Record<string, boolean>);
+  // Super Admin → dashboard da plataforma (visão global)
+  if (dbUser?.isSuperAdmin) {
+    const data = await getDashboardData();
+    return (
+      <div className="space-y-5 lg:space-y-6 max-w-[1600px] mx-auto">
+        <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 fade-in-up">
+          <div>
+            <h1 className="text-2xl lg:text-3xl font-bold text-fg tracking-tight">
+              Visão Geral da Plataforma 🫡
+            </h1>
+            <p className="text-sm text-muted-fg mt-1.5 max-w-2xl">
+              Acompanhe o desempenho geral e gerencie toda a plataforma Orion em um único painel.
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <button className="inline-flex items-center gap-2 rounded-lg border border-soft bg-chip px-3.5 h-10 text-sm font-medium text-fg hover:bg-chip-hover transition-colors">
+              <CalendarRange className="h-4 w-4 text-muted-2" />
+              <span className="hidden sm:inline">Últimos 30 dias</span>
+              <span className="sm:hidden">30 dias</span>
+            </button>
+            <button className="inline-flex items-center gap-2 rounded-lg brand-gradient px-4 h-10 text-sm font-semibold text-white shadow-lg shadow-violet-500/20 hover:opacity-95 transition-opacity">
+              <Plus className="h-4 w-4" />
+              <span className="hidden sm:inline">Novo Projeto</span>
+              <span className="sm:hidden">Novo</span>
+            </button>
+          </div>
+        </div>
+
+        <KpiGrid kpis={data.kpis} />
+
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-5 stagger">
+          <RevenueChart data={data.revenue} mrr={data.kpis.mrr.value} />
+          <ProjectsDonut data={data.projectsByStatus} />
+          <SystemStatus services={data.systemServices} />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-5 stagger">
+          <RecentProjects projects={data.recentProjects} />
+          <ActivityFeed activities={data.activities} />
+          <AlertsPanel alerts={data.alerts} />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-5 stagger">
+          <AIUsageChart data={data.aiUsage} />
+          <AppDistribution data={data.appDistribution} />
+          <ResourceUsage data={data.resources} />
+        </div>
+      </div>
+    );
   }
 
-  // Monta lista de produtos para o card
+  // Usuário comum (tenant) → dashboard da EMPRESA dele
+  if (!dbUser?.companyId) {
+    return (
+      <div className="max-w-2xl mx-auto py-20 text-center">
+        <h1 className="text-2xl font-bold text-white mb-2">Bem-vindo!</h1>
+        <p className="text-sm text-[#8b8fa3]">Sua conta não está vinculada a uma empresa. Entre em contato com o suporte.</p>
+      </div>
+    );
+  }
+
+  // Buscar dados filtrados por companyId
+  const data = await getDashboardDataTenant(dbUser.companyId);
+
+  // Buscar módulos habilitados
+  const enabledModules = await prisma.enabledModule.findMany({
+    where: { companyId: dbUser.companyId },
+    select: { moduleKey: true, enabled: true },
+  });
+  const enabledModulesMap = enabledModules.reduce((acc, m) => {
+    acc[m.moduleKey] = m.enabled;
+    return acc;
+  }, {} as Record<string, boolean>);
+
   const products = AVAILABLE_MODULES.map((m) => ({
     moduleKey: m.key,
     moduleName: m.name,
@@ -71,61 +131,63 @@ export default async function DashboardPage() {
     enabled: enabledModulesMap[m.key] ?? false,
   }));
 
+  const company = dbUser.company;
+  const isTrial = data.company?.trialStatus === "trial";
+  const trialDaysLeft = data.company?.trialDaysLeft ?? 0;
+
   return (
     <div className="space-y-5 lg:space-y-6 max-w-[1600px] mx-auto">
-      {/* Hero */}
+      {/* Hero — boas-vindas personalizadas */}
       <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 fade-in-up">
         <div>
           <h1 className="text-2xl lg:text-3xl font-bold text-fg tracking-tight">
-            Visão Geral da Plataforma 🫡
+            Bem-vindo, {company?.tradeName || dbUser.name}! 👋
           </h1>
           <p className="text-sm text-muted-fg mt-1.5 max-w-2xl">
-            Acompanhe o desempenho geral e gerencie toda a plataforma Orion em um único painel.
+            Gerencie sua empresa e acesse seus produtos em um único painel.
+            {isTrial && trialDaysLeft > 0 && (
+              <span className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-300 text-[11px] font-semibold">
+                Trial: {trialDaysLeft} dias restantes
+              </span>
+            )}
+            {data.company?.trialStatus === "active" && (
+              <span className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-300 text-[11px] font-semibold">
+                Plano {company?.plan}
+              </span>
+            )}
           </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <button className="inline-flex items-center gap-2 rounded-lg border border-soft bg-chip px-3.5 h-10 text-sm font-medium text-fg hover:bg-chip-hover transition-colors">
-            <CalendarRange className="h-4 w-4 text-muted-2" />
-            <span className="hidden sm:inline">Últimos 30 dias</span>
-            <span className="sm:hidden">30 dias</span>
-          </button>
-          <button className="inline-flex items-center gap-2 rounded-lg brand-gradient px-4 h-10 text-sm font-semibold text-white shadow-lg shadow-violet-500/20 hover:opacity-95 transition-opacity">
-            <Plus className="h-4 w-4" />
-            <span className="hidden sm:inline">Novo Projeto</span>
-            <span className="sm:hidden">Novo</span>
-          </button>
         </div>
       </div>
 
-      {/* Meus Produtos — Card de produtos habilitados para a empresa */}
-      {dbUser?.company && (
+      {/* Meus Produtos — card com produtos assinados */}
+      {company && (
         <MyProductsCard
-          companyId={dbUser.company.id.toString()}
-          companyTradeName={dbUser.company.tradeName}
-          plan={dbUser.company.plan}
-          stripeCustomerId={dbUser.company.stripeCustomerId}
+          companyId={company.id.toString()}
+          companyTradeName={company.tradeName}
+          plan={company.plan}
+          stripeCustomerId={company.stripeCustomerId}
           products={products}
         />
       )}
 
-      {/* Row 1 — 6 KPI cards (2 / 3 / 6 responsive cols) */}
-      <KpiGrid kpis={data.kpis} />
+      {/* KPIs da empresa */}
+      <TenantKpiGrid kpis={data.kpis} />
 
-      {/* Row 2 — Revenue, Donut, System Status (1 / 2 / 3 responsive cols) */}
+      {/* Charts */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-5 stagger">
-        <RevenueChart data={data.revenue} mrr={data.kpis.mrr.value} />
+        <RevenueChart data={data.revenue} mrr={data.kpis.results?.value ?? 0} />
         <ProjectsDonut data={data.projectsByStatus} />
         <SystemStatus services={data.systemServices} />
       </div>
 
-      {/* Row 3 — Recent Projects, Activity, Alerts */}
+      {/* Activity + Alerts */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-5 stagger">
         <RecentProjects projects={data.recentProjects} />
         <ActivityFeed activities={data.activities} />
         <AlertsPanel alerts={data.alerts} />
       </div>
 
-      {/* Row 4 — AI Usage, App Distribution, Resource Usage */}
+      {/* Usage */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-5 stagger">
         <AIUsageChart data={data.aiUsage} />
         <AppDistribution data={data.appDistribution} />
