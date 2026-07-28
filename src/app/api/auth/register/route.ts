@@ -33,18 +33,16 @@ export async function POST(request: NextRequest) {
 
     // === 1. Cria Supabase Auth user ===
     const supabase = await createSupabaseServerClient();
-    // Usa admin API para criar e confirmar email em um step
-    const supabaseAdmin = (await import("@supabase/supabase-js")).createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SECRET_KEY!,
-      { auth: { autoRefreshToken: false, persistSession: false } }
-    );
 
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+    // Usa signUp (anon key) em vez de admin.createUser (service role)
+    // porque a service role key pode não estar configurada corretamente.
+    // O signUp cria o usuário e o Supabase envia email de confirmação.
+    const { data: authData, error: authError } = await supabase.auth.signUp({
       email: email.toLowerCase().trim(),
       password,
-      email_confirm: true, // já confirmado
-      user_metadata: { name, company_name: companyName, role: "admin" },
+      options: {
+        data: { name, company_name: companyName, role: "admin" },
+      },
     });
 
     if (authError) {
@@ -55,7 +53,29 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: authError.message }, { status: 400 });
     }
 
+    if (!authData.user) {
+      return NextResponse.json({ error: "Erro ao criar usuário" }, { status: 500 });
+    }
+
     const supabaseId = authData.user.id;
+
+    // Tenta confirmar email automaticamente via admin API (se service role estiver OK)
+    // Se falhar, não bloqueia — usuário confirma via link por email
+    try {
+      const { createClient } = await import("@supabase/supabase-js");
+      const supabaseAdmin = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SECRET_KEY!,
+        { auth: { autoRefreshToken: false, persistSession: false } }
+      );
+      await supabaseAdmin.auth.admin.updateUserById(supabaseId, {
+        email_confirm: true,
+      });
+      console.log("[register] ✓ Email confirmado automaticamente");
+    } catch (confirmErr: any) {
+      console.warn("[register] Não foi possível confirmar email automaticamente:", confirmErr.message);
+      // Não bloqueia — usuário confirma via email
+    }
 
     // === 2. Cria Company (tenant) ===
     const subdomain = await generateUniqueSubdomain(slugifyCompany(companyName));
