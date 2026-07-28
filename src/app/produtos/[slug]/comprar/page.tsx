@@ -27,10 +27,37 @@ export default async function ComprarPage({ params }: { params: Promise<{ slug: 
     const companyName = String(formData.get("companyName") ?? "").trim();
     if (!email || !companyName) return;
 
+    // Cria a Company (tenant) inicial — pendente, sem licença ativa ainda.
+    // O webhook /api/stripe/webhook vai ativar a License quando o pagamento for confirmado.
+    const slugify = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").substring(0, 40);
+    const subdomain = slugify(companyName);
+
+    // Verifica se subdomain já existe; se sim, adiciona sufixo
+    let uniqueSubdomain = subdomain;
+    let suffix = 1;
+    while (await prisma.company.findFirst({ where: { subdomain: uniqueSubdomain } })) {
+      uniqueSubdomain = `${subdomain}-${suffix++}`;
+    }
+
+    const company = await prisma.company.create({
+      data: {
+        tradeName: companyName,
+        legalName: companyName,
+        subdomain: uniqueSubdomain,
+        appName: companyName,
+        email,
+        plan,
+        active: false, // só ativa após pagamento
+        country: "BR",
+        onboardingCompleted: false,
+      },
+    });
+
     const result = await createCheckoutSession({
       plan,
+      companyId: company.id.toString(),
       customerEmail: email,
-      successUrl: `${process.env.NEXT_PUBLIC_APP_URL || "https://orion-saas-platform.vercel.app"}/produtos/${slug}/sucesso?email=${encodeURIComponent(email)}&company=${encodeURIComponent(companyName)}`,
+      successUrl: `${process.env.NEXT_PUBLIC_APP_URL || "https://orion-saas-platform.vercel.app"}/produtos/${slug}/sucesso?email=${encodeURIComponent(email)}&company=${encodeURIComponent(companyName)}&companyId=${company.id}`,
       cancelUrl: `${process.env.NEXT_PUBLIC_APP_URL || "https://orion-saas-platform.vercel.app"}/produtos/${slug}/comprar`,
     });
 
