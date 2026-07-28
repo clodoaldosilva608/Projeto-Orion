@@ -10,3 +10,4 @@ download/
 upload/
 scripts/
 *.tgz
+tsconfig.tsbuildinfo
