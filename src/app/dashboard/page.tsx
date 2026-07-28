@@ -1,4 +1,10 @@
-import { Plus, CalendarRange } from "lucide-react";
+import { redirect } from "next/navigation";
+import { checkCompanyLicense } from "@/lib/modules-actions";
+import { prisma } from "@/lib/db";
+import { createSupabaseServerClient } from "@/lib/supabase";
+import { AVAILABLE_MODULES } from "@/lib/modules-catalog";
+import { MinimalDashboard } from "@/components/MinimalDashboard";
+import { DashboardShell } from "./DashboardShell";
 import { KpiGrid } from "@/components/KpiGrid";
 import { RevenueChart } from "@/components/RevenueChart";
 import { ProjectsDonut } from "@/components/ProjectsDonut";
@@ -9,12 +15,8 @@ import { AlertsPanel } from "@/components/AlertsPanel";
 import { AIUsageChart } from "@/components/AIUsageChart";
 import { AppDistribution } from "@/components/AppDistribution";
 import { ResourceUsage } from "@/components/ResourceUsage";
-import { MyProductsCard } from "@/components/MyProductsCard";
-import { TenantKpiGrid } from "@/components/TenantKpiGrid";
-import { getDashboardData, getDashboardDataTenant } from "@/lib/queries";
-import { prisma } from "@/lib/db";
-import { createSupabaseServerClient } from "@/lib/supabase";
-import { AVAILABLE_MODULES } from "@/lib/modules-catalog";
+import { getDashboardData } from "@/lib/queries";
+import { Plus, CalendarRange } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +39,8 @@ async function getCurrentUserCompany() {
           stripeCustomerId: true,
           active: true,
           onboardingCompleted: true,
+          primaryColor: true,
+          appName: true,
         },
       },
     },
@@ -47,69 +51,82 @@ async function getCurrentUserCompany() {
 export default async function DashboardPage() {
   const dbUser = await getCurrentUserCompany();
 
-  // Super Admin → dashboard da plataforma (visão global)
-  if (dbUser?.isSuperAdmin) {
+  // Não autenticado
+  if (!dbUser) redirect("/login");
+
+  // === SUPER ADMIN → dashboard da plataforma (visão global com Sidebar) ===
+  if (dbUser.isSuperAdmin) {
     const data = await getDashboardData();
     return (
-      <div className="space-y-5 lg:space-y-6 max-w-[1600px] mx-auto">
-        <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 fade-in-up">
-          <div>
-            <h1 className="text-2xl lg:text-3xl font-bold text-fg tracking-tight">
-              Visão Geral da Plataforma 🫡
-            </h1>
-            <p className="text-sm text-muted-fg mt-1.5 max-w-2xl">
-              Acompanhe o desempenho geral e gerencie toda a plataforma Orion em um único painel.
-            </p>
+      <DashboardShell>
+        <div className="space-y-5 lg:space-y-6 max-w-[1600px] mx-auto">
+          <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 fade-in-up">
+            <div>
+              <h1 className="text-2xl lg:text-3xl font-bold text-fg tracking-tight">
+                Visão Geral da Plataforma 🫡
+              </h1>
+              <p className="text-sm text-muted-fg mt-1.5 max-w-2xl">
+                Acompanhe o desempenho geral e gerencie toda a plataforma Orion em um único painel.
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <button className="inline-flex items-center gap-2 rounded-lg border border-soft bg-chip px-3.5 h-10 text-sm font-medium text-fg hover:bg-chip-hover transition-colors">
+                <CalendarRange className="h-4 w-4 text-muted-2" />
+                <span className="hidden sm:inline">Últimos 30 dias</span>
+              </button>
+              <button className="inline-flex items-center gap-2 rounded-lg brand-gradient px-4 h-10 text-sm font-semibold text-white shadow-lg">
+                <Plus className="h-4 w-4" />
+                <span className="hidden sm:inline">Novo Projeto</span>
+              </button>
+            </div>
           </div>
-          <div className="flex items-center gap-3">
-            <button className="inline-flex items-center gap-2 rounded-lg border border-soft bg-chip px-3.5 h-10 text-sm font-medium text-fg hover:bg-chip-hover transition-colors">
-              <CalendarRange className="h-4 w-4 text-muted-2" />
-              <span className="hidden sm:inline">Últimos 30 dias</span>
-              <span className="sm:hidden">30 dias</span>
-            </button>
-            <button className="inline-flex items-center gap-2 rounded-lg brand-gradient px-4 h-10 text-sm font-semibold text-white shadow-lg shadow-violet-500/20 hover:opacity-95 transition-opacity">
-              <Plus className="h-4 w-4" />
-              <span className="hidden sm:inline">Novo Projeto</span>
-              <span className="sm:hidden">Novo</span>
-            </button>
+          <KpiGrid kpis={data.kpis} />
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-5 stagger">
+            <RevenueChart data={data.revenue} mrr={data.kpis.mrr.value} />
+            <ProjectsDonut data={data.projectsByStatus} />
+            <SystemStatus services={data.systemServices} />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-5 stagger">
+            <RecentProjects projects={data.recentProjects} />
+            <ActivityFeed activities={data.activities} />
+            <AlertsPanel alerts={data.alerts} />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-5 stagger">
+            <AIUsageChart data={data.aiUsage} />
+            <AppDistribution data={data.appDistribution} />
+            <ResourceUsage data={data.resources} />
           </div>
         </div>
-
-        <KpiGrid kpis={data.kpis} />
-
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-5 stagger">
-          <RevenueChart data={data.revenue} mrr={data.kpis.mrr.value} />
-          <ProjectsDonut data={data.projectsByStatus} />
-          <SystemStatus services={data.systemServices} />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-5 stagger">
-          <RecentProjects projects={data.recentProjects} />
-          <ActivityFeed activities={data.activities} />
-          <AlertsPanel alerts={data.alerts} />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-5 stagger">
-          <AIUsageChart data={data.aiUsage} />
-          <AppDistribution data={data.appDistribution} />
-          <ResourceUsage data={data.resources} />
-        </div>
-      </div>
+      </DashboardShell>
     );
   }
 
-  // Usuário comum (tenant) → dashboard da EMPRESA dele
-  if (!dbUser?.companyId) {
+  // === USUÁRIO COMUM (tenant) → DASHBOARD MINIMALISTA (sem Sidebar/Header) ===
+  if (!dbUser.companyId) {
     return (
-      <div className="max-w-2xl mx-auto py-20 text-center">
-        <h1 className="text-2xl font-bold text-white mb-2">Bem-vindo!</h1>
-        <p className="text-sm text-[#8b8fa3]">Sua conta não está vinculada a uma empresa. Entre em contato com o suporte.</p>
+      <div className="min-h-screen bg-[#0a0b14] text-white flex items-center justify-center p-4">
+        <div className="text-center">
+          <h1 className="text-xl font-bold mb-2">Bem-vindo!</h1>
+          <p className="text-sm text-[#8b8fa3]">Sua conta não está vinculada a uma empresa.</p>
+        </div>
       </div>
     );
   }
 
-  // Buscar dados filtrados por companyId
-  const data = await getDashboardDataTenant(dbUser.companyId);
+  // Verifica licença
+  const license = await checkCompanyLicense();
+  if (!license.active) {
+    if (license.status === "trial_expired") redirect("/bloqueada?reason=trial_expired");
+    else if (license.status === "suspended") redirect("/bloqueada?reason=suspended");
+    else if (license.status === "canceled") redirect("/bloqueada?reason=canceled");
+    else if (license.status === "expired") redirect("/bloqueada?reason=expired");
+    else redirect("/planos");
+  }
+
+  // Onboarding pendente
+  if (dbUser.company && !dbUser.company.onboardingCompleted) {
+    redirect("/onboarding");
+  }
 
   // Buscar módulos habilitados
   const enabledModules = await prisma.enabledModule.findMany({
@@ -132,67 +149,18 @@ export default async function DashboardPage() {
   }));
 
   const company = dbUser.company;
-  const isTrial = data.company?.trialStatus === "trial";
-  const trialDaysLeft = data.company?.trialDaysLeft ?? 0;
 
   return (
-    <div className="space-y-5 lg:space-y-6 max-w-[1600px] mx-auto">
-      {/* Hero — boas-vindas personalizadas */}
-      <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 fade-in-up">
-        <div>
-          <h1 className="text-2xl lg:text-3xl font-bold text-fg tracking-tight">
-            Bem-vindo, {company?.tradeName || dbUser.name}! 👋
-          </h1>
-          <p className="text-sm text-muted-fg mt-1.5 max-w-2xl">
-            Gerencie sua empresa e acesse seus produtos em um único painel.
-            {isTrial && trialDaysLeft > 0 && (
-              <span className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-300 text-[11px] font-semibold">
-                Trial: {trialDaysLeft} dias restantes
-              </span>
-            )}
-            {data.company?.trialStatus === "active" && (
-              <span className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-300 text-[11px] font-semibold">
-                Plano {company?.plan}
-              </span>
-            )}
-          </p>
-        </div>
-      </div>
-
-      {/* Meus Produtos — card com produtos assinados */}
-      {company && (
-        <MyProductsCard
-          companyId={company.id.toString()}
-          companyTradeName={company.tradeName}
-          plan={company.plan}
-          stripeCustomerId={company.stripeCustomerId}
-          products={products}
-        />
-      )}
-
-      {/* KPIs da empresa */}
-      <TenantKpiGrid kpis={data.kpis} />
-
-      {/* Charts */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-5 stagger">
-        <RevenueChart data={data.revenue} mrr={data.kpis.results?.value ?? 0} />
-        <ProjectsDonut data={data.projectsByStatus} />
-        <SystemStatus services={data.systemServices} />
-      </div>
-
-      {/* Activity + Alerts */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-5 stagger">
-        <RecentProjects projects={data.recentProjects} />
-        <ActivityFeed activities={data.activities} />
-        <AlertsPanel alerts={data.alerts} />
-      </div>
-
-      {/* Usage */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-5 stagger">
-        <AIUsageChart data={data.aiUsage} />
-        <AppDistribution data={data.appDistribution} />
-        <ResourceUsage data={data.resources} />
-      </div>
-    </div>
+    <MinimalDashboard
+      companyId={company.id.toString()}
+      companyTradeName={company.tradeName}
+      companyInitial={company.tradeName.charAt(0).toUpperCase()}
+      primaryColor={company.primaryColor}
+      plan={company.plan}
+      trialDaysLeft={license.daysLeft}
+      trialStatus={license.status}
+      stripeCustomerId={company.stripeCustomerId}
+      products={products}
+    />
   );
 }

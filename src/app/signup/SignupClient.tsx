@@ -81,16 +81,16 @@ export function SignupClient() {
           body: new URLSearchParams({
             email: form.email,
             password: form.password,
-            redirect: "/onboarding",
+            redirect: nextUrl || "/dashboard",
           }).toString(),
         });
         if (loginRes.ok) {
-          // Se veio de uma página de produto (next=), vai para onboarding
-          // e depois onboarding redireciona para next
+          // dashboard/layout.tsx vai redirecionar para /onboarding se necessário
+          // Após onboarding, volta para nextUrl ou /dashboard
           if (nextUrl) {
-            router.push(`/onboarding?next=${encodeURIComponent(nextUrl)}`);
+            router.push(nextUrl);
           } else {
-            router.push("/onboarding");
+            router.push("/dashboard");
           }
         } else {
           router.push(`/login?registered=1&email=${encodeURIComponent(form.email)}`);
