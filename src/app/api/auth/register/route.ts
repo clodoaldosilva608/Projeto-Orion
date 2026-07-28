@@ -29,7 +29,14 @@ export async function POST(request: NextRequest) {
     if (!email?.trim()) return NextResponse.json({ error: "Email obrigatório" }, { status: 400 });
     if (!password || password.length < 6) return NextResponse.json({ error: "Senha deve ter ao menos 6 caracteres" }, { status: 400 });
     if (!companyName?.trim()) return NextResponse.json({ error: "Nome da empresa obrigatório" }, { status: 400 });
-    if (cnpj && !validateCnpj(cnpj)) return NextResponse.json({ error: "CNPJ inválido" }, { status: 400 });
+
+    // CNPJ é OPCIONAL — só valida se o usuário digitou os 14 dígitos completos.
+    // Se digitou parcialmente (ex: "12.345"), ignora silenciosamente (trata como vazio).
+    const sanitizedCnpj = cnpj ? sanitizeCnpj(cnpj) : "";
+    const finalCnpj = sanitizedCnpj.length === 14 ? (validateCnpj(sanitizedCnpj) ? sanitizedCnpj : null) : null;
+    if (cnpj && sanitizedCnpj.length === 14 && !validateCnpj(sanitizedCnpj)) {
+      return NextResponse.json({ error: "CNPJ inválido — verifique os dígitos" }, { status: 400 });
+    }
 
     // === 1. Cria Supabase Auth user ===
     const supabase = await createSupabaseServerClient();
@@ -87,7 +94,7 @@ export async function POST(request: NextRequest) {
         subdomain,
         appName: companyName.trim(),
         email: email.toLowerCase().trim(),
-        cnpj: cnpj ? sanitizeCnpj(cnpj) : null,
+        cnpj: finalCnpj,
         primaryColor: primaryColor || "#8b5cf6",
         secondaryColor: secondaryColor || "#6366f1",
         backgroundColor: "#0f111a",

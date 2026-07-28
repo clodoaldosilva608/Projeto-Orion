@@ -55,12 +55,18 @@ export function SignupClient() {
       return;
     }
 
+    // Limpa CNPJ parcial — se não tem 14 dígitos, envia vazio (é opcional)
+    const sanitizedCnpj = form.cnpj.replace(/\D/g, "");
+    const payload = sanitizedCnpj.length === 14 || sanitizedCnpj.length === 0
+      ? { ...form, cnpj: sanitizedCnpj }
+      : { ...form, cnpj: "" }; // parcial → ignora
+
     startTransition(async () => {
       try {
         const res = await fetch("/api/auth/register", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(form),
+          body: JSON.stringify(payload),
         });
         const data = await res.json();
         if (!res.ok) {
