@@ -1,9 +1,3 @@
-/**
- * Stripe Client — Orion Platform
- * Cria checkout sessions para cobrança de licenças.
- * Se não houver STRIPE_SECRET_KEY, retorna erro gracioso.
- */
-
 export const stripeEnabled = Boolean(process.env.STRIPE_SECRET_KEY)
 
 const PLANS = {
@@ -16,61 +10,35 @@ const PLANS = {
 export type PlanSlug = keyof typeof PLANS
 
 export async function createCheckoutSession(params: {
-  plan: PlanSlug
-  customerEmail: string
-  customerId?: string
-  successUrl: string
-  cancelUrl: string
+  plan: PlanSlug; customerEmail: string; customerId?: string; successUrl: string; cancelUrl: string
 }): Promise<{ url: string | null; error: string | null }> {
-  if (!stripeEnabled) {
-    return { url: null, error: 'Stripe não configurado. Adicione STRIPE_SECRET_KEY.' }
-  }
-
+  if (!stripeEnabled) return { url: null, error: 'Stripe não configurado.' }
   const plan = PLANS[params.plan]
-  if (!plan.priceId) {
-    return { url: null, error: `Price ID não configurado para o plano ${plan.name}` }
-  }
-
+  if (!plan.priceId) return { url: null, error: `Price ID não configurado para ${plan.name}` }
   try {
-    // Dynamic import para não carregar a lib se não estiver instalada
     const Stripe = (await import('stripe')).default
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2024-06-20' as any })
-
     const session = await stripe.checkout.sessions.create({
-      mode: 'subscription',
-      payment_method_types: ['card'],
-      customer_email: params.customerEmail,
-      customer: params.customerId,
+      mode: 'subscription', payment_method_types: ['card'],
+      customer_email: params.customerEmail, customer: params.customerId,
       line_items: [{ price: plan.priceId, quantity: 1 }],
-      success_url: params.successUrl,
-      cancel_url: params.cancelUrl,
+      success_url: params.successUrl, cancel_url: params.cancelUrl,
       metadata: { plan: params.plan },
+      billing_address_collection: 'required',
+      locale: 'pt-BR',
     })
-
     return { url: session.url, error: null }
   } catch (error: any) {
-    console.error('[stripe] Erro:', error.message)
-    return { url: null, error: error.message || 'Erro ao criar sessão de checkout' }
+    return { url: null, error: error.message }
   }
 }
 
-export async function createBillingPortal(params: {
-  customerId: string
-  returnUrl: string
-}): Promise<{ url: string | null; error: string | null }> {
-  if (!stripeEnabled) {
-    return { url: null, error: 'Stripe não configurado.' }
-  }
-
+export async function createBillingPortal(params: { customerId: string; returnUrl: string }): Promise<{ url: string | null; error: string | null }> {
+  if (!stripeEnabled) return { url: null, error: 'Stripe não configurado.' }
   try {
     const Stripe = (await import('stripe')).default
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2024-06-20' as any })
-
-    const session = await stripe.billingPortal.sessions.create({
-      customer: params.customerId,
-      return_url: params.returnUrl,
-    })
-
+    const session = await stripe.billingPortal.sessions.create({ customer: params.customerId, return_url: params.returnUrl })
     return { url: session.url, error: null }
   } catch (error: any) {
     return { url: null, error: error.message }
