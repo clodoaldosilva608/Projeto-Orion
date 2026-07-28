@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { Sparkles, Mail, Lock, ArrowRight, Loader2 } from "lucide-react";
 
@@ -9,6 +9,18 @@ function LoginInner() {
   const error = params.get("error");
   const redirect = params.get("redirect") ?? "/dashboard";
   const [loading, setLoading] = useState(false);
+  const [appName, setAppName] = useState("ORION");
+  const [tradeName, setTradeName] = useState("SaaS Platform");
+
+  useEffect(() => {
+    fetch("/api/tenant")
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (d?.appName) setAppName(d.appName.toUpperCase());
+        if (d?.tradeName) setTradeName(d.tradeName);
+      })
+      .catch(() => {});
+  }, []);
 
   return (
     // force-dark: login page is always dark (per spec) regardless of theme toggle
@@ -19,9 +31,9 @@ function LoginInner() {
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl brand-gradient shadow-lg shadow-violet-500/25 mb-4">
             <Sparkles className="h-6 w-6 text-white" />
           </div>
-          <h1 className="text-2xl font-bold brand-text">ORION</h1>
+          <h1 className="text-2xl font-bold brand-text">{appName}</h1>
           <p className="text-xs uppercase tracking-[0.25em] text-muted mt-1">
-            SaaS Platform
+            {tradeName}
           </p>
         </div>
 

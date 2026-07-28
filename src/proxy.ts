@@ -26,6 +26,7 @@ export function proxy(request: NextRequest) {
   // Routes that bypass auth check entirely
   if (pathname.startsWith("/superadmin") ||
       pathname.startsWith("/api/auth/") ||
+      pathname.startsWith("/api/tenant") ||
       pathname.startsWith("/api/cron/") ||
       pathname.startsWith("/api/v1/public/") ||
       pathname.startsWith("/api/fabrica/") ||
