@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Atualiza Company: stripeCustomerId + plan + active
-        await prisma.company.update({
+        const updatedCompany = await prisma.company.update({
           where: { id: BigInt(companyId) },
           data: {
             stripeCustomerId: stripeCustomerId ?? null,
@@ -125,6 +125,100 @@ export async function POST(request: NextRequest) {
           },
         })
         console.log('[stripe webhook] Company updated:', companyId)
+
+        // === PROVISIONAR USER AUTOMATICAMENTE ===
+        // Se a Company foi criada pelo /produtos/[slug]/comprar (sem User),
+        // criamos o primeiro User admin agora usando email do checkout.
+        const customerEmail = session.customer_email || session.customer_details?.email
+        if (customerEmail) {
+          const existingUser = await prisma.user.findFirst({
+            where: { email: { equals: customerEmail, mode: 'insensitive' } },
+          })
+
+          if (!existingUser) {
+            try {
+              // Cria User no Supabase Auth
+              const { createClient } = await import('@supabase/supabase-js')
+              const supabaseAdmin = createClient(
+                process.env.NEXT_PUBLIC_SUPABASE_URL!,
+                process.env.SUPABASE_SECRET_KEY!,
+                { auth: { autoRefreshToken: false, persistSession: false } }
+              )
+
+              // Senha temporária aleatória — usuário redefine via magic link
+              const tempPassword = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2) + 'A1!'
+
+              const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+                email: customerEmail.toLowerCase().trim(),
+                password: tempPassword,
+                email_confirm: true,
+                user_metadata: {
+                  name: updatedCompany.tradeName,
+                  company_name: updatedCompany.tradeName,
+                  role: 'admin',
+                  source: 'stripe_checkout',
+                },
+              })
+
+              if (!authError && authData.user) {
+                // Cria Branch Matriz se não existir
+                let branch = await prisma.branch.findFirst({ where: { companyId: updatedCompany.id, code: 'MATRIZ' } })
+                if (!branch) {
+                  branch = await prisma.branch.create({
+                    data: { companyId: updatedCompany.id, code: 'MATRIZ', name: 'Matriz', country: 'BR', status: 'active', isHeadquarters: true },
+                  })
+                }
+
+                // Cria Role admin
+                let adminRole = await prisma.role.findFirst({ where: { companyId: updatedCompany.id, slug: 'admin' } })
+                if (!adminRole) {
+                  adminRole = await prisma.role.create({
+                    data: { companyId: updatedCompany.id, name: 'Administrador', slug: 'admin', description: 'Acesso total', isSystem: true },
+                  })
+                }
+
+                // Cria User no Prisma
+                await prisma.user.create({
+                  data: {
+                    companyId: updatedCompany.id,
+                    branchId: branch.id,
+                    roleId: adminRole.id,
+                    supabaseId: authData.user.id,
+                    name: updatedCompany.tradeName,
+                    email: customerEmail.toLowerCase().trim(),
+                    status: 'active',
+                    emailVerifiedAt: new Date(),
+                    jobTitle: 'Administrador',
+                    department: 'Direção',
+                    isSuperAdmin: false,
+                    active: true,
+                  },
+                })
+
+                // Envia magic link para redefinir senha
+                await supabaseAdmin.auth.resetPasswordForEmail(customerEmail.toLowerCase().trim(), {
+                  redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/login?reset=1`,
+                })
+
+                console.log(`[stripe webhook] ✓ User provisionado: ${customerEmail}`)
+
+                // Envia email de boas-vindas
+                const { welcomeEmail, sendEmail } = await import('@/lib/emails')
+                await sendEmail(welcomeEmail(
+                  { tradeName: updatedCompany.tradeName, appName: updatedCompany.appName, subdomain: updatedCompany.subdomain },
+                  customerEmail,
+                  updatedCompany.tradeName,
+                ))
+              } else if (authError) {
+                console.error('[stripe webhook] Erro criando user:', authError.message)
+              }
+            } catch (e: any) {
+              console.error('[stripe webhook] Erro provisionando user:', e.message)
+            }
+          } else {
+            console.log(`[stripe webhook] User já existe: ${customerEmail}`)
+          }
+        }
         break
       }
 

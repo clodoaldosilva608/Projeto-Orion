@@ -167,10 +167,10 @@ export default function LandingPage() {
               Entrar
             </Link>
             <Link
-              href="/login"
+              href="/signup"
               className="inline-flex items-center gap-2 rounded-lg brand-gradient px-4 h-9 text-sm font-semibold text-white hover:opacity-95"
             >
-              Começar Agora
+              Teste 14 dias grátis
               <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
@@ -206,11 +206,11 @@ export default function LandingPage() {
               </p>
               <div className="mt-8 flex flex-col sm:flex-row gap-3">
                 <Link
-                  href="/login"
+                  href="/signup"
                   className="inline-flex items-center justify-center gap-2 rounded-lg brand-gradient-strong px-6 h-12 text-sm font-semibold text-white shadow-lg shadow-violet-500/30 hover:opacity-95"
                 >
                   <Rocket className="h-4 w-4" />
-                  Começar meu projeto agora
+                  Começar 14 dias grátis
                 </Link>
                 <Link
                   href="/produtos"

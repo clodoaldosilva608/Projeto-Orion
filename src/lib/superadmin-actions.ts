@@ -249,3 +249,321 @@ export async function toggleCompanyStatusAction(companyId: string) {
     return { data: null, error: (e as Error).message };
   }
 }
+
+// ================================================================
+// ADVANCED LICENSE ACTIONS — prorrogar, cancelar, ativar, resetar
+// ================================================================
+
+/**
+ * Prorrogar trial por N dias adicionais.
+ */
+export async function extendTrialAction(companyId: string, days: number) {
+  const user = await requireSuperAdmin();
+  if (!user) return { error: "Acesso negado" };
+  if (!days || days < 1 || days > 365) return { error: "Dias inválido (1-365)" };
+
+  try {
+    const company = await prisma.company.findUnique({
+      where: { id: BigInt(companyId) },
+      include: { license: true },
+    });
+    if (!company) return { error: "Empresa não encontrada" };
+    if (!company.license) return { error: "Empresa sem licença" };
+
+    const baseDate = company.license.trialEndsAt && company.license.trialEndsAt > new Date()
+      ? company.license.trialEndsAt
+      : new Date();
+    const newTrialEnd = new Date(baseDate.getTime() + days * 24 * 60 * 60 * 1000);
+
+    await prisma.license.update({
+      where: { id: company.license.id },
+      data: {
+        status: "trial",
+        active: true,
+        trialEndsAt: newTrialEnd,
+        expirationDate: newTrialEnd,
+      },
+    });
+    await prisma.company.update({
+      where: { id: company.id },
+      data: { active: true, licenseExpiresAt: newTrialEnd, trialEndsAt: newTrialEnd },
+    });
+
+    await logAudit({
+      companyId: BigInt(companyId),
+      userId: user.id,
+      action: "update",
+      tableName: "licenses",
+      recordId: company.license.id,
+      oldValue: { trialEndsAt: company.license.trialEndsAt },
+      newValue: { trialEndsAt: newTrialEnd, extendedByDays: days },
+    });
+
+    revalidatePath("/superadmin");
+    revalidatePath(`/superadmin/empresas/${companyId}`);
+    return { error: null, newTrialEnd: newTrialEnd.toISOString() };
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+}
+
+/**
+ * Cancelar assinatura definitivamente.
+ * Cancela no Stripe + marca License.canceled + Company.active=false.
+ */
+export async function cancelCompanyAction(companyId: string, reason?: string) {
+  const user = await requireSuperAdmin();
+  if (!user) return { error: "Acesso negado" };
+
+  try {
+    const company = await prisma.company.findUnique({
+      where: { id: BigInt(companyId) },
+      include: { license: true },
+    });
+    if (!company) return { error: "Empresa não encontrada" };
+
+    // Cancela no Stripe se tiver stripeCustomerId
+    if (company.stripeCustomerId && process.env.STRIPE_SECRET_KEY) {
+      try {
+        const Stripe = (await import("stripe")).default;
+        const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2024-06-20" as any });
+
+        // Lista subscriptions ativas do customer
+        const subs = await stripe.subscriptions.list({
+          customer: company.stripeCustomerId,
+          status: "active",
+        });
+        for (const sub of subs.data) {
+          await stripe.subscriptions.cancel(sub.id);
+          console.log(`[cancelCompany] Stripe subscription ${sub.id} canceled`);
+        }
+      } catch (stripeErr: any) {
+        console.warn("[cancelCompany] Stripe cancel failed:", stripeErr.message);
+        // Continua mesmo se Stripe falhar
+      }
+    }
+
+    // Atualiza License
+    if (company.license) {
+      await prisma.license.update({
+        where: { id: company.license.id },
+        data: {
+          status: "canceled",
+          active: false,
+          metadata: {
+            ...(company.license.metadata as any ?? {}),
+            canceledAt: new Date().toISOString(),
+            cancelReason: reason || "Canceled by admin",
+            canceledBy: user.id.toString(),
+          },
+        },
+      });
+    }
+
+    // Suspende Company
+    await prisma.company.update({
+      where: { id: company.id },
+      data: { active: false },
+    });
+
+    await logAudit({
+      companyId: BigInt(companyId),
+      userId: user.id,
+      action: "update",
+      tableName: "companies",
+      recordId: BigInt(companyId),
+      newValue: { status: "canceled", reason },
+    });
+
+    revalidatePath("/superadmin");
+    revalidatePath(`/superadmin/empresas/${companyId}`);
+    return { error: null };
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+}
+
+/**
+ * Ativar manualmente — para clientes que pagam por fora (PIX, boleto, cortesia).
+ * Não passa pelo Stripe.
+ */
+export async function activateManuallyAction(companyId: string, plan: string, expiresAt?: string) {
+  const user = await requireSuperAdmin();
+  if (!user) return { error: "Acesso negado" };
+  if (!["free", "starter", "pro", "enterprise"].includes(plan)) {
+    return { error: "Plano inválido" };
+  }
+
+  try {
+    const company = await prisma.company.findUnique({
+      where: { id: BigInt(companyId) },
+      include: { license: true },
+    });
+    if (!company) return { error: "Empresa não encontrada" };
+
+    const expirationDate = expiresAt ? new Date(expiresAt) : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+
+    const planConfig: Record<string, { maxUsers: number; maxBranches: number }> = {
+      free: { maxUsers: 5, maxBranches: 1 },
+      starter: { maxUsers: 20, maxBranches: 3 },
+      pro: { maxUsers: 50, maxBranches: 10 },
+      enterprise: { maxUsers: 100, maxBranches: 20 },
+    };
+    const cfg = planConfig[plan];
+
+    if (company.license) {
+      await prisma.license.update({
+        where: { id: company.license.id },
+        data: {
+          plan: plan as any,
+          status: "active",
+          active: true,
+          maxUsers: cfg.maxUsers,
+          maxBranches: cfg.maxBranches,
+          expirationDate,
+          trialEndsAt: null,
+          metadata: {
+            ...(company.license.metadata as any ?? {}),
+            manualActivation: true,
+            activatedAt: new Date().toISOString(),
+            activatedBy: user.id.toString(),
+          },
+        },
+      });
+    } else {
+      const license = await prisma.license.create({
+        data: {
+          plan: plan as any,
+          status: "active",
+          active: true,
+          maxUsers: cfg.maxUsers,
+          maxBranches: cfg.maxBranches,
+          maxIndicators: 50,
+          startDate: new Date(),
+          expirationDate,
+          metadata: { manualActivation: true, activatedAt: new Date().toISOString(), activatedBy: user.id.toString() },
+        },
+      });
+      await prisma.company.update({
+        where: { id: company.id },
+        data: { licenseId: license.id, licenseExpiresAt: expirationDate },
+      });
+    }
+
+    await prisma.company.update({
+      where: { id: company.id },
+      data: { active: true, plan: plan as any, licenseExpiresAt: expirationDate },
+    });
+
+    await logAudit({
+      companyId: BigInt(companyId),
+      userId: user.id,
+      action: "update",
+      tableName: "licenses",
+      recordId: BigInt(companyId),
+      newValue: { plan, status: "active", expirationDate, manualActivation: true },
+    });
+
+    revalidatePath("/superadmin");
+    revalidatePath(`/superadmin/empresas/${companyId}`);
+    return { error: null };
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+}
+
+/**
+ * Resetar trial — recomeça trial de 14 dias.
+ */
+export async function resetTrialAction(companyId: string) {
+  const user = await requireSuperAdmin();
+  if (!user) return { error: "Acesso negado" };
+
+  try {
+    const company = await prisma.company.findUnique({
+      where: { id: BigInt(companyId) },
+      include: { license: true },
+    });
+    if (!company) return { error: "Empresa não encontrada" };
+    if (!company.license) return { error: "Empresa sem licença" };
+
+    const newTrialEnd = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+
+    await prisma.license.update({
+      where: { id: company.license.id },
+      data: {
+        status: "trial",
+        active: true,
+        trialEndsAt: newTrialEnd,
+        expirationDate: newTrialEnd,
+        plan: "free",
+        metadata: {
+          ...(company.license.metadata as any ?? {}),
+          trialResetAt: new Date().toISOString(),
+          resetBy: user.id.toString(),
+        },
+      },
+    });
+    await prisma.company.update({
+      where: { id: company.id },
+      data: { active: true, licenseExpiresAt: newTrialEnd, trialEndsAt: newTrialEnd, plan: "free" },
+    });
+
+    await logAudit({
+      companyId: BigInt(companyId),
+      userId: user.id,
+      action: "update",
+      tableName: "licenses",
+      recordId: company.license.id,
+      newValue: { status: "trial", trialEndsAt: newTrialEnd, reset: true },
+    });
+
+    revalidatePath("/superadmin");
+    revalidatePath(`/superadmin/empresas/${companyId}`);
+    return { error: null, newTrialEnd: newTrialEnd.toISOString() };
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+}
+
+/**
+ * Detalhes de uma empresa (para a página de detalhe).
+ */
+export async function getCompanyDetailAction(companyId: string) {
+  const user = await requireSuperAdmin();
+  if (!user) return { data: null, error: "Acesso negado" };
+
+  try {
+    const company = await prisma.company.findUnique({
+      where: { id: BigInt(companyId) },
+      include: {
+        license: true,
+        users: { select: { id: true, name: true, email: true, status: true, isSuperAdmin: true, lastLoginAt: true, createdAt: true }, take: 50 },
+        branches: { select: { id: true, code: true, name: true, status: true } },
+        enabledModules: { select: { moduleKey: true, enabled: true, grantedAt: true } },
+        auditLogs: {
+          orderBy: { createdAt: "desc" },
+          take: 20,
+          select: { id: true, action: true, tableName: true, oldValue: true, newValue: true, createdAt: true, userId: true },
+        },
+        _count: { select: { users: true, branches: true, indicators: true, goals: true, softwareProjects: true } },
+      },
+    });
+    if (!company) return { data: null, error: "Empresa não encontrada" };
+
+    return {
+      data: {
+        ...company,
+        id: company.id.toString(),
+        licenseId: company.licenseId?.toString() ?? null,
+        license: company.license ? { ...company.license, id: company.license.id.toString() } : null,
+        users: company.users.map((u) => ({ ...u, id: u.id.toString() })),
+        branches: company.branches.map((b) => ({ ...b, id: b.id.toString() })),
+        auditLogs: company.auditLogs.map((a) => ({ ...a, id: a.id.toString(), userId: a.userId?.toString() })),
+      },
+      error: null,
+    };
+  } catch (e) {
+    return { data: null, error: (e as Error).message };
+  }
+}

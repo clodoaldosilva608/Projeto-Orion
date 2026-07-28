@@ -53,7 +53,7 @@ export function proxy(request: NextRequest) {
   requestHeaders.set("x-tenant-hostname", hostname);
 
   // Public routes that never require auth.
-  const publicPaths = ["/", "/login", "/login/2fa", "/produtos", "/deployments", "/superadmin/login", "/kill-sw", "/clear-sw", "/planos"];
+  const publicPaths = ["/", "/login", "/login/2fa", "/produtos", "/deployments", "/superadmin/login", "/kill-sw", "/clear-sw", "/planos", "/signup", "/bloqueada", "/termos", "/privacidade", "/precos"];
   if (publicPaths.some((p) => pathname === p || pathname.startsWith(p + "/"))) {
     return NextResponse.next({ request: { headers: requestHeaders } });
   }

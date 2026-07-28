@@ -2,6 +2,7 @@
 
 import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { Sparkles, Mail, Lock, ArrowRight, Loader2 } from "lucide-react";
 import { useTenant } from "@/components/TenantProvider";
 
@@ -68,7 +69,6 @@ function LoginInner() {
                   name="email"
                   type="email"
                   required
-                  defaultValue="clodoaldosilva608@gmail.com"
                   placeholder="voce@empresa.com"
                   className="w-full h-11 rounded-lg bg-white/5 border border-white/10 pl-10 pr-3 text-sm text-white placeholder:text-muted/60 outline-none focus:border-violet-400/50 focus:bg-white/[0.07] transition-colors"
                 />
@@ -89,7 +89,6 @@ function LoginInner() {
                   name="password"
                   type="password"
                   required
-                  defaultValue="Silva88677488"
                   placeholder="••••••••"
                   className="w-full h-11 rounded-lg bg-white/5 border border-white/10 pl-10 pr-3 text-sm text-white placeholder:text-muted/60 outline-none focus:border-violet-400/50 focus:bg-white/[0.07] transition-colors"
                 />
@@ -118,6 +117,12 @@ function LoginInner() {
             <a href="#" className="text-violet-300 hover:text-violet-200">
               Recuperar acesso
             </a>
+          </p>
+          <p className="mt-3 text-center text-xs text-muted">
+            Não tem conta?{" "}
+            <Link href="/signup" className="text-violet-300 hover:text-violet-200 font-medium">
+              Criar conta grátis (14 dias)
+            </Link>
           </p>
         </div>
 

@@ -171,7 +171,15 @@ export default async function SuperAdminPage() {
                       </div>
                     </td>
                     <td className="px-5 py-3 text-right">
-                      <ToggleCompanyButton id={c.id} active={c.active} tradeName={c.tradeName} />
+                      <div className="flex items-center justify-end gap-2">
+                        <Link
+                          href={`/superadmin/empresas/${c.id}`}
+                          className="inline-flex items-center gap-1 h-7 px-2.5 rounded-md border border-violet-500/30 bg-violet-500/10 text-[10px] font-medium text-violet-200 hover:bg-violet-500/20"
+                        >
+                          Detalhes
+                        </Link>
+                        <ToggleCompanyButton id={c.id} active={c.active} tradeName={c.tradeName} />
+                      </div>
                     </td>
                   </tr>
                 ))}

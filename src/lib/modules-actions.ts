@@ -42,21 +42,24 @@ async function requireSuperAdmin() {
 export async function checkCompanyLicense(): Promise<{
   active: boolean;
   reason?: string;
-  company?: { id: string; tradeName: string; plan: string };
-  license?: { status: string; expirationDate: Date } | null;
+  status?: "ok" | "trial" | "trial_expired" | "suspended" | "canceled" | "expired" | "no_license";
+  daysLeft?: number;
+  company?: { id: string; tradeName: string; plan: string; onboardingCompleted?: boolean };
+  license?: { status: string; expirationDate: Date; trialEndsAt?: Date | null } | null;
 }> {
   const user = await getCurrentUser();
-  if (!user) return { active: false, reason: "Não autenticado" };
+  if (!user) return { active: false, reason: "Não autenticado", status: "no_license" };
 
   // Super Admin sempre tem acesso
   if (user.isSuperAdmin) {
     const company = await prisma.company.findUnique({
       where: { id: user.companyId },
-      select: { id: true, tradeName: true, plan: true, licenseId: true },
+      select: { id: true, tradeName: true, plan: true, licenseId: true, onboardingCompleted: true },
     });
     return {
       active: true,
-      company: company ? { id: company.id.toString(), tradeName: company.tradeName, plan: company.plan } : undefined,
+      status: "ok",
+      company: company ? { id: company.id.toString(), tradeName: company.tradeName, plan: company.plan, onboardingCompleted: company.onboardingCompleted } : undefined,
       license: null,
     };
   }
@@ -64,34 +67,71 @@ export async function checkCompanyLicense(): Promise<{
   const company = await prisma.company.findUnique({
     where: { id: user.companyId },
     select: {
-      id: true, tradeName: true, plan: true, active: true,
-      license: { select: { status: true, expirationDate: true, active: true } },
+      id: true, tradeName: true, plan: true, active: true, onboardingCompleted: true,
+      license: { select: { status: true, expirationDate: true, active: true, trialEndsAt: true } },
     },
   });
 
-  if (!company) return { active: false, reason: "Empresa não encontrada" };
-  if (!company.active) return { active: false, reason: "Empresa suspensa", company: { id: company.id.toString(), tradeName: company.tradeName, plan: company.plan } };
-  if (!company.license || company.license.status !== 'active') {
-    return {
-      active: false,
-      reason: "Licença inativa",
-      company: { id: company.id.toString(), tradeName: company.tradeName, plan: company.plan },
-      license: company.license,
-    };
+  const companyInfo = { id: company?.id.toString() ?? "", tradeName: company?.tradeName ?? "", plan: company?.plan ?? "free", onboardingCompleted: company?.onboardingCompleted };
+
+  if (!company) return { active: false, reason: "Empresa não encontrada", status: "no_license" };
+  if (!company.active) return { active: false, reason: "Empresa suspensa", status: "suspended", company: companyInfo, license: company.license };
+
+  if (!company.license) {
+    return { active: false, reason: "Sem licença", status: "no_license", company: companyInfo, license: null };
   }
-  if (company.license.expirationDate < new Date()) {
+
+  const now = new Date();
+  const lic = company.license;
+
+  // TRIAL: ativo enquanto trialEndsAt > now
+  if (lic.status === 'trial') {
+    if (lic.trialEndsAt && lic.trialEndsAt > now) {
+      const daysLeft = Math.ceil((lic.trialEndsAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+      return {
+        active: true,
+        status: "trial",
+        daysLeft,
+        company: companyInfo,
+        license: lic,
+      };
+    }
+    // Trial expirado
     return {
       active: false,
-      reason: "Licença expirada",
-      company: { id: company.id.toString(), tradeName: company.tradeName, plan: company.plan },
-      license: company.license,
+      reason: "Trial expirado",
+      status: "trial_expired",
+      company: companyInfo,
+      license: lic,
     };
   }
 
+  // ACTIVE: assinatura paga
+  if (lic.status === 'active') {
+    if (lic.expirationDate < now) {
+      return {
+        active: false,
+        reason: "Licença expirada",
+        status: "expired",
+        company: companyInfo,
+        license: lic,
+      };
+    }
+    return {
+      active: true,
+      status: "ok",
+      company: companyInfo,
+      license: lic,
+    };
+  }
+
+  // SUSPENDED, CANCELED, etc.
   return {
-    active: true,
-    company: { id: company.id.toString(), tradeName: company.tradeName, plan: company.plan },
-    license: company.license,
+    active: false,
+    reason: lic.status === 'canceled' ? "Assinatura cancelada" : "Licença suspensa",
+    status: lic.status === 'canceled' ? "canceled" : "suspended",
+    company: companyInfo,
+    license: lic,
   };
 }
 

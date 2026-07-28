@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Sidebar } from "@/components/Sidebar";
 import { Header } from "@/components/Header";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { TrialBanner } from "@/components/TrialBanner";
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
@@ -19,6 +20,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           onCloseMobile={() => setMobileOpen(false)}
         />
         <div className="flex-1 flex flex-col min-w-0">
+          <TrialBanner />
           <Header onOpenMobile={() => setMobileOpen(true)} />
           <main className="flex-1 p-4 lg:p-6">{children}</main>
         </div>
