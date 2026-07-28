@@ -34,6 +34,8 @@ import {
   Gamepad2,
   Calendar,
   CheckSquare,
+  GraduationCap,
+  FolderOpen,
   Factory,
   ClipboardList,
   Layers,
@@ -104,6 +106,8 @@ const SECTIONS: NavSection[] = [
       { label: "Calendário", href: "/calendario", icon: Calendar },
       { label: "Checklist", href: "/checklist", icon: CheckSquare },
       { label: "Feedback", href: "/feedback", icon: MessageSquare },
+      { label: "Treinamentos", href: "/treinamentos", icon: GraduationCap },
+      { label: "Documentos", href: "/documentos", icon: FolderOpen },
     ],
   },
   {
