@@ -1,0 +1,2002 @@
+     1→# DOSSIÊ MASTER DO PRODUTO
+     2→
+     3→## DOCUMENTO 23
+     4→
+     5→# ESPECIFICAÇÃO DE INTEGRAÇÕES
+     6→
+     7→**Projeto:** Orion (Nome interno)
+     8→**Versão:** 1.0
+     9→**Status:** Em Desenvolvimento
+    10→**Documento:** Especificações de Integrações Externas
+    11→
+    12→---
+    13→
+    14→# Capítulo 1 — Objetivo
+    15→
+    16→Este documento detalha as integrações externas suportadas pelo Projeto Orion, os protocolos de cada uma, autenticação, mapeamento de dados, e exemplos práticos de implementação. Integrações são essenciais para que o Orion troque dados com sistemas já existentes no cliente (ERPs, CRMs, mensageria, e-mail).
+    17→
+    18→---
+    19→
+    20→# Capítulo 2 — Visão Geral de Integrações
+    21→
+    22→## 2.1 Categorias
+    23→
+    24→| Categoria | Sistemas | Disponibilidade |
+    25→|-----------|----------|-----------------|
+    26→| ERP | Totvs, SAP B1, Sankhya | v2.0 |
+    27→| CRM | Salesforce, HubSpot, Pipedrive | v3.0 |
+    28→| Mensageria | WhatsApp, Telegram | v2.0 (plugins) |
+    29→| E-mail | SMTP, SendGrid, SES | v1.0 |
+    30→| E-commerce | Shopify, WooCommerce, VTEX | v3.0 |
+    31→| BI | Power BI, Tableau, Metabase | v3.0 |
+    32→| Auth | Google, Microsoft, SAML | v1.0-v2.0 |
+    33→| Storage | S3, Google Cloud Storage | v1.0 |
+    34→
+    35→## 2.2 Tipos de Integração
+    36→
+    37→### Inbound (sistema externo → Orion)
+    38→- Webhooks recebidos pelo Orion
+    39→- API REST consumida por sistemas externos
+    40→- Importação manual de arquivos (Excel, CSV)
+    41→
+    42→### Outbound (Orion → sistema externo)
+    43→- Webhooks disparados pelo Orion
+    44→- Chamadas API para sistemas externos
+    45→- Exportação automática para FTP/S3
+    46→
+    47→---
+    48→
+    49→# Capítulo 3 — Integração com ERPs
+    50→
+    51→## 3.1 Totvs (Protheus e RM)
+    52→
+    53→### Visão
+    54→Sincroniza dados de vendas do Totvs com o Orion para lançar resultados automaticamente.
+    55→
+    56→### Autenticação
+    57→- OAuth 2.0 com client credentials
+    58→- Ou Basic Auth com API key (legado)
+    59→
+    60→### Endpoints Consumidos (Totvs → Orion)
+    61→```
+    62→GET /api/v1/sales?date={YYYY-MM-DD}
+    63→GET /api/v1/sales/{id}/items
+    64→GET /api/v1/products/{id}
+    65→GET /api/v1/sellers/{id}
+    66→```
+    67→
+    68→### Mapeamento de Dados
+    69→
+    70→| Totvs Field | Orion Field | Transformação |
+    71→|-------------|-------------|---------------|
+    72→| `F2_EMISSAO` | `result_date` | Date parse |
+    73→| `F2_VEND1` | `user.external_id` | Lookup por CPF |
+    74→| `F2_VALBRUT` | `value` | Decimal(18,4) |
+    75→| `F2_DOC` + `F2_SERIE` | `external_reference` | Concatenação |
+    76→| `C6_PRODUTO` | `product.external_id` | Lookup |
+    77→| `C6_VALOR` | `sale_item.value` | Decimal |
+    78→
+    79→### Fluxo
+    80→```
+    81→1. Scheduler roda a cada 30min (configurável)
+    82→2. Busca vendas no Totvs desde última sincronização
+    83→3. Para cada venda:
+    84→   - Identifica vendedor por CPF
+    85→   - Mapeia indicadores (configurável: faturamento, itens, etc.)
+    86→   - Lança resultado no Orion via API
+    87→4. Marca timestamp de última sync
+    88→5. Emite evento result.imported (auditado)
+    89→```
+    90→
+    91→### Tratamento de Erros
+    92→- Vendedor não encontrado: cria log, pula registro
+    93→- Valor inválido: cria log, pula registro
+    94→- Timeout Totvs: retry 3x com backoff exponencial
+    95→
+    96→### Configuração no Orion
+    97→```
+    98→Admin > Integrações > ERP > Totvs
+    99→- URL base: https://api.totvs.com.br
+   100→- Client ID: ****
+   101→- Client Secret: ****
+   102→- Empresa: 01
+   103→- Filial: 0101
+   104→- Sincronizar a cada: 30 min
+   105→- Indicador padrão: Faturamento
+   106→- Status: Ativo
+   107→```
+   108→
+   109→## 3.2 SAP Business One
+   110→
+   111→### Diferenças vs Totvs
+   112→- API via Service Layer (REST)
+   113→- Autenticação por sessão (login/logout)
+   114→- Filtros via OData
+   115→
+   116→### Mapeamento
+   117→| SAP B1 Field | Orion Field |
+   118→|--------------|-------------|
+   119→| `DocDate` | `result_date` |
+   120→| `SalesPersonCode` | `user.external_id` |
+   121→| `DocTotal` | `value` |
+   122→| `DocEntry` | `external_reference` |
+   123→
+   124→## 3.3 Sankhya
+   125→
+   126→### Visão
+   127→Sincronização via API REST Sankhya (Gan.
+   128→
+   129→### Mapeamento
+   130→| Sankhya Field | Orion Field |
+   131→|---------------|-------------|
+   132→| `DTNEG` | `result_date` |
+   133→| `CODVEND` | `user.external_id` |
+   134→| `VLRNOTA` | `value` |
+   135→| `NUNOTA` | `external_reference` |
+   136→
+   137→---
+   138→
+   139→# Capítulo 4 — Integração com CRMs
+   140→
+   141→## 4.1 Salesforce
+   142→
+   143→### Visão
+   144→Permite que gestores vejam dados do CRM alongside dados de performance do Orion.
+   145→
+   146→### Autenticação
+   147→- OAuth 2.0 com refresh token
+   148→- Sandbox e produção suportados
+   149→
+   150→### Endpoints Consumidos
+   151→```
+   152→GET /services/data/v60.0/sobjects/Opportunity
+   153→GET /services/data/v60.0/sobjects/User/{id}
+   154→GET /services/data/v60.0/query?q=SELECT...
+   155→```
+   156→
+   157→### Mapeamento
+   158→
+   159→| Salesforce Field | Orion Field | Obs |
+   160→|------------------|-------------|-----|
+   161→| `Opportunity.OwnerId` | `user.external_id` | Salesperson |
+   162→| `Opportunity.Amount` | `sale.value` | Revenue |
+   163→| `Opportunity.CloseDate` | `result_date` | When closed |
+   164→| `Opportunity.StageName` | `sale.status` | Stage |
+   165→| `Account.Name` | `customer.name` | Customer |
+   166→
+   167→### Webhook Salesforce → Orion
+   168→Quando oportunidade é marcada como "Closed Won":
+   169→1. Salesforce dispara webhook para `https://api.orion.com/v1/integrations/salesforce/webhook`
+   170→2. Orion valida assinatura HMAC
+   171→3. Mapeia oportunidade para resultado
+   172→4. Lança no Orion
+   173→5. Notifica vendedor
+   174→
+   175→## 4.2 HubSpot
+   176→
+   177→### Visão
+   178→Sincroniza deals do HubSpot como resultados no Orion.
+   179→
+   180→### Autenticação
+   181→- API Key (v1) ou Private App (v2)
+   182→
+   183→### Mapeamento
+   184→| HubSpot Field | Orion Field |
+   185→|---------------|-------------|
+   186→| `deal_amount` | `sale.value` |
+   187→| `deal_owner` | `user.external_id` |
+   188→| `closedate` | `result_date` |
+   189→| `dealstage` | `sale.status` |
+   190→
+   191→## 4.3 Pipedrive
+   192→
+   193→### Mapeamento
+   194→| Pipedrive Field | Orion Field |
+   195→|-----------------|-------------|
+   196→| `value` | `sale.value` |
+   197→| `user_id` | `user.external_id` |
+   198→| `won_time` | `result_date` |
+   199→| `status` | `sale.status` (won/lost) |
+   200→
+   201→---
+   202→
+   203→# Capítulo 5 — Integração com WhatsApp
+   204→
+   205→## 5.1 WhatsApp Business API (Oficial)
+   206→
+   207→### Visão
+   208→Permite enviar notificações para vendedores e gerentes via WhatsApp.
+   209→
+   210→### Pré-requisitos
+   211→- WhatsApp Business API account (Meta)
+   212→- Número verificado
+   213→- Template messages aprovados
+   214→
+   215→### Templates Aprovados
+   216→
+   217→#### Novo Resultado Lançado
+   218→```
+   219→Olá, {{1}}!
+   220→
+   221→Seu resultado de {{2}} foi registrado:
+   222→• {{3}}: {{4}}
+   223→• Progresso: {{5}}% da meta
+   224→
+   225→Continue assim! 🚀
+   226→```
+   227→
+   228→#### Meta Atingida 🎉
+   229→```
+   230→Parabéns {{1}}! 🎉
+   231→
+   232→Você atingiu {{2}}% da meta de {{3}} hoje!
+   233→
+   234→Sua posição no ranking: #{{4}}
+   235→
+   236→Continue performando!
+   237→```
+   238→
+   239→#### Campanha Começou
+   240→```
+   241→{{1}}, começou a campanha {{2}}! 🏆
+   242→
+   243→Período: {{3}} a {{4}}
+   244→Indicador: {{5}}
+   245→Premiação: {{6}}
+   246→
+   247→Acesse o Orion para acompanhar seu progresso.
+   248→```
+   249→
+   250→### Fluxo de Envio
+   251→```
+   252→1. Evento ocorre no Orion (ex: goal.achieved)
+   253→2. Sistema verifica se webhook WhatsApp está configurado
+   254→3. Busca número do vendedor no cadastro
+   255→4. Monta mensagem com template
+   256→5. Envia para WhatsApp Business API
+   257→6. Aguarda confirmação de entrega
+   258→7. Registra auditoria
+   259→```
+   260→
+   261→### Limites
+   262→- 1 mensagem por usuário por hora (anti-spam)
+   263→- Apenas templates aprovados (sem free text)
+   264→- Custo por mensagem (cobrado pela Meta)
+   265→
+   266→### Configuração
+   267→```
+   268→Admin > Integrações > WhatsApp
+   269→- Phone Number ID: ****
+   270→- Business Account ID: ****
+   271→- Access Token: ****
+   272→- Webhook Verify Token: ****
+   273→- Templates mapeados: ✓
+   274→- Status: Ativo
+   275→```
+   276→
+   277→## 5.2 WhatsApp NÃO Oficial (Plugin)
+   278→
+   279→Aviso: usar API não oficial viola ToS da Meta. Plugin disponível mas não recomendado.
+   280→
+   281→---
+   282→
+   283→# Capítulo 6 — Integração com Telegram
+   284→
+   285→## 6.1 Visão
+   286→Bot do Telegram para receber notificações e consultar dashboard.
+   287→
+   288→## 6.2 Setup
+   289→
+   290→1. Criar bot via @BotFather no Telegram
+   291→2. Obter token
+   292→3. Configurar no Orion
+   293→4. Usuários vinculam Telegram via `/start @OrionBot`
+   294→
+   295→## 6.3 Comandos do Bot
+   296→
+   297→| Comando | Ação |
+   298→|---------|------|
+   299→| `/start` | Vincula Telegram ao usuário Orion |
+   300→| `/metas` | Mostra metas do dia |
+   301→| `/ranking` | Mostra top 5 do dia |
+   302→| `/resultado` | Mostra seu resultado atual |
+   303→| `/campanhas` | Lista campanhas ativas |
+   304→| `/ajuda` | Lista comandos |
+   305→
+   306→## 6.4 Notificações Automáticas
+   307→
+   308→- Meta atingida 🎉
+   309→- Campanha começou
+   310→- Campanha terminando (3 dias)
+   311→- Resultado pendente de aprovação (gerentes)
+   312→- Insights de IA (opcional)
+   313→
+   314→---
+   315→
+   316→# Capítulo 7 — Integração com E-mail (SMTP)
+   317→
+   318→## 7.1 Configuração SMTP
+   319→
+   320→```
+   321→Admin > Sistema > Parâmetros > E-mail
+   322→- Host: smtp.sendgrid.net
+   323→- Porta: 587
+   324→- Usuário: apikey
+   325→- Senha: ****
+   326→- TLS: Sim
+   327→- Remetente: noreply@suaempresa.com
+   328→- Nome remetente: Sistema Orion
+   329→```
+   330→
+   331→## 7.2 Templates de E-mail
+   332→
+   333→### Boas-vindas
+   334→```
+   335→Assunto: Bem-vindo ao Orion, {{nome}}!
+   336→
+   337→Olá {{nome}},
+   338→
+   339→Sua conta no Orion foi criada pela {{empresa}}.
+   340→
+   341→Para acessar:
+   342→- URL: {{login_url}}
+   343→- Login: {{email}}
+   344→- Senha temporária: {{senha_temp}}
+   345→
+   346→Você será solicitado a trocar a senha no primeiro acesso.
+   347→
+   348→Dúvidas? Contate seu supervisor.
+   349→
+   350→Equipe Orion
+   351→```
+   352→
+   353→### Reset de Senha
+   354→```
+   355→Assunto: Reset de senha - Orion
+   356→
+   357→Olá {{nome}},
+   358→
+   359→Recebemos uma solicitação para resetar sua senha.
+   360→
+   361→Clique no link abaixo (válido por 1 hora):
+   362→{{reset_link}}
+   363→
+   364→Se você não solicitou, ignore este e-mail.
+   365→
+   366→Equipe Orion
+   367→```
+   368→
+   369→### Relatório Diário (Gerentes)
+   370→```
+   371→Assunto: [Orion] Relatório diário - {{data}}
+   372→
+   373→Resumo de {{empresa}} - {{filial}}:
+   374→
+   375→📊 Faturamento: R$ {{valor}} ({{percentual}}% da meta)
+   376→👥 Vendedores ativos: {{ativos}}/{{total}}
+   377→🏆 Top vendedor: {{top_nome}} ({{top_pct}}%)
+   378→⚠️ Abaixo da meta: {{abaixo}} vendedores
+   379→
+   380→Ver detalhes: {{dashboard_url}}
+   381→
+   382→Equipe Orion
+   383→```
+   384→
+   385→## 7.3 Provedores Suportados
+   386→
+   387→| Provedor | Host | Porta |
+   388→|----------|------|-------|
+   389→| SendGrid | smtp.sendgrid.net | 587 |
+   390→| AWS SES | email-smtp.us-east-1.amazonaws.com | 587 |
+   391→| Mailgun | smtp.mailgun.org | 587 |
+   392→| Gmail (SMTP) | smtp.gmail.com | 587 |
+   393→| Office 365 | smtp.office365.com | 587 |
+   394→| Generic SMTP | (configurável) | (configurável) |
+   395→
+   396→---
+   397→
+   398→# Capítulo 8 — Integração com E-commerce
+   399→
+   400→## 8.1 Shopify
+   401→
+   402→### Visão
+   403→Importa pedidos do Shopify como resultados de vendas.
+   404→
+   405→### Autenticação
+   406→- OAuth 2.0 (Shopify App)
+   407→
+   408→### Webhook Shopify → Orion
+   409→```
+   410→POST /v1/integrations/shopify/webhook
+   411→Event: orders/create
+   412→```
+   413→
+   414→### Mapeamento
+   415→| Shopify Field | Orion Field |
+   416→|---------------|-------------|
+   417→| `order.total_price` | `sale.value` |
+   418→| `order.customer` | `customer.external_id` |
+   419→| `order.created_at` | `result_date` |
+   420→| `order.id` | `external_reference` |
+   421→
+   422→## 8.2 WooCommerce
+   423→
+   424→### Autenticação
+   425→- REST API com Consumer Key/Secret
+   426→
+   427→### Mapeamento
+   428→| WooCommerce Field | Orion Field |
+   429→|-------------------|-------------|
+   430→| `total` | `sale.value` |
+   431→| `customer_id` | `customer.external_id` |
+   432→| `date_created` | `result_date` |
+   433→| `id` | `external_reference` |
+   434→
+   435→## 8.3 VTEX
+   436→
+   437→### Autenticação
+   438→- App Key e App Token
+   439→
+   440→### Mapeamento
+   441→| VTEX Field | Orion Field |
+   442→|------------|-------------|
+   443→| `totals.value` | `sale.value` |
+   444→| `clientProfileData.email` | `customer.external_id` |
+   445→| `creationDate` | `result_date` |
+   446→| `orderId` | `external_reference` |
+   447→
+   448→---
+   449→
+   450→# Capítulo 9 — Integração com BI
+   451→
+   452→## 9.1 Power BI
+   453→
+   454→### Visão
+   455→Conector para Power BI consumir dados do Orion.
+   456→
+   457→### Como Funciona
+   458→1. Orion expõe endpoint OData
+   459→2. Power BI Desktop conecta via "OData Feed"
+   460→3. Usuário seleciona tabelas para importar
+   461→4. Refresh automático configurável
+   462→
+   463→### Endpoint
+   464→```
+   465→GET https://api.orion.com/v1/odata
+   466→GET https://api.orion.com/v1/odata/goals
+   467→GET https://api.orion.com/v1/odata/results
+   468→GET https://api.orion.com/v1/odata/users
+   469→```
+   470→
+   471→### Autenticação
+   472→- API Key no header `Authorization: Bearer {token}`
+   473→- Token gerado pelo Admin em Integrações > API Keys
+   474→
+   475→## 9.2 Tableau
+   476→
+   477→### Como Funciona
+   478→- Conector PostgreSQL direto (read-only user)
+   479→- Ou via Web Data Connector (WDC)
+   480→
+   481→### Read-only User
+   482→```sql
+   483→CREATE USER orion_bi WITH PASSWORD '***' CONNECTION LIMIT 5;
+   484→GRANT SELECT ON ALL TABLES IN SCHEMA public TO orion_bi;
+   485→ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO orion_bi;
+   486→```
+   487→
+   488→## 9.3 Metabase
+   489→
+   490→### Setup
+   491→- Self-hosted Metabase conecta ao PostgreSQL do Orion
+   492→- Usuário read-only (mesmo que Tableau)
+   493→- Dashboards criados no Metabase (separados do Orion)
+   494→
+   495→---
+   496→
+   497→# Capítulo 10 — SSO (Single Sign-On)
+   498→
+   499→## 10.1 Google Workspace
+   500→
+   501→### Visão
+   502→Login com conta Google corporativa.
+   503→
+   504→### Setup
+   505→1. Criar projeto no Google Cloud Console
+   506→2. Configurar OAuth consent screen
+   507→3. Criar credenciais OAuth 2.0
+   508→4. Configurar URLs de callback no Orion
+   509→5. Mapear domínios permitidos
+   510→
+   511→### Fluxo
+   512→1. Usuário clica "Entrar com Google"
+   513→2. Redireciona para Google OAuth
+   514→3. Usuário autoriza
+   515→4. Google retorna code
+   516→5. Orion troca code por token
+   517→6. Orion busca e-mail do usuário
+   518→7. Se e-mail existe no Orion, cria sessão JWT
+   519→
+   520→## 10.2 Microsoft (Azure AD)
+   521→
+   522→### Setup
+   523→1. Registrar app no Azure Portal
+   524→2. Configurar redirect URIs
+   525→3. Gerar client secret
+   526→4. Configurar API permissions (User.Read)
+   527→
+   528→### Fluxo
+   529→Similar ao Google, via Microsoft Identity Platform.
+   530→
+   531→## 10.3 SAML 2.0 (v2.0)
+   532→
+   533→### Visão
+   534→Para empresas que já têm Identity Provider (Okta, OneLogin, AD FS).
+   535→
+   536→### Setup
+   537→1. Admin faz upload do metadata XML do IdP
+   538→2. Orion gera seu metadata
+   539→3. Admin configura no IdP
+   540→4. Usuários logam via IdP, redirecionam para Orion
+   541→
+   542→### Mapeamento de Atributos
+   543→| SAML Attribute | Orion Field |
+   544→|----------------|-------------|
+   545→| `email` | `user.email` |
+   546→| `name` | `user.full_name` |
+   547→| `role` | `user.role` (se provisionamento JIT) |
+   548→
+   549→---
+   550→
+   551→# Capítulo 11 — Storage Externo (S3)
+   552→
+   553→## 11.1 Visão
+   554→Backup e armazenamento de arquivos em S3 (ou compatível: MinIO, DigitalOcean Spaces, etc).
+   555→
+   556→## 11.2 Usos
+   557→
+   558→### Backup Automático
+   559→- Backup diário enviado para S3
+   560→- Retenção configurável (90 dias default)
+   561→- Criptografia AES-256 no S3
+   562→
+   563→### Armazenamento de Anexos
+   564→- Fotos de comprovantes
+   565→- Documentos de campanhas
+   566→- Logos de empresas
+   567→
+   568→### Export de Relatórios
+   569→- Relatórios grandes exportados para S3
+   570→- Link assinado enviado por e-mail
+   571→
+   572→## 11.3 Configuração
+   573→```
+   574→Admin > Sistema > Storage
+   575→- Provider: AWS S3 (ou MinIO, DO Spaces, etc)
+   576→- Bucket: orion-backups
+   577→- Region: sa-east-1
+   578→- Access Key: ****
+   579→- Secret Key: ****
+   580→- Encryption: AES-256
+   581→- Lifecycle: 90 dias → Glacier
+   582→```
+   583→
+   584→---
+   585→
+   586→# Capítulo 12 — Webhooks do Orion (Outbound)
+   587→
+   588→## 12.1 Eventos Disponíveis
+   589→
+   590→| Evento | Quando dispara |
+   591→|--------|----------------|
+   592→| `user.created` | Novo usuário cadastrado |
+   593→| `user.updated` | Dados do usuário alterados |
+   594→| `user.deleted` | Usuário desativado |
+   595→| `goal.created` | Nova meta criada |
+   596→| `goal.updated` | Meta alterada |
+   597→| `goal.achieved` | Meta atingida ou superada |
+   598→| `result.created` | Resultado lançado |
+   599→| `result.approved` | Resultado aprovado |
+   600→| `result.rejected` | Resultado rejeitado |
+   601→| `campaign.started` | Campanha começou |
+   602→| `campaign.ended` | Campanha encerrou |
+   603→| `ranking.updated` | Ranking recalculado |
+   604→| `license.expiring` | Licença expira em 7 dias |
+   605→| `license.expired` | Licença expirou |
+   606→
+   607→## 12.2 Payload Padrão
+   608→
+   609→```json
+   610→{
+   611→  "event": "goal.achieved",
+   612→  "timestamp": "2025-08-15T14:30:00Z",
+   613→  "companyId": 1,
+   614→  "data": {
+   615→    "goalId": 42,
+   616→    "userId": 10,
+   617→    "userName": "João Silva",
+   618→    "indicatorId": 3,
+   619→    "indicatorName": "Faturamento",
+   620→    "achievementPercent": 110.5,
+   621→    "targetValue": 30000,
+   622→    "achievedValue": 33150
+   623→  },
+   624→  "signature": "sha256=abc123def456..."
+   625→}
+   626→```
+   627→
+   628→## 12.3 Assinatura HMAC
+   629→
+   630→Todo webhook é assinado. Header:
+   631→```
+   632→X-Orion-Signature: sha256=<hmac>
+   633→X-Orion-Event: goal.achieved
+   634→X-Orion-Delivery: <uuid>
+   635→```
+   636→
+   637→Cliente valida:
+   638→```python
+   639→import hmac, hashlib
+   640→
+   641→def verify_signature(payload, signature, secret):
+   642→    expected = 'sha256=' + hmac.new(
+   643→        secret.encode(),
+   644→        payload.encode(),
+   645→        hashlib.sha256
+   646→    ).hexdigest()
+   647→    return hmac.compare_digest(expected, signature)
+   648→```
+   649→
+   650→## 12.4 Retry Policy
+   651→
+   652→- 3 tentativas com backoff exponencial: 1min, 5min, 30min
+   653→- Após 3 falhas: webhook desativado
+   654→- Cliente é notificado por e-mail
+   655→- Pode reativar manualmente
+   656→
+   657→## 12.5 Configuração
+   658→
+   659→```
+   660→Admin > Sistema > Integrações > Webhooks
+   661→- URL: https://sistema-cliente.com/webhook
+   662→- Eventos: [✓] goal.achieved [✓] result.created [✓] campaign.ended
+   663→- Secret: ****
+   664→- Status: Ativo
+   665→- Última entrega: 2025-08-15 14:30
+   666→- Taxa de sucesso: 99.2%
+   667→```
+   668→
+   669→---
+   670→
+   671→# Capítulo 13 — SDKs Oficiais
+   672→
+   673→## 13.1 JavaScript/TypeScript
+   674→
+   675→```bash
+   676→npm install @orion/sdk-js
+   677→```
+   678→
+   679→```typescript
+   680→import { OrionClient } from '@orion/sdk-js';
+   681→
+   682→const client = new OrionClient({
+   683→  apiKey: 'orion_sk_...',
+   684→  baseUrl: 'https://api.orion.com/v1'
+   685→});
+   686→
+   687→// Criar meta
+   688→const goal = await client.goals.create({
+   689→  userId: 10,
+   690→  indicatorId: 3,
+   691→  goalType: 'monthly',
+   692→  targetValue: 30000,
+   693→  startDate: '2025-08-01',
+   694→  endDate: '2025-08-31'
+   695→});
+   696→
+   697→// Listar resultados
+   698→const results = await client.results.list({
+   699→  userId: 10,
+   700→  dateFrom: '2025-08-01',
+   701→  dateTo: '2025-08-31'
+   702→});
+   703→
+   704→// Escutar webhooks (Node.js Express)
+   705→app.post('/webhook', (req, res) => {
+   706→  const event = client.webhooks.constructEvent(req.body, req.headers);
+   707→  if (event.type === 'goal.achieved') {
+   708→    console.log('Meta atingida!', event.data);
+   709→  }
+   710→  res.json({ received: true });
+   711→});
+   712→```
+   713→
+   714→## 13.2 Python
+   715→
+   716→```bash
+   717→pip install orion-sdk-python
+   718→```
+   719→
+   720→```python
+   721→from orion import OrionClient
+   722→
+   723→client = OrionClient(
+   724→    api_key='orion_sk_...',
+   725→    base_url='https://api.orion.com/v1'
+   726→)
+   727→
+   728→# Criar resultado
+   729→result = client.results.create(
+   730→    user_id=10,
+   731→    indicator_id=3,
+   732→    result_date='2025-08-15',
+   733→    value=1250.50,
+   734→    notes='Vendas da manhã'
+   735→)
+   736→
+   737→# Listar metas
+   738→goals = client.goals.list(user_id=10, status='active')
+   739→```
+   740→
+   741→## 13.3 PHP
+   742→
+   743→```bash
+   744→composer require orion/sdk-php
+   745→```
+   746→
+   747→```php
+   748→<?php
+   749→require 'vendor/autoload.php';
+   750→
+   751→$client = new Orion\Client('orion_sk_...', 'https://api.orion.com/v1');
+   752→
+   753→$goal = $client->goals()->create([
+   754→    'userId' => 10,
+   755→    'indicatorId' => 3,
+   756→    'goalType' => 'monthly',
+   757→    'targetValue' => 30000,
+   758→    'startDate' => '2025-08-01',
+   759→    'endDate' => '2025-08-31'
+   760→]);
+   761→```
+   762→
+   763→---
+   764→
+   765→# Capítulo 14 — Monitoramento de Integrações
+   766→
+   767→## 14.1 Dashboard de Integrações
+   768→
+   769→```
+   770→Admin > Sistema > Integrações > Status
+   771→
+   772→┌──────────────────────────────────────────────────┐
+   773→│ INTEGRAÇÃO          STATUS    ÚLTIMA SYNC       │
+   774→├──────────────────────────────────────────────────┤
+   775→│ Totvs ERP           ✅ OK     15/08 14:30       │
+   776→│ WhatsApp            ✅ OK     15/08 14:32       │
+   777→│ SendGrid (Email)    ✅ OK     15/08 14:31       │
+   778→│ Google OAuth        ✅ OK     —                 │
+   779→│ S3 Backup           ✅ OK     15/08 02:00       │
+   780→│ Power BI            ✅ OK     —                 │
+   781→└──────────────────────────────────────────────────┘
+   782→```
+   783→
+   784→## 14.2 Logs de Integração
+   785→
+   786→Cada integração gera logs estruturados:
+   787→- Request/Response
+   788→- Latência
+   789→- Status code
+   790→- Erros (com stack trace)
+   791→
+   792→Disponível em `Admin > Sistema > Logs > Integrações`
+   793→
+   794→## 14.3 Alertas
+   795→
+   796→| Condição | Alerta |
+   797→|----------|--------|
+   798→| Sync falha 3x consecutivas | Email ao admin |
+   799→| Latência > 30s | Warning no dashboard |
+   800→| Webhook falha | Email + dashboard |
+   801→| Token expira em 7 dias | Email preventivo |
+   802→
+   803→---
+   804→
+   805→# Capítulo 15 — Mapeamento Detalhado de Campos (50+ por ERP)
+   806→
+   807→Mapeamento completo campo-a-campo entre os três principais ERPs nacionais (Totvs Protheus, SAP Business One, Sankhya) e o Orion. Cada ERP tem peculiaridades de nomenclatura, tipos e semântica que precisam ser tratadas na integração.
+   808→
+   809→## 15.1 Totvs Protheus — Mapeamento Completo (65 campos)
+   810→
+   811→### Cabeçalho da Nota Fiscal de Saída (SF2)
+   812→| Totvs Field | Orion Field | Tipo | Direção | Transformação | Notas |
+   813→|-------------|-------------|------|---------|---------------|-------|
+   814→| `F2_FILIAL` | `branch.external_code` | CHAR(2) | → | Lookup por código + tenant | Filial no Protheus |
+   815→| `F2_DOC` | `external_reference` | CHAR(9) | → | Concatenar com série | Número NF |
+   816→| `F2_SERIE` | `external_reference.serie` | CHAR(3) | → | Parte do external_reference | Série NF |
+   817→| `F2_EMISSAO` | `result_date` | DATE(8) | → | `DD/MM/YY` → ISO 8601 | Data emissão |
+   818→| `F2_CLIENTE` | `customer.external_id` | CHAR(6) | → | Lookup por código | Cliente SA1 |
+   819→| `F2_LOJA` | `customer.branch_code` | CHAR(2) | → | Concatenar com cliente | Loja do cliente |
+   820→| `F2_VEND1` | `user.external_id` | CHAR(6) | → | Lookup por código → CPF | Vendedor principal |
+   821→| `F2_VEND2` | `secondary_seller_id` | CHAR(6) | → | Opcional | Vendedor 2 (comissão) |
+   822→| `F2_VEND3` | `tertiary_seller_id` | CHAR(6) | → | Opcional | Vendedor 3 |
+   823→| `F2_VEND4` | `quaternary_seller_id` | CHAR(6) | → | Opcional | Vendedor 4 |
+   824→| `F2_VEND5` | `quinary_seller_id` | CHAR(6) | → | Opcional | Vendedor 5 |
+   825→| `F2_VALBRUT` | `value` | NUMERIC(14,2) | → | Decimal | Valor bruto |
+   826→| `F2_VALMERC` | `merchandise_value` | NUMERIC(14,2) | → | Decimal | Valor mercadorias |
+   827→| `F2_DESCONT` | `discount_value` | NUMERIC(14,2) | → | Decimal | Desconto |
+   828→| `F2_VALIPI` | `ipi_value` | NUMERIC(14,2) | → | Decimal | IPI |
+   829→| `F2_BASEICM` | `icms_base` | NUMERIC(14,2) | → | Decimal | Base ICMS |
+   830→| `F2_VALICM` | `icms_value` | NUMERIC(14,2) | → | Decimal | Valor ICMS |
+   831→| `F2_BASEICMST` | `icms_st_base` | NUMERIC(14,2) | → | Decimal | Base ICMS-ST |
+   832→| `F2_ICMSRET` | `icms_st_value` | NUMERIC(14,2) | → | Decimal | Valor ICMS-ST |
+   833→| `F2_VALPIS` | `pis_value` | NUMERIC(14,2) | → | Decimal | PIS |
+   834→| `F2_VALCOFI` | `cofins_value` | NUMERIC(14,2) | → | Decimal | COFINS |
+   835→| `F2_RECISS` | `iss_value` | NUMERIC(14,2) | → | Decimal | ISS |
+   836→| `F2_VALFET` | `freight_value` | NUMERIC(14,2) | → | Decimal | Frete |
+   837→| `F2_SEGURO` | `insurance_value` | NUMERIC(14,2) | → | Decimal | Seguro |
+   838→| `F2_DESPESA` | `expenses_value` | NUMERIC(14,2) | → | Decimal | Outras despesas |
+   839→| `F2_TIPOCLI` | `customer.type` | CHAR(1) | → | Lookup: F=Cons. Final, R=Rev., S=Solidário | Tipo cliente |
+   840→| `F2_TPFRET` | `freight_type` | CHAR(1) | → | C=CIF, F=FOB, T=Terceiros, S=Sem | Tipo frete |
+   841→| `F2_STATUS` | `nf_status` | CHAR(1) | → | Lookup | Status NF |
+   842→| `F2_HORA` | `result_time` | CHAR(6) | → | HH:MM:SS | Hora emissão |
+   843→| `F2_ESPECIE` | `document_species` | CHAR(2) | → | Lookup: NF=NF-e, CF=Cupom | Espécie documento |
+   844→| `F2_COND` | `payment_condition` | CHAR(3) | → | Lookup SE4 | Condição pagamento |
+   845→| `F2_CHVNFE` | `nf_access_key` | CHAR(44) | → |Direto | Chave NF-e |
+   846→| `F2_PROTOCL` | `nf_protocol` | CHAR(15) | → | Direto | Protocolo SEFAZ |
+   847→| `F2_DTENTR` | `delivery_date` | DATE(8) | → | `DD/MM/YY` → ISO | Data entrega |
+   848→
+   849→### Itens da Nota (SD2)
+   850→| Totvs Field | Orion Field | Tipo | Notas |
+   851→|-------------|-------------|------|-------|
+   852→| `D2_FILIAL` | `branch_id` | CHAR(2) | Filial |
+   853→| `D2_DOC` | `external_reference` | CHAR(9) | Mesma da SF2 |
+   854→| `D2_SERIE` | `external_reference.serie` | CHAR(3) | Série |
+   855→| `D2_ITEM` | `item_sequence` | CHAR(2) | Seq item |
+   856→| `D2_COD` | `product.external_id` | CHAR(15) | Produto SB1 |
+   857→| `D2_UM` | `product.unit` | CHAR(2) | Unidade medida |
+   858→| `D2_QUANT` | `quantity` | NUMERIC(14,4) | Quantidade |
+   859→| `D2_PRCVEN` | `unit_price` | NUMERIC(14,4) | Preço unitário |
+   860→| `D2_TOTAL` | `total_value` | NUMERIC(14,2) | Total item |
+   861→| `D2_DESC` | `discount_value` | NUMERIC(14,2) | Desconto item |
+   862→| `D2_VALFRE` | `freight_value` | NUMERIC(14,2) | Frete rateado |
+   863→| `D2_SEGURO` | `insurance_value` | NUMERIC(14,2) | Seguro rateado |
+   864→| `D2_VALIPI` | `ipi_value` | NUMERIC(14,2) | IPI item |
+   865→| `D2_VALICM` | `icms_value` | NUMERIC(14,2) | ICMS item |
+   866→| `D2_BASEICM` | `icms_base` | NUMERIC(14,2) | Base ICMS |
+   867→| `D2_PICM` | `icms_rate` | NUMERIC(6,2) | % ICMS |
+   868→| `D2_VALIMP6` | `pis_value` | NUMERIC(14,2) | PIS item |
+   869→| `D2_VALIMP5` | `cofins_value` | NUMERIC(14,2) | COFINS item |
+   870→| `D2_CF` | `fiscal_code` | CHAR(5) | CFOP |
+   871→| `D2_TES` | `tes_code` | CHAR(3) | Tipo Entrada/Saída |
+   872→| `D2_CLASFIS` | `fiscal_classification` | CHAR(8) | NCM |
+   873→| `D2_LOTECTL` | `lot_control` | CHAR(10) | Lote |
+   874→| `D2_DTVALID` | `expiration_date` | DATE(8) | Validade |
+   875→| `D2_NUMLOTE` | `sublot` | CHAR(6) | Sublote |
+   876→| `D2_LOCALIZ` | `location_code` | CHAR(15) | Endereço estoque |
+   877→| `D2_NUMSEQ` | `stock_sequence` | CHAR(6) | Seq estoque |
+   878→
+   879→### Cadastro de Vendedor (SA3)
+   880→| Totvs Field | Orion Field | Notas |
+   881→|-------------|-------------|-------|
+   882→| `A3_COD` | `user.external_id` | Código vendedor |
+   883→| `A3_NOME` | `user.full_name` | Nome |
+   884→| `A3_CGC` | `user.cpf` | CPF (lookup para match) |
+   885→| `A3_EMAIL` | `user.email` | Email |
+   886→| `A3_TEL` | `user.phone` | Telefone |
+   887→| `A3_END` | `user.address.street` | Endereço |
+   888→| `A3_MUN` | `user.address.city` | Cidade |
+   889→| `A3_EST` | `user.address.state` | UF |
+   890→| `A3_CEP` | `user.address.zip` | CEP |
+   891→| `A3_COMIS` | `commission_rate_default` | % comissão |
+   892→| `A3_TIPO` | `seller_type` | Interno/Externo |
+   893→
+   894→### Cadastro de Cliente (SA1)
+   895→| Totvs Field | Orion Field | Notas |
+   896→|-------------|-------------|-------|
+   897→| `A1_COD` | `customer.external_id` | Código |
+   898→| `A1_LOJA` | `customer.branch_code` | Loja |
+   899→| `A1_NOME` | `customer.name` | Nome/Razão |
+   900→| `A1_PESSOA` | `customer.person_type` | F=Física, J=Jurídica |
+   901→| `A1_CGC` | `customer.cpf_cnpj` | CPF ou CNPJ |
+   902→| `A1_EMAIL` | `customer.email` | Email |
+   903→| `A1_TEL` | `customer.phone` | Telefone |
+   904→| `A1_END` | `customer.address.street` | Endereço |
+   905→| `A1_MUN` | `customer.address.city` | Cidade |
+   906→| `A1_EST` | `customer.address.state` | UF |
+   907→| `A1_CEP` | `customer.address.zip` | CEP |
+   908→| `A1_VEND` | `customer.primary_seller` | Vendedor principal |
+   909→| `A1_COND` | `customer.payment_condition` | Cond. pagamento |
+   910→
+   911→### Cadastro de Produto (SB1)
+   912→| Totvs Field | Orion Field | Notas |
+   913→|-------------|-------------|-------|
+   914→| `B1_COD` | `product.external_id` | Código |
+   915→| `B1_DESC` | `product.name` | Descrição |
+   916→| `B1_UM` | `product.unit` | Unidade |
+   917→| `B1_TIPO` | `product.type` | Tipo (PA, MP, etc.) |
+   918→| `B1_GRUPO` | `product.category` | Grupo |
+   919→| `B1_POSIPI` | `product.ncm` | NCM |
+   920→| `B1_PRCVEN` | `product.sale_price` | Preço venda |
+   921→| `B1_CUSTD` | `product.cost` | Custo standard |
+   922→| `B1_ESTFOR` | `product.supplier` | Fornecedor |
+   923→
+   924→### Regras de Transformação
+   925→1. **CPF/CNPJ:** Remove formatação (`.` e `-`), mantém apenas dígitos
+   926→2. **Datas:** `DD/MM/YY` → `YYYY-MM-DD` (ISO 8601)
+   927→3. **Decimais:** Totvs usa `,` como separador decimal, Orion usa `.`
+   928→4. **Char para Number:** Strip leading zeros (`"00042"` → `42`)
+   929→5. **Lookup de vendedor:** `F2_VEND1` (código Protheus) → buscar `users.external_id` no Orion
+   930→6. **Multi-tenant:** Sempre filtrar por `F2_FILIAL` correspondente ao tenant
+   931→
+   932→## 15.2 SAP Business One — Mapeamento Completo (60 campos)
+   933→
+   934→### Documento de Venda (ODLN / OINV)
+   935→| SAP B1 Field | Orion Field | Tipo | Tabela | Notas |
+   936→|-------------|-------------|------|--------|-------|
+   937→| `DocEntry` | `external_reference` | INT | OINV | ID interno SAP |
+   938→| `DocNum` | `external_doc_number` | INT | OINV | Número visível |
+   939→| `Series` | `external_reference.series` | INT | OINV | Série (NNF) |
+   940→| `DocType` | `document_type` | CHAR(1) | OINV | d=Item, s=Service |
+   941→| `DocDate` | `result_date` | DATETIME | OINV | Data documento |
+   942→| `DocDueDate` | `due_date` | DATETIME | OINV | Vencimento |
+   943→| `TaxDate` | `tax_date` | DATETIME | OINV | Data fiscal |
+   944→| `CardCode` | `customer.external_id` | NVARCHAR(15) | OINV | Código cliente OCRD |
+   945→| `CardName` | `customer.name` | NVARCHAR(100) | OINV | Nome cliente |
+   946→| `CardCode` | `customer.external_id` | NVARCHAR(15) | OINV | Código cliente |
+   947→| `SalesPersonCode` | `user.external_id` | INT | OINV | Vendedor OSLP |
+   948→| `NumAtCard` | `customer_po_number` | NVARCHAR(100) | OINV | PO do cliente |
+   949→| `ContactPersonCode` | `contact_person_id` | INT | OINV | Contato OCPR |
+   950→| `PaymentGroupCode` | `payment_condition` | INT | OINV | Octgot |
+   951→| `DocTotal` | `value` | NUMERIC(19,6) | OINV | Total documento |
+   952→| `VatSum` | `tax_total` | NUMERIC(19,6) | OINV | Total impostos |
+   953→| `DocTotalFC` | `foreign_value` | NUMERIC(19,6) | OINV | Valor moeda estrangeira |
+   954→| `DocRate` | `exchange_rate` | NUMERIC(19,6) | OINV | Taxa câmbio |
+   955→| `DocCur` | `currency` | NVARCHAR(3) | OINV | Moeda (BRL, USD) |
+   956→| `Comments` | `notes` | NVARCHAR(254) | OINV | Observações |
+   957→| `JrnlMemo` | `journal_memo` | NVARCHAR(50) | OINV | Memo contábil |
+   958→| `TransID` | `transaction_id` | INT | OINV | ID transação contábil |
+   959→| `WarehouseCode` | `warehouse_code` | NVARCHAR(8) | OINV | Filial OWHS |
+   960→| `Branch` | `branch_id` | INT | OINV | Filial */
+   961→| `BPL_ID` | `branch_id` | INT | OINV | Business Place |
+   962→| `BPLName` | `branch_name` | NVARCHAR(30) | OINV | Nome filial |
+   963→| `AtCardEntry` | `original_doc_id` | INT | OINV | Doc origem |
+   964→| `BaseAmnt` | `base_amount` | NUMERIC(19,6) | OINV | Valor base |
+   965→| `BaseType` | `base_type` | INT | OINV | Tipo doc origem |
+   966→| `CntrlAcct` | `control_account` | NVARCHAR(15) | OINV | Conta contábil |
+   967→| `Project` | `project_code` | NVARCHAR(20) | OINV | Projeto OPRJ |
+   968→| `OperatorCode` | `operator_code` | INT | OINV | Operador |
+   969→| `DocumentsOwner` | `document_owner` | INT | OINV | Dono doc OHEM |
+   970→| `SequenceCode` | `sequence_id` | INT | OINV | Seq NFSe |
+   971→| `SequenceSerial` | `sequence_serial` | INT | OINV | Serial |
+   972→| `SeriesString` | `series_string` | NVARCHAR(10) | OINV | String série |
+   973→| `SubSeriesString` | `subseries_string` | NVARCHAR(10) | OINV | Sub série |
+   974→| `Indicator` | `indicator` | NVARCHAR(1) | OINV | Indicador |
+   975→| `Exported` | `exported_flag` | CHAR(1) | OINV | Flag exportação |
+   976→| `LogInstanc` | `log_instance` | INT | OINV | Instância log |
+   977→| `ManualNumber` | `manual_number` | CHAR(1) | OINV | Numeração manual |
+   978→| `Canceled` | `canceled` | CHAR(1) | OINV | Y/N cancelado |
+   979→| `Signature` | `signature` | NVARCHAR(254) | OINV | Assinatura msg |
+   980→| `CreateTS` | `create_timestamp` | INT | OINV | HHMMSS |
+   981→| `UpdateTS` | `update_timestamp` | INT | OINV | HHMMSS |
+   982→| `UserSign` | `user_sign` | INT | OINV | Usuário criação |
+   983→| `UserSign2` | `user_sign2` | INT | OINV | Usuário update |
+   984→| `ObjType` | `object_type` | NVARCHAR(20) | OINV | 13=Invoice, 14=Credit |
+   985→
+   986→### Linhas do Documento (INV1)
+   987→| SAP B1 Field | Orion Field | Notas |
+   988→|-------------|-------------|-------|
+   989→| `LineNum` | `item_sequence` | Seq item |
+   990→| `ItemCode` | `product.external_id` | Código OITM |
+   991→| `Dscription` | `product.name` | Descrição |
+   992→| `Quantity` | `quantity` | Quantidade |
+   993→| `Price` | `unit_price` | Preço unitário |
+   994→| `PriceBefDi` | `price_before_discount` | Preço antes desc |
+   995→| `DiscountPrc` | `discount_percent` | % desconto |
+   996→| `LineTotal` | `total_value` | Total linha |
+   997→| `GTotal` | `gross_total` | Total bruto |
+   998→| `VatGroup` | `tax_group` | Grupo imposto |
+   999→| `VatPrcnt` | `tax_rate` | % imposto |
+  1000→| `TaxCode` | `tax_code` | Código imposto |
+  1001→| `TaxTotal` | `tax_value` | Valor imposto |
+  1002→| `WarehouseCode` | `warehouse_code` | Filial |
+  1003→| `SalesPersonCode` | `seller_id` | Vendedor linha |
+  1004→| `AccountCode` | `account_code` | Conta contábil |
+  1005→| `Project` | `project_code` | Projeto |
+  1006→| `OcrCode` | `dimension1` | Dimensão 1 |
+  1007→| `OcrCode2` | `dimension2` | Dimensão 2 |
+  1008→| `OcrCode3` | `dimension3` | Dimensão 3 |
+  1009→| `OcrCode4` | `dimension4` | Dimensão 4 |
+  1010→| `OcrCode5` | `dimension5` | Dimensão 5 |
+  1011→| `CostingCode` | `cost_center` | Centro custo |
+  1012→| `BaseType` | `base_type` | Doc origem |
+  1013→| `BaseEntry` | `base_entry` | ID doc origem |
+  1014→| `BaseLine` | `base_line` | Linha origem |
+  1015→| `TreeType` | `tree_type` | Tipo árvore |
+  1016→| `AcctCode` | `account_code` | Conta |
+  1017→| `UomCode` | `uom_code` | Unidade medida |
+  1018→| `UomEntry` | `uom_entry` | ID unidade |
+  1019→| `UnitsMeas` | `units_meas` | Fator unidade |
+  1020→| `LineVat` | `line_vat` | VAT linha |
+  1021→| `TaxOnly` | `tax_only` | Apenas imposto |
+  1022→
+  1023→### Cadastro de Cliente (OCRD)
+  1024→| SAP B1 Field | Orion Field | Notas |
+  1025→|-------------|-------------|-------|
+  1026→| `CardCode` | `customer.external_id` | Código |
+  1027→| `CardName` | `customer.name` | Nome |
+  1028→| `CardType` | `customer.type` | C=Cliente, L=Fornecedor, S=Lead |
+  1029→| `GroupCode` | `customer.group` | Grupo OCRG |
+  1030→| `FederalTaxID` | `customer.cpf_cnpj` | CNPJ/CPF |
+  1031→| `StateTaxID` | `customer.ie` | Inscrição estadual |
+  1032→| `CityTaxID` | `customer.im` | Inscrição municipal |
+  1033→| `Email` | `customer.email` | Email |
+  1034→| `Phone1` | `customer.phone1` | Tel 1 |
+  1035→| `Phone2` | `customer.phone2` | Tel 2 |
+  1036→| `Cellular` | `customer.mobile` | Celular |
+  1037→| `Balance` | `customer.balance` | Saldo |
+  1038→| `CreditLimit` | `customer.credit_limit` | Limite crédito |
+  1039→| `CurrentAccountBalance` | `customer.current_balance` | Saldo atual |
+  1040→| `SalesPersonCode` | `customer.seller_id` | Vendedor |
+  1041→| `SlpCode` | `customer.sales_person` | Vendedor |
+  1042→| `BilltoAddr` | `customer.billing_address` | Endereço cobrança |
+  1043→| `ShiptoAddr` | `customer.shipping_address` | Endereço entrega |
+  1044→| `Currency` | `customer.currency` | Moeda |
+  1045→| `ListNum` | `customer.price_list` | Lista preço |
+  1046→| `PayBlock` | `customer.payment_block` | Bloqueio pagamento |
+  1047→| `DunningLevel` | `customer.dunning_level` | Nível cobrança |
+  1048→| `DunningBalance` | `customer.dunning_balance` | Saldo cobrança |
+  1049→| `BackOrders` | `customer.back_orders` | Pedidos pendentes |
+  1050→
+  1051→### Cadastro de Item (OITM)
+  1052→| SAP B1 Field | Orion Field | Notas |
+  1053→|-------------|-------------|-------|
+  1054→| `ItemCode` | `product.external_id` | Código |
+  1055→| `ItemName` | `product.name` | Nome |
+  1056→| `ForeignName` | `product.foreign_name` | Nome estrangeiro |
+  1057→| `ItemsGroupCode` | `product.category` | Grupo OITB |
+  1058→| `CustomGroupCode` | `product.custom_group` | Grupo custom |
+  1059→| `PurchaseItem` | `product.purchase` | Compra Y/N |
+  1060→| `SalesItem` | `product.sale` | Venda Y/N |
+  1061→| `InventoryItem` | `product.inventory` | Estoque Y/N |
+  1062→| `ItemClass` | `product.class` | Classe |
+  1063→| `UserText` | `product.user_text` | Texto livre |
+  1064→| `UoMGroupEntry` | `product.uom_group` | Grupo unidade |
+  1065→| `DefaultSalesUoM` | `product.default_sale_uom` | Unidade venda |
+  1066→| `DefaultPurchUoM` | `product.default_purchase_uom` | Unidade compra |
+  1067→| `AvgPrice` | `product.avg_cost` | Custo médio |
+  1068→| `LastPurPrc` | `product.last_purchase_price` | Último preço compra |
+  1069→| `StandardCost` | `product.standard_cost` | Custo standard |
+  1070→| `MovingAveragePrice` | `product.moving_avg_price` | Preço médio móvel |
+  1071→| `PriceAtWhs` | `product.price_at_whs` | Preço por filial |
+  1072→| `ValuationMethod` | `product.valuation` | Método avaliação |
+  1073→| `ManageBatchNumbers` | `product.batch_managed` | Lote Y/N |
+  1074→| `ManageSerialNumbers` | `product.serial_managed` | Série Y/N |
+  1075→| `WTLotSize` | `product.lot_size` | Tamanho lote |
+  1076→| `Mainsupplier` | `product.supplier` | Fornecedor principal |
+  1077→| `CountryOrg` | `product.country` | País origem |
+  1078→| `SWW` | `product.custom_field` | Campo custom |
+  1079→| `Quality` | `product.quality` | Qualidade |
+  1080→| `Producer` | `product.producer` | Produtor |
+  1081→| `Brand` | `product.brand` | Marca |
+  1082→| `Model` | `product.model` | Modelo |
+  1083→| `SizeInUnits` | `product.size` | Tamanho |
+  1084→
+  1085→### Service Layer API
+  1086→SAP B1 usa **Service Layer** (REST + OData):
+  1087→```
+  1088→GET /b1s/v1/Invoices?$filter=DocDate ge '2025-08-01' and DocDate le '2025-08-31'
+  1089→&$select=DocEntry,DocNum,DocDate,CardCode,CardName,SalesPersonCode,DocTotal
+  1090→&$expand=DocumentLines($select=ItemCode,Quantity,Price,LineTotal)
+  1091→&$top=100&$skip=0
+  1092→```
+  1093→
+  1094→## 15.3 Sankhya — Mapeamento Completo (55 campos)
+  1095→
+  1096→### Cabeçalho da Nota (TGFCAB)
+  1097→| Sankhya Field | Orion Field | Tipo | Notas |
+  1098→|---------------|-------------|------|-------|
+  1099→| `NUNOTA` | `external_reference` | INT | ID único |
+  1100→| `CODPARC` | `customer.external_id` | INT | Parceiro TGFPAR |
+  1101→| `CODVEND` | `user.external_id` | INT | Vendedor TGFVEN |
+  1102→| `DTNEG` | `result_date` | DATE | Data negociação |
+  1103→| `DTENTSAI` | `entry_exit_date` | DATE | Entrada/saída |
+  1104→| `DTFATURA` | `invoice_date` | DATE | Data faturamento |
+  1105→| `DTMOV` | `movement_date` | DATE | Data movimento |
+  1106→| `CODEMP` | `company_id` | INT | Empresa TG EMP |
+  1107→| `CODTIPVENDA` | `sale_type` | INT | Tipo venda |
+  1108→| `CODTIPNEG` | `negotiation_type` | INT | Tipo negociação |
+  1109→| `CODNAT` | `nature_code` | INT | Natureza operação |
+  1110→| `CODCENCUS` | `cost_center` | INT | Centro custo |
+  1111→| `CODPROJ` | `project_code` | INT | Projeto |
+  1112→| `NUMNOTA` | `invoice_number` | INT | Número NF |
+  1113→| `SERIENOTA` | `series` | VARCHAR(3) | Série |
+  1114→| `TIPMOVE` | `movement_type` | CHAR(1) | E=Entrada, S=Saída |
+  1115→| `STATUSNOTA` | `nf_status` | CHAR(1) | A=Aberta, F=Faturada, C=Cancelada |
+  1116→| `VLRNOTA` | `value` | NUMERIC(15,2) | Valor total nota |
+  1117→| `VLRDESC` | `discount_value` | NUMERIC(15,2) | Desconto |
+  1118→| `VLRTOTALITEMS` | `items_total` | NUMERIC(15,2) | Total itens |
+  1119→| `VLRFRETE` | `freight_value` | NUMERIC(15,2) | Frete |
+  1120→| `VLROUTRASDESP` | `other_expenses` | NUMERIC(15,2) | Outras despesas |
+  1121→| `VLRSEGURO` | `insurance_value` | NUMERIC(15,2) | Seguro |
+  1122→| `VLRIPI` | `ipi_value` | NUMERIC(15,2) | IPI |
+  1123→| `VLRICMS` | `icms_value` | NUMERIC(15,2) | ICMS |
+  1124→| `VLRICMSST` | `icms_st_value` | NUMERIC(15,2) | ICMS-ST |
+  1125→| `VLRPIS` | `pis_value` | NUMERIC(15,2) | PIS |
+  1126→| `VLRCOFINS` | `cofins_value` | NUMERIC(15,2) | COFINS |
+  1127→| `VLRBASEICMS` | `icms_base` | NUMERIC(15,2) | Base ICMS |
+  1128→| `VLRBASEICMSST` | `icms_st_base` | NUMERIC(15,2) | Base ICMS-ST |
+  1129→| `VLRBASEIPI` | `ipi_base` | NUMERIC(15,2) | Base IPI |
+  1130→| `VLRBASEPIS` | `pis_base` | NUMERIC(15,2) | Base PIS |
+  1131→| `VLRBASECOFINS` | `cofins_base` | NUMERIC(15,2) | Base COFINS |
+  1132→| `PERCENTUALDESC` | `discount_percent` | NUMERIC(6,2) | % desconto |
+  1133→| `CODCPG` | `payment_condition` | VARCHAR(5) | Cond pagamento |
+  1134→| `CODTIPOPER` | `operation_type` | INT | Tipo operação |
+  1135→| `OBSERVACAO` | `notes` | VARCHAR(4000) | Observação |
+  1136→| `CHAVENFE` | `nf_access_key` | VARCHAR(44) | Chave NF-e |
+  1137→| `PROTOCOLO` | `nf_protocol` | VARCHAR(15) | Protocolo SEFAZ |
+  1138→| `XMLNFE` | `xml_nf` | TEXT | XML NF-e |
+  1139→| `CODOCORRENCIA` | `occurrence_code` | INT | Ocorrência |
+  1140→| `CODUSU` | `user_id` | INT | Usuário Sankhya |
+  1141→| `CODVEN` | `salesperson_id` | INT | Vendedor |
+  1142→| `CODPARCTRANS` | `transporter_id` | INT | Transportadora |
+  1143→| `CODPARCRED` | `recipient_id` | INT | Destinatário |
+  1144→| `CIF_FOB` | `freight_type` | CHAR(1) | C=CIF, F=FOB |
+  1145→| `TIPOFRETE` | `freight_paid_by` | CHAR(1) | 0=Emitente, 1=Destinatário |
+  1146→| `PESOBRUTO` | `gross_weight` | NUMERIC(15,3) | Peso bruto |
+  1147→| `PESOLIQUIDO` | `net_weight` | NUMERIC(15,3) | Peso líquido |
+  1148→| `QTDCXS` | `boxes_quantity` | INT | Qtd caixas |
+  1149→| `QTDEVOL` | `volumes_quantity` | INT | Qtd volumes |
+  1150→| `PRAZOENTREGA` | `delivery_deadline` | INT | Prazo entrega (dias) |
+  1151→| `CODMOTIVO` | `reason_code` | INT | Motivo |
+  1152→| `APROVADO` | `approved` | CHAR(1) | S/N aprovado |
+  1153→| `CODAPROVADOR` | `approver_id` | INT | Aprovador |
+  1154→| `DATAAPROVACAO` | `approval_date` | DATETIME | Data aprovação |
+  1155→
+  1156→### Itens da Nota (TGFITE)
+  1157→| Sankhya Field | Orion Field | Notas |
+  1158→|---------------|-------------|-------|
+  1159→| `NUNOTA` | `external_reference` | FK TGFCAB |
+  1160→| `SEQITE` | `item_sequence` | Seq item |
+  1161→| `CODPROD` | `product.external_id` | Produto TGFPRO |
+  1162→| `CODVOL` | `volume_unit` | Unidade |
+  1163→| `QTDNEG` | `quantity` | Quantidade |
+  1164→| `VLRUNIT` | `unit_price` | Preço unitário |
+  1165→| `VLRTOT` | `total_value` | Total item |
+  1166→| `VLRDESC` | `discount_value` | Desconto |
+  1167→| `PERDESC` | `discount_percent` | % desconto |
+  1168→| `CODLOC` | `location_code` | Local estoque |
+  1169→| `CODDER` | `derivation_code` | Derivação |
+  1170→| `CODLOTE` | `lot_code` | Lote |
+  1171→| `DTVAL` | `expiration_date` | Validade |
+  1172→| `CODTIPIPI` | `ipi_type` | Tipo IPI |
+  1173→| `ALIQIPI` | `ipi_rate` | % IPI |
+  1174→| `VLRIPI` | `ipi_value` | Valor IPI |
+  1175→| `VLRBASEIPI` | `ipi_base` | Base IPI |
+  1176→| `CODTIPICMS` | `icms_type` | Tipo ICMS |
+  1177→| `ALIQICMS` | `icms_rate` | % ICMS |
+  1178→| `VLRICMS` | `icms_value` | Valor ICMS |
+  1179→| `VLRBASEICMS` | `icms_base` | Base ICMS |
+  1180→| `ALIQICMSST` | `icms_st_rate` | % ICMS-ST |
+  1181→| `VLRICMSST` | `icms_st_value` | Valor ICMS-ST |
+  1182→| `VLRBASEICMSST` | `icms_st_base` | Base ICMS-ST |
+  1183→| `CODTIPPIS` | `pis_type` | Tipo PIS |
+  1184→| `ALIQPIS` | `pis_rate` | % PIS |
+  1185→| `VLRPIS` | `pis_value` | Valor PIS |
+  1186→| `VLRBASEPIS` | `pis_base` | Base PIS |
+  1187→| `CODTIPCOFINS` | `cofins_type` | Tipo COFINS |
+  1188→| `ALIQCOFINS` | `cofins_rate` | % COFINS |
+  1189→| `VLRCOFINS` | `cofins_value` | Valor COFINS |
+  1190→| `VLRBASECOFINS` | `cofins_base` | Base COFINS |
+  1191→
+  1192→### Cadastro de Parceiro (TGFPAR)
+  1193→| Sankhya Field | Orion Field | Notas |
+  1194→|---------------|-------------|-------|
+  1195→| `CODPARC` | `customer.external_id` | Código |
+  1196→| `NOMEPARC` | `customer.name` | Nome |
+  1197→| `RAZAOSOCIAL` | `customer.legal_name` | Razão social |
+  1198→| `TIPPESSOA` | `customer.person_type` | F/J |
+  1199→| `CGC_CPF` | `customer.cpf_cnpj` | CPF/CNPJ |
+  1200→| `IE` | `customer.ie` | Insc estadual |
+  1201→| `IM` | `customer.im` | Insc municipal |
+  1202→| `EMAIL` | `customer.email` | Email |
+  1203→| `TELEFONE` | `customer.phone` | Telefone |
+  1204→| `CELULAR` | `customer.mobile` | Celular |
+  1205→| `CODVEND` | `customer.seller_id` | Vendedor |
+  1206→| `CODROC` | `customer.route` | Rota |
+  1207→| `CODATV` | `customer.activity` | Atividade |
+  1208→| `CODTIP` | `customer.type` | Tipo |
+  1209→| `CODRAMO` | `customer.segment` | Ramo |
+  1210→| `CLIENTE` | `customer.is_client` | S/N |
+  1211→| `FORNECEDOR` | `customer.is_supplier` | S/N |
+  1212→| `TRANSPORTADORA` | `customer.is_transporter` | S/N |
+  1213→| `LIMITECRED` | `customer.credit_limit` | Limite |
+  1214→| `SALDOLIMITE` | `customer.balance_limit` | Saldo limite |
+  1215→
+  1216→### Cadastro de Vendedor (TGFVEN)
+  1217→| Sankhya Field | Orion Field | Notas |
+  1218→|---------------|-------------|-------|
+  1219→| `CODVEND` | `user.external_id` | Código |
+  1220→| `NOMEVEND` | `user.full_name` | Nome |
+  1221→| `CGC_CPF` | `user.cpf` | CPF |
+  1222→| `EMAIL` | `user.email` | Email |
+  1223→| `TELEFONE` | `user.phone` | Tel |
+  1224→| `COMISSAOPERC` | `commission_rate` | % comissão |
+  1225→| `CODSUPERVISOR` | `supervisor_id` | Supervisor |
+  1226→| `CODREGIAO` | `region_id` | Região |
+  1227→
+  1228→### Cadastro de Produto (TGFPRO)
+  1229→| Sankhya Field | Orion Field | Notas |
+  1230→|---------------|-------------|-------|
+  1231→| `CODPROD` | `product.external_id` | Código |
+  1232→| `DESCRPROD` | `product.name` | Descrição |
+  1233→| `DESCRCOMPLETA` | `product.full_description` | Desc completa |
+  1234→| `CODVOL` | `product.unit` | Unidade |
+  1235→| `CODGRUPOPROD` | `product.category` | Grupo |
+  1236→| `CODTIPOPROD` | `product.type` | Tipo |
+  1237→| `CODNCM` | `product.ncm` | NCM |
+  1238→| `PRECO` | `product.sale_price` | Preço |
+  1239→| `CUSTO` | `product.cost` | Custo |
+  1240→| `MARCA` | `product.brand` | Marca |
+  1241→| `ATIVO` | `product.active` | S/N |
+  1242→
+  1243→### API Sankhya (Swagger)
+  1244→```
+  1245→POST /mge/service.sbr?serviceName=CRUDServiceProvider.loadRecords
+  1246→{
+  1247→  "serviceName": "CRUDServiceProvider.loadRecords",
+  1248→  "requestBody": {
+  1249→    "dataSet": {
+  1250→      "rootEntity": "CabecalhoNota",
+  1251→      "includePresentationFields": "false",
+  1252→      "offsetPage": "0",
+  1253→      "criteria": {
+  1254→        "expression": "DTNEG >= '2025-08-01' AND DTNEG <= '2025-08-31' AND STATUSNOTA = 'F'"
+  1255→      },
+  1256→      "entity": {
+  1257→        "field": ["NUNOTA", "CODPARC", "CODVEND", "DTNEG", "VLRNOTA"]
+  1258→      }
+  1259→    }
+  1260→  }
+  1261→}
+  1262→```
+  1263→
+  1264→---
+  1265→
+  1266→# Capítulo 16 — Exemplos de Payload para Webhooks
+  1267→
+  1268→Para cada webhook do Orion (Capítulo 12), especificação completa do payload com exemplos reais.
+  1269→
+  1270→## 16.1 user.created
+  1271→```json
+  1272→{
+  1273→  "event": "user.created",
+  1274→  "eventId": "evt_5f8a3b2c-1234-5678-9abc-def012345678",
+  1275→  "timestamp": "2025-08-15T14:30:00.000Z",
+  1276→  "version": "1.0",
+  1277→  "companyId": 42,
+  1278→  "data": {
+  1279→    "userId": 10,
+  1280→    "externalId": "VEND001",
+  1281→    "email": "joao.silva@empresa.com",
+  1282→    "fullName": "João Silva Santos",
+  1283→    "cpf": "12345678901",
+  1284→    "phone": "+5511987654321",
+  1285→    "role": "seller",
+  1286→    "branchId": 5,
+  1287→    "branchName": "Loja SP - Centro",
+  1288→    "active": true,
+  1289→    "createdAt": "2025-08-15T14:30:00.000Z",
+  1290→    "createdBy": 1
+  1291→  },
+  1292→  "signature": "sha256=4a8e2c1b9f5d3e7a6c2b1d8e9f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a"
+  1293→}
+  1294→```
+  1295→
+  1296→## 16.2 user.updated
+  1297→```json
+  1298→{
+  1299→  "event": "user.updated",
+  1300→  "eventId": "evt_5f8a3b2c-1234-5678-9abc-def012345679",
+  1301→  "timestamp": "2025-08-15T15:45:22.000Z",
+  1302→  "version": "1.0",
+  1303→  "companyId": 42,
+  1304→  "data": {
+  1305→    "userId": 10,
+  1306→    "changes": {
+  1307→      "phone": {
+  1308→        "old": "+551187654321",
+  1309→        "new": "+5511987654321"
+  1310→      },
+  1311→      "role": {
+  1312→        "old": "seller",
+  1313→        "new": "manager"
+  1314→      }
+  1315→    },
+  1316→    "updatedBy": 1,
+  1317→    "updatedAt": "2025-08-15T15:45:22.000Z"
+  1318→  },
+  1319→  "signature": "sha256=..."
+  1320→}
+  1321→```
+  1322→
+  1323→## 16.3 goal.created
+  1324→```json
+  1325→{
+  1326→  "event": "goal.created",
+  1327→  "eventId": "evt_5f8a3b2c-1234-5678-9abc-def012345680",
+  1328→  "timestamp": "2025-08-15T09:15:00.000Z",
+  1329→  "version": "1.0",
+  1330→  "companyId": 42,
+  1331→  "data": {
+  1332→    "goalId": 1024,
+  1333→    "userId": 10,
+  1334→    "userName": "João Silva Santos",
+  1335→    "branchId": 5,
+  1336→    "indicatorId": 3,
+  1337→    "indicatorName": "Faturamento",
+  1338→    "indicatorType": "monetary",
+  1339→    "goalType": "monthly",
+  1340→    "targetValue": 30000.00,
+  1341→    "achievedValue": 0,
+  1342→    "achievementPercent": 0,
+  1343→    "startDate": "2025-08-01",
+  1344→    "endDate": "2025-08-31",
+  1345→    "status": "active",
+  1346→    "notes": "Meta de faturamento mensal",
+  1347→    "createdAt": "2025-08-15T09:15:00.000Z",
+  1348→    "createdBy": 1
+  1349→  },
+  1350→  "signature": "sha256=..."
+  1351→}
+  1352→```
+  1353→
+  1354→## 16.4 goal.achieved
+  1355→```json
+  1356→{
+  1357→  "event": "goal.achieved",
+  1358→  "eventId": "evt_5f8a3b2c-1234-5678-9abc-def012345681",
+  1359→  "timestamp": "2025-08-15T16:23:45.000Z",
+  1360→  "version": "1.0",
+  1361→  "companyId": 42,
+  1362→  "data": {
+  1363→    "goalId": 1024,
+  1364→    "userId": 10,
+  1365→    "userName": "João Silva Santos",
+  1366→    "branchId": 5,
+  1367→    "branchName": "Loja SP - Centro",
+  1368→    "indicatorId": 3,
+  1369→    "indicatorName": "Faturamento",
+  1370→    "achievementPercent": 110.5,
+  1371→    "targetValue": 30000.00,
+  1372→    "achievedValue": 33150.00,
+  1373→    "achievedAt": "2025-08-15T16:23:45.000Z",
+  1374→    "daysToAchieve": 14,
+  1375→    "overachieved": true,
+  1376→    "previousRanking": 3,
+  1377→    "newRanking": 1
+  1378→  },
+  1379→  "signature": "sha256=..."
+  1380→}
+  1381→```
+  1382→
+  1383→## 16.5 result.created
+  1384→```json
+  1385→{
+  1386→  "event": "result.created",
+  1387→  "eventId": "evt_5f8a3b2c-1234-5678-9abc-def012345682",
+  1388→  "timestamp": "2025-08-15T14:30:00.000Z",
+  1389→  "version": "1.0",
+  1390→  "companyId": 42,
+  1391→  "data": {
+  1392→    "resultId": 99812,
+  1393→    "userId": 10,
+  1394→    "userName": "João Silva Santos",
+  1395→    "branchId": 5,
+  1396→    "branchName": "Loja SP - Centro",
+  1397→    "indicatorId": 3,
+  1398→    "indicatorName": "Faturamento",
+  1399→    "resultDate": "2025-08-15",
+  1400→    "value": 1250.50,
+  1401→    "quantity": 1,
+  1402→    "externalReference": "NF-000123456-1",
+  1403→    "externalSource": "totvs",
+  1404→    "notes": "Venda de cosméticos manhã",
+  1405→    "status": "pending_approval",
+  1406→    "createdAt": "2025-08-15T14:30:00.000Z",
+  1407→    "createdBy": 10,
+  1408→    "attachments": [
+  1409→      {
+  1410→        "id": "att_abc123",
+  1411→        "filename": "comprovante.jpg",
+  1412→        "url": "https://storage.orion.com/tenants/t42/receipts/2025/08/15/result-99812.jpg?sig=...",
+  1413→        "expiresAt": "2025-08-15T15:30:00.000Z"
+  1414→      }
+  1415→    ]
+  1416→  },
+  1417→  "signature": "sha256=..."
+  1418→}
+  1419→```
+  1420→
+  1421→## 16.6 result.approved
+  1422→```json
+  1423→{
+  1424→  "event": "result.approved",
+  1425→  "eventId": "evt_5f8a3b2c-1234-5678-9abc-def012345683",
+  1426→  "timestamp": "2025-08-15T15:00:00.000Z",
+  1427→  "version": "1.0",
+  1428→  "companyId": 42,
+  1429→  "data": {
+  1430→    "resultId": 99812,
+  1431→    "userId": 10,
+  1432→    "userName": "João Silva Santos",
+  1433→    "branchId": 5,
+  1434→    "indicatorId": 3,
+  1435→    "indicatorName": "Faturamento",
+  1436→    "value": 1250.50,
+  1437→    "resultDate": "2025-08-15",
+  1438→    "approvedAt": "2025-08-15T15:00:00.000Z",
+  1439→    "approvedBy": 5,
+  1440→    "approvedByName": "Maria Souza (Gerente)",
+  1441→    "approvalNotes": "Confere com NF-e",
+  1442→    "goalImpact": {
+  1443→      "goalId": 1024,
+  1444→      "previousAchievement": 31900.00,
+  1445→      "newAchievement": 33150.50,
+  1446→      "achievementPercentChange": 4.17
+  1447→    },
+  1448→    "rankingImpact": {
+  1449→      "previousRank": 3,
+  1450→      "newRank": 2
+  1451→    }
+  1452→  },
+  1453→  "signature": "sha256=..."
+  1454→}
+  1455→```
+  1456→
+  1457→## 16.7 result.rejected
+  1458→```json
+  1459→{
+  1460→  "event": "result.rejected",
+  1461→  "eventId": "evt_5f8a3b2c-1234-5678-9abc-def012345684",
+  1462→  "timestamp": "2025-08-15T15:05:00.000Z",
+  1463→  "version": "1.0",
+  1464→  "companyId": 42,
+  1465→  "data": {
+  1466→    "resultId": 99812,
+  1467→    "userId": 10,
+  1468→    "userName": "João Silva Santos",
+  1469→    "value": 1250.50,
+  1470→    "resultDate": "2025-08-15",
+  1471→    "rejectedAt": "2025-08-15T15:05:00.000Z",
+  1472→    "rejectedBy": 5,
+  1473→    "rejectedByName": "Maria Souza (Gerente)",
+  1474→    "reason": "Divergência entre valor da NF-e e valor lançado",
+  1475→    "reasonCode": "value_mismatch",
+  1476→    "nextSteps": "Revisar valor e reabrir resultado"
+  1477→  },
+  1478→  "signature": "sha256=..."
+  1479→}
+  1480→```
+  1481→
+  1482→## 16.8 campaign.started
+  1483→```json
+  1484→{
+  1485→  "event": "campaign.started",
+  1486→  "eventId": "evt_5f8a3b2c-1234-5678-9abc-def012345685",
+  1487→  "timestamp": "2025-08-01T00:00:00.000Z",
+  1488→  "version": "1.0",
+  1489→  "companyId": 42,
+  1490→  "data": {
+  1491→    "campaignId": 15,
+  1492→    "name": "Campanha de Inverno 2025",
+  1493→    "description": "Venda mais itens de inverno e ganhe prêmios!",
+  1494→    "startDate": "2025-08-01",
+  1495→    "endDate": "2025-08-31",
+  1496→    "indicators": [
+  1497→      {
+  1498→        "indicatorId": 3,
+  1499→        "indicatorName": "Faturamento",
+  1500→        "weight": 60,
+  1501→        "targetValue": 50000
+  1502→      },
+  1503→      {
+  1504→        "indicatorId": 7,
+  1505→        "indicatorName": "Itens vendidos",
+  1506→        "weight": 40,
+  1507→        "targetValue": 500
+  1508→      }
+  1509→    ],
+  1510→    "participantsCount": 25,
+  1511→    "branches": [5, 6, 7],
+  1512→    "awards": [
+  1513→      {
+  1514→        "position": 1,
+  1515→        "description": "iPhone 15 Pro",
+  1516→        "estimatedValue": 9000
+  1517→      },
+  1518→      {
+  1519→        "position": 2,
+  1520→        "description": "Apple Watch Series 9",
+  1521→        "estimatedValue": 4500
+  1522→      },
+  1523→      {
+  1524→        "position": 3,
+  1525→        "description": "AirPods Pro",
+  1526→        "estimatedValue": 2200
+  1527→      }
+  1528→    ],
+  1529→    "type": "individual",
+  1530→    "rules": "Válido para vendedores ativos. Não cumulativo com outras campanhas."
+  1531→  },
+  1532→  "signature": "sha256=..."
+  1533→}
+  1534→```
+  1535→
+  1536→## 16.9 campaign.ended
+  1537→```json
+  1538→{
+  1539→  "event": "campaign.ended",
+  1540→  "eventId": "evt_5f8a3b2c-1234-5678-9abc-def012345686",
+  1541→  "timestamp": "2025-08-31T23:59:59.000Z",
+  1542→  "version": "1.0",
+  1543→  "companyId": 42,
+  1544→  "data": {
+  1545→    "campaignId": 15,
+  1546→    "name": "Campanha de Inverno 2025",
+  1547→    "endDate": "2025-08-31",
+  1548→    "winners": [
+  1549→      {
+  1550→        "position": 1,
+  1551→        "userId": 10,
+  1552→        "userName": "João Silva Santos",
+  1553→        "branchId": 5,
+  1554→        "score": 95.5,
+  1555→        "award": "iPhone 15 Pro",
+  1556→        "awardValue": 9000
+  1557→      },
+  1558→      {
+  1559→        "position": 2,
+  1560→        "userId": 12,
+  1561→        "userName": "Maria Oliveira",
+  1562→        "branchId": 5,
+  1563→        "score": 87.2,
+  1564→        "award": "Apple Watch Series 9",
+  1565→        "awardValue": 4500
+  1566→      },
+  1567→      {
+  1568→        "position": 3,
+  1569→        "userId": 8,
+  1570→        "userName": "Pedro Santos",
+  1571→        "branchId": 6,
+  1572→        "score": 82.1,
+  1573→        "award": "AirPods Pro",
+  1574→        "awardValue": 2200
+  1575→      }
+  1576→    ],
+  1577→    "totalParticipants": 25,
+  1578→    "completedParticipants": 22,
+  1579→    "campaignSummary": {
+  1580→      "totalSales": 1250000,
+  1581→      "totalItems": 12500,
+  1582→      "averageScore": 65.3
+  1583→    }
+  1584→  },
+  1585→  "signature": "sha256=..."
+  1586→}
+  1587→```
+  1588→
+  1589→## 16.10 ranking.updated
+  1590→```json
+  1591→{
+  1592→  "event": "ranking.updated",
+  1593→  "eventId": "evt_5f8a3b2c-1234-5678-9abc-def012345687",
+  1594→  "timestamp": "2025-08-15T15:00:05.000Z",
+  1595→  "version": "1.0",
+  1596→  "companyId": 42,
+  1597→  "data": {
+  1598→    "scope": "monthly",
+  1599→    "period": "2025-08",
+  1600→    "branchId": 5,
+  1601→    "indicatorId": 3,
+  1602→    "generatedAt": "2025-08-15T15:00:00.000Z",
+  1603→    "version": 142,
+  1604→    "topUsers": [
+  1605→      {"rank": 1, "userId": 10, "userName": "João Silva", "achievementPercent": 110.5, "value": 33150.50},
+  1606→      {"rank": 2, "userId": 12, "userName": "Maria Oliveira", "achievementPercent": 95.2, "value": 28560.00},
+  1607→      {"rank": 3, "userId": 8, "userName": "Pedro Santos", "achievementPercent": 87.1, "value": 26130.00},
+  1608→      {"rank": 4, "userId": 15, "userName": "Ana Costa", "achievementPercent": 75.5, "value": 22650.00},
+  1609→      {"rank": 5, "userId": 7, "userName": "Bruno Lima", "achievementPercent": 68.3, "value": 20490.00}
+  1610→    ],
+  1611→    "totalUsersRanked": 25,
+  1612→    "averageAchievement": 62.4,
+  1613→    "changesFromPrevious": [
+  1614→      {"userId": 10, "previousRank": 2, "newRank": 1, "direction": "up"},
+  1615→      {"userId": 12, "previousRank": 1, "newRank": 2, "direction": "down"}
+  1616→    ]
+  1617→  },
+  1618→  "signature": "sha256=..."
+  1619→}
+  1620→```
+  1621→
+  1622→## 16.11 license.expiring
+  1623→```json
+  1624→{
+  1625→  "event": "license.expiring",
+  1626→  "eventId": "evt_5f8a3b2c-1234-5678-9abc-def012345688",
+  1627→  "timestamp": "2025-08-25T09:00:00.000Z",
+  1628→  "version": "1.0",
+  1629→  "companyId": 42,
+  1630→  "data": {
+  1631→    "licenseId": "LIC-2025-ORION-PRO-42",
+  1632→    "plan": "professional",
+  1633→    "expiresAt": "2025-09-01T00:00:00.000Z",
+  1634→    "daysUntilExpiry": 7,
+  1635→    "currentUsers": 35,
+  1636→    "maxUsers": 50,
+  1637→    "currentBranches": 4,
+  1638→    "maxBranches": 5,
+  1639→    "renewalUrl": "https://orion.com/renew/LIC-2025-ORION-PRO-42",
+  1640→    "renewalPrice": 18000.00,
+  1641→    "currency": "BRL",
+  1642→    "contactEmail": "sales@orion.com"
+  1643→  },
+  1644→  "signature": "sha256=..."
+  1645→}
+  1646→```
+  1647→
+  1648→## 16.12 license.expired
+  1649→```json
+  1650→{
+  1651→  "event": "license.expired",
+  1652→  "eventId": "evt_5f8a3b2c-1234-5678-9abc-def012345689",
+  1653→  "timestamp": "2025-09-01T00:00:00.000Z",
+  1654→  "version": "1.0",
+  1655→  "companyId": 42,
+  1656→  "data": {
+  1657→    "licenseId": "LIC-2025-ORION-PRO-42",
+  1658→    "plan": "professional",
+  1659→    "expiredAt": "2025-09-01T00:00:00.000Z",
+  1660→    "gracePeriodDays": 7,
+  1661→    "gracePeriodEndsAt": "2025-09-08T00:00:00.000Z",
+  1662→    "systemStatus": "read_only",
+  1663→    "renewalUrl": "https://orion.com/renew/LIC-2025-ORION-PRO-42",
+  1664→    "contactEmail": "sales@orion.com"
+  1665→  },
+  1666→  "signature": "sha256=..."
+  1667→}
+  1668→```
+  1669→
+  1670→---
+  1671→
+  1672→# Capítulo 17 — Rate Limiting por Integração
+  1673→
+  1674→Cada integração tem limites próprios (do provedor externo ou auto-impostos) que precisam ser respeitados.
+  1675→
+  1676→## 17.1 Rate Limits por Provedor Externo
+  1677→
+  1678→| Provedor | Limite | Janela | Tipo | Fonte |
+  1679→|----------|--------|--------|------|-------|
+  1680→| Totvs Protheus (REST) | 100 req/min | Por IP/token | API | Documentação TOTVS |
+  1681→| SAP B1 Service Layer | 60 req/min | Por usuário | API | Documentação SAP |
+  1682→| Sankhya | 30 req/min | Por usuário | API | Documentação Sankhya |
+  1683→| Salesforce REST | 100 req/min (concurrent) | Por usuário | API | Salesforce limits |
+  1684→| HubSpot | 100 req/10s (private app) | Por token | API | HubSpot docs |
+  1685→| Pipedrive | 40 req/min | Por token | API | Pipedrive docs |
+  1686→| Shopify | 2 req/sec (basic) | Por app | Leaky bucket | Shopify docs |
+  1687→| WooCommerce | Variável (server) | Por IP | Server | Cliente configura |
+  1688→| VTEX | 4 req/sec | Por app | API | VTEX docs |
+  1689→| WhatsApp Business | 80 req/hora (templates) | Por número | Tier-based | Meta docs |
+  1690→| Twilio SMS | 10 req/sec | Por conta | API | Twilio docs |
+  1691→| SendGrid | 600 req/min (mail send) | Por chave | API | SendGrid docs |
+  1692→| AWS SES | 14 req/sec | Por conta | API | SES limits |
+  1693→| OpenAI | 60 req/min (GPT-4o) | Por chave | Tier-based | OpenAI docs |
+  1694→| Anthropic | 50 req/min | Por chave | Tier-based | Anthropic docs |
+  1695→| Google OAuth | 100M req/day | Por client | Daily | Google docs |
+  1696→| Microsoft Graph | 10k req/10min | Por app | API | MS docs |
+  1697→
+  1698→## 17.2 Implementação no Orion
+  1699→
+  1700→### Token Bucket Algorithm
+  1701→```typescript
+  1702→class TokenBucket {
+  1703→  private tokens: number;
+  1704→  private lastRefill: number;
+  1705→  
+  1706→  constructor(
+  1707→    private capacity: number,
+  1708→    private refillRate: number,  // tokens per second
+  1709→  ) {
+  1710→    this.tokens = capacity;
+  1711→    this.lastRefill = Date.now();
+  1712→  }
+  1713→  
+  1714→  async consume(count: number = 1): Promise<boolean> {
+  1715→    const now = Date.now();
+  1716→    const elapsed = (now - this.lastRefill) / 1000;
+  1717→    this.tokens = Math.min(this.capacity, this.tokens + elapsed * this.refillRate);
+  1718→    this.lastRefill = now;
+  1719→    
+  1720→    if (this.tokens >= count) {
+  1721→      this.tokens -= count;
+  1722→      return true;
+  1723→    }
+  1724→    return false;
+  1725→  }
+  1726→  
+  1727→  async waitForToken(): Promise<void> {
+  1728→    while (!(await this.consume(1))) {
+  1729→      await sleep(100);
+  1730→    }
+  1731→  }
+  1732→}
+  1733→
+  1734→// Por provedor
+  1735→const rateLimiters = {
+  1736→  totvs: new TokenBucket(100, 100/60),  // 100/min
+  1737→  sap: new TokenBucket(60, 1),          // 60/min
+  1738→  sankhya: new TokenBucket(30, 0.5),    // 30/min
+  1739→  whatsapp: new TokenBucket(80, 80/3600),// 80/hora
+  1740→  // ...
+  1741→};
+  1742→```
+  1743→
+  1744→### Rate Limit por Integração (Tabela Resumo)
+  1745→| Integração | Limite Praticado | Backoff se exceder | Notificação Admin |
+  1746→|-----------|------------------|---------------------|-------------------|
+  1747→| Totvs ERP | 80 req/min | Exponential 5s | Após 3 falhas |
+  1748→| SAP B1 | 50 req/min | Exponential 5s | Após 3 falhas |
+  1749→| Sankhya | 25 req/min | Exponential 5s | Após 3 falhas |
+  1750→| Salesforce | 80 req/min | Exponential 10s | Após 3 falhas |
+  1751→| HubSpot | 90 req/10s | Exponential 5s | Após 5 falhas |
+  1752→| Pipedrive | 35 req/min | Exponential 5s | Após 5 falhas |
+  1753→| Shopify | 1.5 req/sec | Exponential 2s | Após 5 falhas |
+  1754→| WhatsApp | 50 req/hora | Linear 60s | Após 2 falhas |
+  1755→| Twilio SMS | 8 req/sec | Linear 1s | Após 5 falhas |
+  1756→| SendGrid | 500 req/min | Linear 60s | Após 3 falhas |
+  1757→
+  1758→### Circuit Breaker
+  1759→Após N falhas consecutivas, circuito abre e paramos de tentar:
+  1760→```typescript
+  1761→class CircuitBreaker {
+  1762→  private failures = 0;
+  1763→  private lastFailure = 0;
+  1764→  private state: 'closed' | 'open' | 'half-open' = 'closed';
+  1765→  
+  1766→  constructor(
+  1767→    private threshold: number = 5,
+  1768→    private resetTimeout: number = 60_000,
+  1769→  ) {}
+  1770→  
+  1771→  async execute<T>(fn: () => Promise<T>): Promise<T> {
+  1772→    if (this.state === 'open') {
+  1773→      if (Date.now() - this.lastFailure > this.resetTimeout) {
+  1774→        this.state = 'half-open';
+  1775→      } else {
+  1776→        throw new Error('Circuit breaker open');
+  1777→      }
+  1778→    }
+  1779→    
+  1780→    try {
+  1781→      const result = await fn();
+  1782→      this.failures = 0;
+  1783→      this.state = 'closed';
+  1784→      return result;
+  1785→    } catch (e) {
+  1786→      this.failures++;
+  1787→      this.lastFailure = Date.now();
+  1788→      if (this.failures >= this.threshold) {
+  1789→        this.state = 'open';
+  1790→      }
+  1791→      throw e;
+  1792→    }
+  1793→  }
+  1794→}
+  1795→```
+  1796→
+  1797→## 17.3 Rate Limit por Cliente Orion
+  1798→Além do limite do provedor externo, Orion impõe limites por cliente (para evitar abuso):
+  1799→- 1000 API calls/hora por cliente (plano Starter)
+  1800→- 5000 API calls/hora (Professional)
+  1801→- 50000 API calls/hora (Enterprise)
+  1802→
+  1803→Implementado via Redis com sliding window:
+  1804→```typescript
+  1805→async function checkRateLimit(tenantId: number, plan: string): Promise<boolean> {
+  1806→  const limits = { starter: 1000, professional: 5000, enterprise: 50000 };
+  1807→  const limit = limits[plan] || 1000;
+  1808→  const key = `ratelimit:${tenantId}:${Math.floor(Date.now() / 3600000)}`;
+  1809→  const count = await redis.incr(key);
+  1810→  if (count === 1) await redis.expire(key, 3600);
+  1811→  return count <= limit;
+  1812→}
+  1813→```
+  1814→
+  1815→---
+  1816→
+  1817→# Capítulo 18 — Error Handling por Integração
+  1818→
+  1819→## 18.1 Categorias de Erro
+  1820→
+  1821→### Erros de Conexão (Network)
+  1822→- DNS falhou
+  1823→- TCP timeout
+  1824→- TLS handshake falhou
+  1825→- Connection refused
+  1826→
+  1827→### Erros de Autenticação (Auth)
+  1828→- 401 Unauthorized (token expirado ou inválido)
+  1829→- 403 Forbidden (sem permissão)
+  1830→- Token malformado
+  1831→
+  1832→### Erros de Cliente (4xx)
+  1833→- 400 Bad Request (payload inválido)
+  1834→- 404 Not Found (recurso não existe)
+  1835→- 409 Conflict (já existe)
+  1836→- 422 Unprocessable Entity (validação semântica)
+  1837→- 429 Too Many Requests (rate limit excedido)
+  1838→
+  1839→### Erros de Servidor (5xx)
+  1840→- 500 Internal Server Error (erro genérico)
+  1841→- 502 Bad Gateway
+  1842→- 503 Service Unavailable
+  1843→- 504 Gateway Timeout
+  1844→
+  1845→### Erros de Aplicação (Negócio)
+  1846→- Vendedor não encontrado no Orion
+  1847→- Valor inválido (negativo, não-numérico)
+  1848→- Data fora de período permitido
+  1849→- Empresa não autorizada para integração
+  1850→
+  1851→## 18.2 Estratégia por Tipo de Erro
+  1852→
+  1853→| Tipo | Ação | Retry? | Notifica? |
+  1854→|------|------|--------|-----------|
+  1855→| Connection (timeout) | Log + retry | Sim (3x backoff exp) | Após 3 falhas |
+  1856→| Auth (401) | Não tentar de novo | Não | Sim, imediato (token pode ter expirado) |
+  1857→| Auth (403) | Não tentar de novo | Não | Sim, imediato |
+  1858→| 400 | Log detalhado | Não | Não |
+  1859→| 404 | Log | Não | Não |
+  1860→| 409 | Log (já processado) | Não | Não |
+  1861→| 422 | Log | Não | Sim (erro de dado) |
+  1862→| 429 | Backoff + retry | Sim (até 5x) | Após 5 retries |
+  1863→| 5xx | Retry | Sim (3x backoff exp) | Após 3 falhas |
+  1864→| Negócio (vendedor não encontrado) | Log + pular | Não | Sim (resumo no fim) |
+  1865→
+  1866→## 18.3 Estrutura de Log de Erro
+  1867→```typescript
+  1868→{
+  1869→  "timestamp": "2025-08-15T14:30:00.000Z",
+  1870→  "level": "error",
+  1871→  "integration": "totvs",
+  1872→  "tenantId": 42,
+  1873→  "operation": "sync_sales",
+  1874→  "externalReference": "F2_DOC=000123456",
+  1875→  "error": {
+  1876→    "type": "validation_error",
+  1877→    "code": "TOTVS_422",
+  1878→    "message": "Vendedor F2_VEND1=VEND999 não encontrado no Orion",
+  1879→    "details": {
+  1880→      "externalField": "F2_VEND1",
+  1881→      "externalValue": "VEND999",
+  1882→      "lookupKey": "external_id",
+  1883→      "tenantId": 42
+  1884→    }
+  1885→  },
+  1886→  "retry": {
+  1887→    "attempt": 1,
+  1888→    "maxAttempts": 3,
+  1889→    "willRetry": false
+  1890→  },
+  1891→  "context": {
+  1892→    "requestId": "req_abc123",
+  1893→    "userId": 1,
+  1894→    "batchId": "batch_xyz789"
+  1895→  }
+  1896→}
+  1897→```
+  1898→
+  1899→## 18.4 Dead Letter Queue (DLQ)
+  1900→Mensagens que falham após todos os retries vão para DLQ:
+  1901→- Stored no PostgreSQL em `integration_failures` table
+  1902→- Disponível para reprocessamento manual
+  1903→- Limpeza após 30 dias
+  1904→
+  1905→```sql
+  1906→CREATE TABLE integration_failures (
+  1907→  id BIGSERIAL PRIMARY KEY,
+  1908→  tenant_id INT NOT NULL,
+  1909→  integration VARCHAR(50) NOT NULL,
+  1910→  operation VARCHAR(100) NOT NULL,
+  1911→  payload JSONB NOT NULL,
+  1912→  error JSONB NOT NULL,
+  1913→  attempts INT NOT NULL,
+  1914→  last_attempt_at TIMESTAMPTZ,
+  1915→  created_at TIMESTAMPTZ DEFAULT NOW(),
+  1916→  resolved_at TIMESTAMPTZ,
+  1917→  resolved_by INT
+  1918→);
+  1919→
+  1920→CREATE INDEX idx_failures_unresolved ON integration_failures(tenant_id, integration)
+  1921→  WHERE resolved_at IS NULL;
+  1922→```
+  1923→
+  1924→## 18.5 Tratamento Específico por Integração
+  1925→
+  1926→### Totvs Protheus
+  1927→- Token expira em 1 hora → refresh automático
+  1928→- Schema XML varia por versão → versionar parser
+  1929→- Campos customizados (X2_CAMPO) → ignora se não mapeado
+  1930→
+  1931→### SAP B1 Service Layer
+  1932→- Session timeout 30 min → re-login automático
+  1933→- CSRF token em POST → captura e reutiliza
+  1934→- $expand com limite 100 → pagina manualmente
+  1935→
+  1936→### Sankhya
+  1937→- XML SOAP body → parser específico
+  1938→- XML response aninhado → extract correto
+  1939→- Timeouts frequentes em queries grandes → batch menor
+  1940→
+  1941→### Salesforce
+  1942→- OAuth refresh token → automático
+  1943→- Bulk API para volumes > 10k registros
+  1944→- SOQL injection escape
+  1945→
+  1946→### WhatsApp Business
+  1947→- Template não aprovado → log + notifica admin
+  1948→- 24h window (após reply do cliente) → não manda template, manda session message
+  1949→- Opt-out → marca usuário como opted_out
+  1950→
+  1951→---
+  1952→
+  1953→# Capítulo 19 — Retry Policies Específicas
+  1954→
+  1955→## 19.1 Política Padrão
+  1956→- **Max attempts:** 5
+  1957→- **Backoff:** Exponential: 1s, 5s, 25s, 125s, 625s
+  1958→- **Jitter:** Random entre 0 e 50% do backoff (evita thundering herd)
+  1959→- **Timeout por tentativa:** 30s
+  1960→- **Total timeout:** 24h (depois vai para DLQ)
+  1961→
+  1962→## 19.2 Políticas por Integração
+  1963→
+  1964→| Integração | Max Attempts | Backoff Type | Base Delay | Max Delay | Jitter |
+  1965→|-----------|--------------|--------------|-----------|-----------|--------|
+  1966→| Totvs ERP | 5 | Exponential | 5s | 5min | 50% |
+  1967→| SAP B1 | 5 | Exponential | 5s | 5min | 50% |
+  1968→| Sankhya | 5 | Exponential | 5s | 5min | 50% |
+  1969→| Salesforce | 5 | Exponential | 10s | 10min | 30% |
+  1970→| HubSpot | 5 | Exponential | 5s | 5min | 30% |
+  1971→| Pipedrive | 5 | Exponential | 5s | 5min | 30% |
+  1972→| Shopify | 7 | Exponential | 2s | 2min | 50% |
+  1973→| WooCommerce | 5 | Exponential | 10s | 10min | 50% |
+  1974→| VTEX | 5 | Exponential | 5s | 5min | 30% |
+  1975→| WhatsApp | 10 | Linear (60s) | 60s | 60s | 10s |
+  1976→| Twilio SMS | 5 | Exponential | 30s | 5min | 20% |
+  1977→| SendGrid | 5 | Linear (60s) | 60s | 60s | 10s |
+  1978→| AWS SES | 5 | Exponential | 30s | 5min | 20% |
+  1979→| OpenAI | 3 | Exponential | 5s | 60s | 50% |
+  1980→| Anthropic | 3 | Exponential | 5s | 60s | 50% |
+  1981→| Webhook outbound | 3 | Exponential | 60s | 30min | 30% |
+  1982→
+  1983→## 19.3 Implementação
+  1984→```typescript
+  1985→async function withRetry<T>(
+  1986→  operation: () => Promise<T>,
+  1987→  options: {
+  1988→    maxAttempts: number;
+  1989→    backoff: 'exponential' | 'linear';
+  1990→    baseDelay: number;
+  1991→    maxDelay: number;
+  1992→    jitter: number;  // 0 to 1
+  1993→    retryOn: (error: Error) => boolean;
+  1994→  }
+  1995→): Promise<T> {
+  1996→  let lastError: Error;
+  1997→  
+  1998→  for (let attempt = 1; attempt <= options.maxAttempts; attempt++) {
+  1999→    try {
+  2000→      return await operation();
+
+[showing lines 1-2000 of 2773; use offset=2001 with limit to continue reading]

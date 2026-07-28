@@ -1,0 +1,2002 @@
+     1→# DOSSIÊ MASTER DO PRODUTO
+     2→
+     3→## DOCUMENTO 03
+     4→
+     5→# PRODUCT REQUIREMENTS DOCUMENT (PRD)
+     6→
+     7→**Projeto:** Orion (Nome interno)
+     8→**Versão:** 1.0
+     9→**Status:** Em Desenvolvimento
+    10→**Documento:** Product Requirements Document
+    11→
+    12→---
+    13→
+    14→# CAPÍTULO 1 — INTRODUÇÃO
+    15→
+    16→## 1.1 Objetivo
+    17→
+    18→Este documento descreve todos os requisitos necessários para o desenvolvimento da plataforma Orion. O PRD será considerado a principal referência durante todo o ciclo de vida do software. Todos os módulos, funcionalidades, regras de negócio, fluxos, interfaces, permissões e integrações deverão seguir rigorosamente as especificações contidas neste documento. Nenhuma funcionalidade deverá ser implementada sem estar documentada.
+    19→
+    20→Este documento tem caráter normativo: em caso de divergência entre implementação e PRD, o PRD prevalece e a implementação deve ser corrigida. Exceções a esta regra exigem aprovação formal do Product Owner e atualização do PRD antes da alteração de código.
+    21→
+    22→## 1.2 Escopo
+    23→
+    24→O Projeto Orion consiste em uma plataforma profissional para gestão de desempenho comercial. O sistema permitirá o cadastro completo de empresas, filiais, departamentos, usuários e equipes; a criação de metas e indicadores personalizados; a gestão de campanhas comerciais com premiações; a exibição de rankings em tempo real; a configuração de dashboards personalizáveis; o envio de notificações; a geração de relatórios; a auditoria completa de operações; a análise por inteligência artificial; e a administração completa da plataforma através de painel independente.
+    25→
+    26→## 1.3 Estrutura do Documento
+    27→
+    28→Este PRD está organizado em 12 capítulos principais:
+    29→
+    30→- **Capítulo 1-3:** Visão geral, escopo e princípios
+    31→- **Capítulo 4:** Personas detalhadas
+    32→- **Capítulo 5:** Requisitos funcionais (RF-001 a RF-185) — o coração do documento
+    33→- **Capítulo 6:** Módulos do sistema
+    34→- **Capítulo 7:** Requisitos não funcionais
+    35→- **Capítulo 8:** Regras gerais
+    36→- **Capítulo 9:** Objetivos de UX
+    37→- **Capítulo 10:** Padrões visuais
+    38→- **Capítulo 11:** Estratégia de evolução
+    39→- **Capítulo 12:** Filosofia do produto
+    40→
+    41→Cada requisito funcional (RF) segue a estrutura:
+    42→- **Código** (RF-XXX)
+    43→- **Descrição** (o que o sistema deve fazer)
+    44→- **Ator principal** (quem executa)
+    45→- **Pré-condições** (o que deve ser verdade antes)
+    46→- **Fluxo principal** (passos normais)
+    47→- **Fluxos alternativos** (variações e exceções)
+    48→- **Pós-condições** (estado final)
+    49→- **Critérios de aceite** (checklist para considerar pronto)
+    50→
+    51→---
+    52→
+    53→# CAPÍTULO 2 — ESCOPO DO PRODUTO
+    54→
+    55→O Projeto Orion consiste em uma plataforma profissional para gestão de desempenho comercial. O sistema permitirá:
+    56→
+    57→- cadastro de empresas com dados completos e configurações específicas;
+    58→- cadastro de filiais vinculadas a empresas, com endereço, gerente e horário;
+    59→- cadastro de departamentos e setores dentro de cada filial;
+    60→- cadastro de usuários com dados pessoais, login e vínculo com cargo;
+    61→- gestão de equipes comerciais com agrupamento de vendedores;
+    62→- criação de metas atribuídas em múltiplos níveis (empresa, filial, equipe, indivíduo);
+    63→- criação de indicadores personalizados através do Construtor de Indicadores;
+    64→- campanhas comerciais com regras, participantes e premiações configuráveis;
+    65→- ranking em tempo real com múltiplos critérios de desempate;
+    66→- dashboards personalizáveis com widgets arrastáveis;
+    67→- notificações push, sistema, e-mail e plugins (WhatsApp, Telegram);
+    68→- relatórios em PDF, Excel e tela com filtros flexíveis;
+    69→- auditoria completa de todas as operações com rastreabilidade;
+    70→- inteligência artificial para insights, previsões e sugestões;
+    71→- administração completa da plataforma através de painel independente;
+    72→- sistema de licenciamento com validação híbrida (online + offline);
+    73→- backup automático e manual com restauração auditada;
+    74→- atualizações automáticas com rollback em caso de falha;
+    75→- API REST pública para integrações externas;
+    76→- suporte a múltiplos idiomas, moedas e temas visuais;
+    77→- funcionamento offline-first com sincronização automática;
+    78→- instalação como PWA em dispositivos móveis e desktop (Electron).
+    79→
+    80→---
+    81→
+    82→# CAPÍTULO 3 — PRINCÍPIOS DO DESENVOLVIMENTO
+    83→
+    84→Durante todo o desenvolvimento deverão ser respeitados os seguintes princípios.
+    85→
+    86→## 3.1 Configurável
+    87→
+    88→Nenhuma empresa deverá depender de programação para adaptar o sistema. Tudo deverá ser parametrizado através de interface administrativa visual. Este princípio elimina a necessidade de customização de código para cada novo cliente, reduzindo drasticamente o custo de implantação e o tempo de onboarding.
+    89→
+    90→## 3.2 Modular
+    91→
+    92→Cada funcionalidade deverá ser desenvolvida como módulo independente. Exemplo: Usuários, Empresas, Ranking, IA e Relatórios são módulos separados que podem evoluir independentemente, ser ativados ou desativados por licença, e ser desenvolvidos por equipes distintas sem conflitos de merge.
+    93→
+    94→## 3.3 Escalável
+    95→
+    96→A arquitetura deverá suportar crescimento durante muitos anos. Decisões como escolha de banco de dados, padrões de comunicação entre módulos e estratégia de cache devem ser tomadas considerando crescimento de 10x a 100x no volume sem necessidade de reescrita.
+    97→
+    98→## 3.4 Responsivo
+    99→
+   100→O sistema deverá funcionar perfeitamente em desktop, notebook, tablet e smartphone. A interface deve adaptar-se a diferentes tamanhos de tela com breakpoints definidos no Design System, garantindo usabilidade consistente em todos os dispositivos.
+   101→
+   102→## 3.5 Seguro
+   103→
+   104→Segurança deverá ser prioridade em todas as decisões. Toda operação deve passar por validação de permissão, todo dado sensível deve ser criptografado em trânsito e em repouso, e toda alteração deve gerar registro de auditoria.
+   105→
+   106→## 3.6 Simples
+   107→
+   108→Mesmo sendo extremamente completo, o sistema deverá ser intuitivo. A curva de aprendizado para um vendedor deve ser inferior a 30 minutos, e para um gerente inferior a 2 horas. Toda complexidade deve ser encapsulada, não exposta ao usuário final.
+   109→
+   110→---
+   111→
+   112→# CAPÍTULO 4 — PERSONAS
+   113→
+   114→O sistema atenderá seis personas principais, cada uma com escopo de atuação e permissões específicas. O controle de acesso baseado em papéis (RBAC) garante que cada persona enxergue apenas as informações e execute apenas as ações relevantes ao seu papel.
+   115→
+   116→## 4.1 Administrador Master
+   117→
+   118→Responsável técnico pela instalação e manutenção do sistema. Diferentemente do Administrador da Empresa (que gerencia dados de negócio), o Master foca em infraestrutura, licenciamento e saúde do sistema.
+   119→
+   120→**Acessos:**
+   121→- Ativação e gestão de licenças
+   122→- Módulos e plugins do sistema
+   123→- Atualizações e versões
+   124→- Backup global e restauração
+   125→- Parâmetros globais (idioma, timezone, política de senhas)
+   126→- Auditoria de todas as empresas (em modo SaaS)
+   127→- Integrações externas (webhooks, API keys)
+   128→- Revogação de sessões ativas
+   129→- Reinício de serviços
+   130→
+   131→**Não acessa:**
+   132→- Dados comerciais específicos de empresas (metas, resultados, ranking)
+   133→- Configurações de identidade visual por empresa
+   134→
+   135→## 4.2 Administrador da Empresa
+   136→
+   137→Gerencia os dados de negócio da empresa. Diferentemente do Master, não tem acesso a configurações técnicas do sistema, mas tem controle total sobre a configuração comercial.
+   138→
+   139→**Acessos:**
+   140→- Cadastro e edição de empresa, filiais, departamentos
+   141→- Cadastro de usuários e atribuição de cargos
+   142→- Construtor de Indicadores (criar, editar, desativar)
+   143→- Categorias de indicadores
+   144→- Cargos e permissões granulares
+   145→- Temas e identidade visual da empresa
+   146→- Idiomas e moeda
+   147→- Regras de cálculo globais
+   148→- Exportação de dados da empresa (LGPD)
+   149→
+   150→**Não acessa:**
+   151→- Configurações técnicas do sistema (módulos, licença, atualizações)
+   152→- Auditoria de outras empresas
+   153→
+   154→## 4.3 Diretor
+   155→
+   156→Tem visão estratégica consolidada da empresa. Não faz operações de cadastro, mas consome relatórios e dashboards executivos para tomada de decisão em nível corporativo.
+   157→
+   158→**Acessos:**
+   159→- Dashboard executivo consolidado
+   160→- Comparativo entre filiais
+   161→- Ranking geral da rede
+   162→- Relatórios estratégicos
+   163→- Aprovação de metas corporativas
+   164→- Consulta à auditoria de gestores
+   165→
+   166→## 4.4 Gerente
+   167→
+   168→Opera no nível tático: cadastra metas, cria campanhas, aprova resultados e consulta insights de IA para tomar decisões sobre sua equipe.
+   169→
+   170→**Acessos:**
+   171→- Cadastro de metas individuais e em lote
+   172→- Criação de campanhas comerciais
+   173→- Configuração de premiações
+   174→- Dashboard da equipe
+   175→- Aprovação de resultados pendentes
+   176→- Ranking da equipe
+   177→- Envio de notificações para equipe
+   178→- Geração de relatórios de desempenho
+   179→- Consulta à IA para insights gerenciais
+   180→
+   181→## 4.5 Supervisor
+   182→
+   183→Atua como camada intermediária entre Gerente e Vendedor, com foco em acompanhamento operacional do grupo sob sua supervisão.
+   184→
+   185→**Acessos:**
+   186→- Acompanhamento de metas do grupo
+   187→- Lançamento de resultados em lote
+   188→- Dashboard do grupo
+   189→- Histórico de vendedores
+   190→- Reportar feedback ao gerente
+   191→- Aprovação de resultados pendentes do grupo
+   192→
+   193→## 4.6 Vendedor
+   194→
+   195→Usuário final do sistema, com acesso apenas aos seus próprios dados. A interface é otimizada para simplicidade e mobile-first.
+   196→
+   197→**Acessos:**
+   198→- Dashboard pessoal
+   199→- Consulta de metas do dia/semana/mês
+   200→- Lançamento de resultados diários
+   201→- Visualização do ranking individual
+   202→- Histórico próprio
+   203→- Participação em campanhas
+   204→- Recebimento de notificações
+   205→- Consulta de premiações recebidas
+   206→- Atualização de perfil
+   207→- Consulta à IA para sugestões pessoais
+   208→
+   209→---
+   210→
+   211→# CAPÍTULO 5 — REQUISITOS FUNCIONAIS
+   212→
+   213→Cada requisito recebe um código único (RF-XXX). Os requisitos estão organizados por módulo/domínio para facilitar navegação.
+   214→
+   215→## 5.1 Módulo: Empresas (RF-001 a RF-012)
+   216→
+   217→### RF-001 — Cadastrar empresa
+   218→
+   219→**Descrição:** O sistema deverá permitir cadastrar empresas com dados completos.
+   220→
+   221→**Ator principal:** Administrador Master (primeira execução) ou Admin da Empresa (edição)
+   222→
+   223→**Pré-condições:**
+   224→- Sistema instalado e licença ativa
+   225→- Usuário autenticado com permissão `companies.create` ou `companies.update`
+   226→
+   227→**Fluxo principal:**
+   228→1. Usuário acessa tela de cadastro/edição de empresa
+   229→2. Sistema exibe formulário com campos: razão social, nome fantasia, CNPJ, inscrição estadual, telefone, celular, e-mail, website, CEP, endereço, número, complemento, bairro, cidade, estado, país, logo, tema, idioma, moeda, timezone
+   230→3. Usuário preenche campos obrigatórios (razão social, CNPJ, endereço, cidade, estado)
+   231→4. Sistema valida CNPJ via algoritmo (módulo 11)
+   232→5. Sistema busca CEP via API externa (Viacep ou similar) para auto-preenchimento
+   233→6. Sistema valida formato de e-mail e telefone
+   234→7. Usuário faz upload da logo (PNG/SVG, até 2MB)
+   235→8. Sistema valida e armazena logo em storage (S3 ou local)
+   236→9. Usuário seleciona tema (Padrão, Azul, Verde, Vermelho, Roxo, Personalizado)
+   237→10. Usuário seleciona idioma (Português, Inglês)
+   238→11. Usuário seleciona moeda (BRL, USD, EUR)
+   239→12. Usuário seleciona timezone (America/Sao_Paulo, etc.)
+   240→13. Usuário clica em Salvar
+   241→14. Sistema valida todos os campos obrigatórios
+   242→15. Sistema criptografa dados sensíveis (CNPJ) com AES-256
+   243→16. Sistema persiste no banco de dados
+   244→17. Sistema registra auditoria (quem, quando, o quê, valores)
+   245→18. Sistema exibe mensagem de sucesso
+   246→19. Sistema redireciona para lista de empresas ou dashboard
+   247→
+   248→**Fluxos alternativos:**
+   249→
+   250→**A1 — CNPJ inválido:**
+   251→- Passo 4: Sistema detecta CNPJ com módulo 11 falhando
+   252→- Sistema exibe erro inline: "CNPJ inválido"
+   253→- Bloqueia avanço até correção
+   254→
+   255→**A2 — CNPJ já cadastrado (modo SaaS):**
+   256→- Passo 4: Sistema verifica unicidade do CNPJ
+   257→- Se já existe: bloqueia cadastro, exibe mensagem "CNPJ já cadastrado em outra empresa"
+   258→- Sugere contato com suporte
+   259→
+   260→**A3 — CEP não encontrado:**
+   261→- Passo 5: API externa retorna vazio
+   262→- Sistema exibe alerta mas permite preenchimento manual
+   263→- Não bloqueia o fluxo
+   264→
+   265→**A4 — Logo inválida:**
+   266→- Passo 7: Arquivo não é PNG/SVG ou excede 2MB
+   267→- Sistema exibe erro: "Formato não suportado" ou "Arquivo muito grande (máx 2MB)"
+   268→- Permite nova tentativa
+   269→
+   270→**A5 — Alteração de CNPJ em empresa ativa:**
+   271→- Passo 13: Sistema detecta tentativa de alterar CNPJ
+   272→- Exige reautenticação com senha + 2FA
+   273→- Registra na auditoria como operação crítica
+   274→
+   275→**Pós-condições:**
+   276→- Empresa criada ou atualizada no banco de dados
+   277→- Auditoria registrada com valores anterior e novo
+   278→- Logo armazenada em storage
+   279→- Configurações de tema/idioma/moeda aplicadas
+   280→
+   281→**Critérios de aceite:**
+   282→- [ ] Todos os campos obrigatórios são validados antes de salvar
+   283→- [ ] CNPJ é validado via algoritmo módulo 11
+   284→- [ ] CEP é auto-preenchido via API externa
+   285→- [ ] Logo aceita apenas PNG/SVG até 2MB
+   286→- [ ] CNPJ é criptografado em repouso (AES-256)
+   287→- [ ] Alteração de CNPJ exige reautenticação
+   288→- [ ] Toda alteração é auditada com IP e User-Agent
+   289→- [ ] Tempo de resposta inferior a 2 segundos
+   290→
+   291→---
+   292→
+   293→### RF-002 — Cadastrar filiais
+   294→
+   295→**Descrição:** O sistema deverá permitir cadastrar filiais vinculadas a uma empresa.
+   296→
+   297→**Ator principal:** Administrador da Empresa
+   298→
+   299→**Pré-condições:**
+   300→- Empresa cadastrada (RF-001)
+   301→- Licença ativa com limite de filiais não atingido
+   302→- Usuário com permissão `branches.create`
+   303→
+   304→**Fluxo principal:**
+   305→1. Usuário acessa Configurações > Filiais > Nova Filial
+   306→2. Sistema exibe formulário: código, nome, telefone, gerente responsável, endereço completo, horário de funcionamento, latitude, longitude
+   307→3. Usuário preenche código da filial (ex: LOJA-001)
+   308→4. Sistema valida unicidade do código dentro da empresa
+   309→5. Usuário preenche nome da filial
+   310→6. Usuário seleciona gerente responsável (lista de usuários com cargo de gerente)
+   311→7. Usuário preenche endereço (CEP auto-preenche)
+   312→8. Usuário define horário de funcionamento (abertura, fechamento, dias da semana)
+   313→9. Sistema captura latitude/longitude via API de geocodificação (Google Maps ou similar)
+   314→10. Usuário clica em Salvar
+   315→11. Sistema valida limite de filiais da licença
+   316→12. Sistema persiste filial no banco
+   317→13. Sistema registra auditoria
+   318→14. Sistema emite evento `branch.created`
+   319→15. Sistema exibe mensagem de sucesso
+   320→
+   321→**Fluxos alternativos:**
+   322→
+   323→**A1 — Limite de filiais atingido:**
+   324→- Passo 11: Sistema verifica `license.max_branches`
+   325→- Se atingido: bloqueia, exibe "Limite atingido (X de Y). Faça upgrade do plano."
+   326→- Botão "Upgrade de Plano" leva ao portal
+   327→
+   328→**A2 — Código já existe:**
+   329→- Passo 4: Sistema detecta duplicidade
+   330→- Exibe erro inline: "Código já usado pela filial X"
+   331→- Bloqueia avanço
+   332→
+   333→**A3 — Geocodificação falha:**
+   334→- Passo 9: API externa indisponível
+   335→- Sistema permite salvar sem lat/lng
+   336→- Marca para preenchimento posterior
+   337→- Não bloqueia o fluxo
+   338→
+   339→**A4 — Gerente não selecionado:**
+   340→- Passo 6: Campo opcional, permite salvar sem gerente
+   341→- Sistema marca como "Sem gerente designado"
+   342→
+   343→**Pós-condições:**
+   344→- Filial criada e vinculada à empresa
+   345→- Auditoria registrada
+   346→- Evento `branch.created` emitido
+   347→- Lat/lng capturados (se API disponível)
+   348→
+   349→**Critérios de aceite:**
+   350→- [ ] Código de filial é único por empresa
+   351→- [ ] Limite de licença é validado antes de salvar
+   352→- [ ] CEP auto-preenche endereço
+   353→- [ ] Lat/lng capturados via geocodificação
+   354→- [ ] Horário de funcionamento aceita múltiplos turnos
+   355→- [ ] Auditoria registra criação
+   356→- [ ] Evento emitido para módulos assinantes
+   357→
+   358→---
+   359→
+   360→### RF-003 — Editar filial
+   361→
+   362→**Descrição:** O sistema deverá permitir editar dados de uma filial existente.
+   363→
+   364→**Ator principal:** Administrador da Empresa
+   365→
+   366→**Pré-condições:**
+   367→- Filial cadastrada (RF-002)
+   368→- Usuário com permissão `branches.update`
+   369→
+   370→**Fluxo principal:**
+   371→1. Usuário acessa lista de filiais
+   372→2. Clica na filial desejada
+   373→3. Sistema exibe formulário preenchido
+   374→4. Usuário edita campos
+   375→5. Usuário clica em Salvar
+   376→6. Sistema valida alterações
+   377→7. Sistema persiste alterações
+   378→8. Sistema registra auditoria (valores anterior e novo)
+   379→9. Sistema emite evento `branch.updated`
+   380→10. Sistema exibe sucesso
+   381→
+   382→**Fluxos alternativos:**
+   383→
+   384→**A1 — Tentativa de mudar empresa da filial:**
+   385→- Sistema bloqueia (filial não pode mudar de empresa)
+   386→- Exibe erro: "Operação não permitida"
+   387→
+   388→**A2 — Filial com resultados lançados:**
+   389→- Sistema alerta mas permite edição
+   390→- Não afeta dados históricos
+   391→
+   392→**Pós-condições:**
+   393→- Filial atualizada
+   394→- Auditoria com diff de valores
+   395→- Evento emitido
+   396→
+   397→**Critérios de aceite:**
+   398→- [ ] Não é possível mudar filial de empresa
+   399→- [ ] Auditoria registra valores anterior e novo
+   400→- [ ] Evento emitido
+   401→
+   402→---
+   403→
+   404→### RF-004 — Desativar filial
+   405→
+   406→**Descrição:** O sistema deverá permitir desativar uma filial (soft delete).
+   407→
+   408→**Ator principal:** Administrador da Empresa
+   409→
+   410→**Pré-condições:**
+   411→- Filial ativa
+   412→- Usuário com permissão `branches.delete`
+   413→
+   414→**Fluxo principal:**
+   415→1. Usuário acessa filial
+   416→2. Clica em "Desativar"
+   417→3. Sistema exibe confirmação: "Desativar filial X? Dados históricos serão preservados. Usuários vinculados não poderão mais acessar."
+   418→4. Usuário confirma
+   419→5. Sistema valida: não há usuários ativos vinculados (ou solicita transferência)
+   420→6. Sistema executa soft delete (SET deleted_at = NOW())
+   421→7. Sistema desativa usuários vinculados (opcional, conforme escolha)
+   422→8. Sistema registra auditoria
+   423→9. Sistema emite evento `branch.deactivated`
+   424→10. Sistema exibe sucesso
+   425→
+   426→**Fluxos alternativos:**
+   427→
+   428→**A1 — Há usuários ativos na filial:**
+   429→- Sistema lista usuários afetados
+   430→- Pergunta: "Transferir usuários para outra filial ou desativar?"
+   431→- Se transferir: seleciona filial destino
+   432→- Se desativar: confirma
+   433→
+   434→**A2 — Há metas ativas para a filial:**
+   435→- Sistema alerta: "Existem X metas ativas. Elas serão canceladas."
+   436→- Exige confirmação dupla
+   437→
+   438→**Pós-condições:**
+   439→- Filial marcada como inativa (deleted_at preenchido)
+   440→- Auditoria registrada
+   441→- Usuários transferidos ou desativados
+   442→- Metas canceladas ou mantidas (conforme escolha)
+   443→- Dados históricos preservados
+   444→
+   445→**Critérios de aceite:**
+   446→- [ ] Soft delete (não DELETE físico)
+   447→- [ ] Usuários vinculados são tratados (transferir ou desativar)
+   448→- [ ] Metas ativas são canceladas ou confirmadas
+   449→- [ ] Dados históricos preservados
+   450→- [ ] Auditoria registrada
+   451→
+   452→---
+   453→
+   454→### RF-005 — Cadastrar departamentos
+   455→
+   456→**Descrição:** O sistema deverá permitir cadastrar departamentos dentro de filiais.
+   457→
+   458→**Ator principal:** Administrador da Empresa
+   459→
+   460→**Pré-condições:**
+   461→- Filial cadastrada
+   462→- Permissão `departments.create`
+   463→
+   464→**Fluxo principal:**
+   465→1. Usuário acessa Configurações > Departamentos > Novo
+   466→2. Preenche: nome, descrição, filial, responsável
+   467→3. Salva
+   468→4. Sistema valida, persiste, audita
+   469→
+   470→**Critérios de aceite:**
+   471→- [ ] Departamento vinculado a filial
+   472→- [ ] Nome único por filial
+   473→- [ ] Auditoria registrada
+   474→
+   475→---
+   476→
+   477→### RF-006 — Listar empresas
+   478→
+   479→**Descrição:** O sistema deverá listar empresas cadastradas.
+   480→
+   481→**Ator principal:** Admin Master (todas) ou Admin Empresa (só a sua)
+   482→
+   483→**Pré-condições:** Usuário autenticado
+   484→
+   485→**Fluxo principal:**
+   486→1. Usuário acessa lista de empresas
+   487→2. Sistema aplica filtro automático: Admin Master vê todas, Admin Empresa vê só a sua
+   488→3. Sistema exibe tabela com: nome, CNPJ, cidade, status, plano, MRR
+   489→4. Suporta paginação, busca, ordenação
+   490→5. Suporta filtros: status, plano, cidade, estado
+   491→
+   492→**Critérios de aceite:**
+   493→- [ ] Isolamento multi-tenant (Admin Empresa vê só a sua)
+   494→- [ ] Paginação (default 20, max 100)
+   495→- [ ] Busca por nome ou CNPJ
+   496→- [ ] Filtros combináveis
+   497→- [ ] Performance < 500ms mesmo com 1000+ empresas
+   498→
+   499→---
+   500→
+   501→### RF-007 — Consultar empresa
+   502→
+   503→**Descrição:** O sistema deverá permitir consultar detalhes de uma empresa.
+   504→
+   505→**Ator principal:** Admin Master ou Admin Empresa
+   506→
+   507→**Pré-condições:** Empresa existe, usuário tem permissão
+   508→
+   509→**Fluxo principal:**
+   510→1. Usuário clica em empresa da lista
+   511→2. Sistema exibe página de detalhes: dados cadastrais, filiais, usuários, indicadores, metas, configurações
+   512→3. Mostra estatísticas: total de filiais, usuários ativos, MRR, últimos acessos
+   513→
+   514→**Critérios de aceite:**
+   515→- [ ] Detalhes completos em uma tela
+   516→- [ ] Estatísticas calculadas em tempo real
+   517→- [ ] Performance < 1s
+   518→
+   519→---
+   520→
+   521→### RF-008 — Configurar tema da empresa
+   522→
+   523→**Descrição:** O sistema deverá permitir configurar o tema visual da empresa.
+   524→
+   525→**Ator principal:** Admin da Empresa
+   526→
+   527→**Pré-condições:** Permissão `company.config`
+   528→
+   529→**Fluxo principal:**
+   530→1. Usuário acessa Configurações > Tema
+   531→2. Seleciona tema pré-definido OU customiza cores
+   532→3. Faz upload de logo personalizada
+   533→4. Define nome exibido no header
+   534→5. Salva
+   535→6. Sistema aplica imediatamente para todos os usuários da empresa
+   536→
+   537→**Critérios de aceite:**
+   538→- [ ] Temas pré-definidos disponíveis
+   539→- [ ] Customização de cor primária, secundária, fundo
+   540→- [ ] Logo aceita PNG/SVG até 2MB
+   541→- [ ] Aplicação imediata (próxima sessão de cada usuário)
+   542→
+   543→---
+   544→
+   545→### RF-009 — Configurar idioma da empresa
+   546→
+   547→**Descrição:** O sistema deverá permitir configurar idioma padrão da empresa.
+   548→
+   549→**Ator principal:** Admin da Empresa
+   550→
+   551→**Pré-condições:** Permissão `company.config`
+   552→
+   553→**Fluxo principal:**
+   554→1. Usuário acessa Configurações > Idioma
+   555→2. Seleciona idioma padrão (Português, Inglês)
+   556→3. Salva
+   557→4. Sistema aplica para novos usuários
+   558→5. Usuários existentes mantêm idioma atual (podem alterar no perfil)
+   559→
+   560→**Critérios de aceite:**
+   561→- [ ] Idioma padrão para novos usuários
+   562→- [ ] Usuários existentes não são forçados a mudar
+   563→- [ ] Tradução cobre 100% da interface
+   564→
+   565→---
+   566→
+   567→### RF-010 — Configurar moeda da empresa
+   568→
+   569→**Descrição:** O sistema deverá permitir configurar moeda padrão.
+   570→
+   571→**Ator principal:** Admin da Empresa
+   572→
+   573→**Fluxo principal:**
+   574→1. Usuário acessa Configurações > Moeda
+   575→2. Seleciona: BRL, USD, EUR
+   576→3. Define formato (R$ 1.234,56 ou $1,234.56)
+   577→4. Salva
+   578→
+   579→**Critérios de aceite:**
+   580→- [ ] Moeda aplicada em todos os formulários
+   581→- [ ] Formato respeitado em relatórios
+   582→- [ ] Conversão não é automática (moeda é apenas display)
+   583→
+   584→---
+   585→
+   586→### RF-011 — Configurar timezone da empresa
+   587→
+   588→**Descrição:** O sistema deverá permitir configurar timezone padrão.
+   589→
+   590→**Ator principal:** Admin da Empresa
+   591→
+   592→**Fluxo principal:**
+   593→1. Usuário seleciona timezone (America/Sao_Paulo, America/New_York, etc.)
+   594→2. Salva
+   595→3. Sistema aplica para cálculos de data/hora
+   596→
+   597→**Critérios de aceite:**
+   598→- [ ] Timezone aplicado em todos os campos de data/hora
+   599→- [ ] Banco armazena em UTC, exibição converte
+   600→- [ ] Usuário pode ter timezone próprio (sobrepõe empresa)
+   601→
+   602→---
+   603→
+   604→### RF-012 — Exportar dados da empresa
+   605→
+   606→**Descrição:** O sistema deverá permitir exportar todos os dados da empresa (LGPD).
+   607→
+   608→**Ator principal:** Admin da Empresa
+   609→
+   610→**Pré-condições:** Permissão `company.export`, 2FA obrigatório
+   611→
+   612→**Fluxo principal:**
+   613→1. Usuário acessa Configurações > Exportar Dados
+   614→2. Sistema exige autenticação 2FA
+   615→3. Usuário seleciona escopo: tudo, ou tabelas específicas
+   616→4. Sistema gera pacote JSON estruturado
+   617→5. Sistema compacta em ZIP
+   618→6. Sistema disponibiliza link de download (válido 24h)
+   619→7. Sistema notifica por e-mail quando pronto
+   620→8. Sistema registra auditoria (operação LGPD crítica)
+   621→
+   622→**Critérios de aceite:**
+   623→- [ ] 2FA obrigatório
+   624→- [ ] Exportação completa (todas as tabelas com dados da empresa)
+   625→- [ ] Formato JSON estruturado
+   626→- [ ] Link expira em 24h
+   627→- [ ] Auditoria registra quem, quando, o quê
+   628→- [ ] Notificação por e-mail ao concluir
+   629→
+   630→---
+   631→
+   632→## 5.2 Módulo: Usuários (RF-013 a RF-035)
+   633→
+   634→### RF-013 — Cadastrar usuário
+   635→
+   636→**Descrição:** O sistema deverá permitir cadastrar usuários vinculados a filial e cargo.
+   637→
+   638→**Ator principal:** Administrador da Empresa, Gerente (escopo limitado)
+   639→
+   640→**Pré-condições:**
+   641→- Empresa e filial cadastradas
+   642→- Cargo definido
+   643→- Permissão `users.create`
+   644→- Limite de usuários da licença não atingido
+   645→
+   646→**Fluxo principal:**
+   647→1. Usuário acessa Configurações > Usuários > Novo
+   648→2. Sistema exibe formulário: nome completo, CPF, RG, matrícula, e-mail, telefone, celular, foto, filial, cargo, supervisor, data admissão, login, senha temporária
+   649→3. Usuário preenche campos obrigatórios (nome, CPF, e-mail, filial, cargo, login, senha)
+   650→4. Sistema valida CPF via módulo 11
+   651→5. Sistema valida unicidade de CPF, e-mail e login
+   652→6. Sistema valida força da senha (8+ chars, 1 maiúscula, 1 número, 1 especial)
+   653→7. Usuário faz upload de foto (opcional, JPG/PNG até 2MB)
+   654→8. Sistema valida e armazena foto
+   655→9. Usuário clica em Criar
+   656→10. Sistema verifica limite de usuários da licença
+   657→11. Sistema criptografa CPF e senha (bcrypt cost 12)
+   658→12. Sistema persiste no banco
+   659→13. Sistema registra auditoria
+   660→14. Sistema envia e-mail de boas-vindas com credenciais
+   661→15. Sistema marca senha como temporária (exige troca no primeiro login)
+   662→16. Sistema emite evento `user.created`
+   663→17. Sistema exibe sucesso
+   664→
+   665→**Fluxos alternativos:**
+   666→
+   667→**A1 — CPF inválido:**
+   668→- Sistema detecta módulo 11 falhando
+   669→- Exibe erro inline: "CPF inválido"
+   670→
+   671→**A2 — CPF já cadastrado:**
+   672→- Sistema verifica unicidade na empresa
+   673→- Exibe: "CPF já cadastrado para usuário X"
+   674→- Bloqueia avanço
+   675→
+   676→**A3 — E-mail já cadastrado:**
+   677→- Sistema verifica unicidade
+   678→- Exibe erro
+   679→
+   680→**A4 — Login já existe:**
+   681→- Sistema verifica unicidade
+   682→- Sugere login alternativo (login + número)
+   683→
+   684→**A5 — Senha fraca:**
+   685→- Sistema valida política
+   686→- Exibe requisitos não atendidos
+   687→
+   688→**A6 — Limite de usuários atingido:**
+   689→- Sistema bloqueia
+   690→- Exibe "Limite atingido (X de Y). Upgrade do plano."
+   691→- Botão de upgrade
+   692→
+   693→**A7 — E-mail de boas-vindas falha:**
+   694→- Sistema tenta 3x
+   695→- Se falhar: registra log, mas usuário é criado
+   696→- Admin pode reenviar e-mail manualmente
+   697→
+   698→**Pós-condições:**
+   699→- Usuário criado no banco
+   700→- Senha criptografada (bcrypt)
+   701→- CPF criptografado (AES-256)
+   702→- Auditoria registrada
+   703→- E-mail de boas-vindas enviado
+   704→- Evento `user.created` emitido
+   705→- Usuário obrigado a trocar senha no primeiro login
+   706→
+   707→**Critérios de aceite:**
+   708→- [ ] CPF validado via módulo 11
+   709→- [ ] Unicidade de CPF, e-mail e login
+   710→- [ ] Senha segue política (8+, maiúscula, número, especial)
+   711→- [ ] Senha criptografada com bcrypt cost 12
+   712→- [ ] CPF criptografado com AES-256
+   713→- [ ] Limite de licença validado
+   714→- [ ] E-mail de boas-vindas enviado
+   715→- [ ] Senha temporária exige troca no primeiro acesso
+   716→- [ ] Auditoria registrada
+   717→- [ ] Evento emitido
+   718→
+   719→---
+   720→
+   721→### RF-014 — Editar usuário
+   722→
+   723→**Descrição:** O sistema deverá permitir editar dados de um usuário.
+   724→
+   725→**Ator principal:** Admin da Empresa, Gerente (escopo limitado)
+   726→
+   727→**Pré-condições:**
+   728→- Usuário cadastrado
+   729→- Permissão `users.update`
+   730→
+   731→**Fluxo principal:**
+   732→1. Usuário acessa lista de usuários
+   733→2. Clica no usuário desejado
+   734→3. Sistema exibe formulário preenchido
+   735→4. Usuário edita campos (exceto CPF e login que são imutáveis)
+   736→5. Usuário clica em Salvar
+   737→6. Sistema valida alterações
+   738→7. Sistema persiste
+   739→8. Sistema registra auditoria (diff)
+   740→9. Sistema emite evento `user.updated`
+   741→10. Sistema exibe sucesso
+   742→
+   743→**Fluxos alternativos:**
+   744→
+   745→**A1 — Alteração de cargo:**
+   746→- Sistema alerta: "Mudança de cargo afeta permissões"
+   747→- Exige confirmação
+   748→- Registra como operação crítica
+   749→
+   750→**A2 — Alteração de filial:**
+   751→- Sistema alerta: "Mudança de filial pode afetar metas históricas"
+   752→- Pergunta: "Manter metas na filial antiga ou transferir?"
+   753→- Exige confirmação
+   754→
+   755→**A3 — Desativação de usuário com metas ativas:**
+   756→- Sistema alerta sobre metas pendentes
+   757→- Exige decisão: cancelar ou manter metas
+   758→
+   759→**Pós-condições:**
+   760→- Usuário atualizado
+   761→- Auditoria com diff de valores
+   762→- Permissões recalculadas se cargo mudou
+   763→- Evento emitido
+   764→
+   765→**Critérios de aceite:**
+   766→- [ ] CPF e login não podem ser alterados
+   767→- [ ] Mudança de cargo exige confirmação
+   768→- [ ] Mudança de filial exige decisão sobre metas
+   769→- [ ] Auditoria registra diff
+   770→- [ ] Permissões recalculadas
+   771→
+   772→---
+   773→
+   774→### RF-015 — Desativar usuário (soft delete)
+   775→
+   776→**Descrição:** O sistema deverá permitir desativar usuários preservando dados históricos.
+   777→
+   778→**Ator principal:** Admin da Empresa
+   779→
+   780→**Pré-condições:** Usuário ativo, permissão `users.delete`
+   781→
+   782→**Fluxo principal:**
+   783→1. Usuário acessa usuário
+   784→2. Clica em "Desativar"
+   785→3. Sistema exibe confirmação: "Desativar usuário X? Dados históricos serão preservados. Acesso ao sistema será bloqueado."
+   786→4. Usuário confirma
+   787→5. Sistema revoga todos os tokens ativos (logout forçado)
+   788→6. Sistema executa soft delete (deleted_at = NOW())
+   789→7. Sistema registra auditoria
+   790→8. Sistema emite evento `user.deactivated`
+   791→9. Sistema exibe sucesso
+   792→
+   793→**Fluxos alternativos:**
+   794→
+   795→**A1 — Usuário tem metas ativas:**
+   796→- Sistema alerta
+   797→- Pergunta: "Cancelar metas ativas ou manter?"
+   798→- Se manter: metas continuam mas usuário não lança resultados
+   799→
+   800→**A2 — Usuário é gerente de outros:**
+   801→- Sistema alerta: "Usuário é gerente de X vendedores"
+   802→- Exige designar novo gerente antes de desativar
+   803→
+   804→**Pós-condições:**
+   805→- Usuário desativado (deleted_at preenchido)
+   806→- Tokens revogados (logout imediato)
+   807→- Dados históricos preservados
+   808→- Metas tratadas conforme decisão
+   809→- Auditoria registrada
+   810→
+   811→**Critérios de aceite:**
+   812→- [ ] Soft delete (não DELETE físico)
+   813→- [ ] Tokens revogados imediatamente
+   814→- [ ] Dados históricos preservados
+   815→- [ ] Metas tratadas (cancelar ou manter)
+   816→- [ ] Se for gerente, exige substituto
+   817→- [ ] Auditoria registrada
+   818→
+   819→---
+   820→
+   821→### RF-016 — Reset de senha (admin)
+   822→
+   823→**Descrição:** O sistema deverá permitir que admin resete senha de usuário.
+   824→
+   825→**Ator principal:** Admin da Empresa, Admin Master
+   826→
+   827→**Pré-condições:** Usuário existe, permissão `users.reset_password`
+   828→
+   829→**Fluxo principal:**
+   830→1. Admin acessa usuário
+   831→2. Clica em "Resetar Senha"
+   832→3. Sistema exibe confirmação
+   833→4. Admin confirma
+   834→5. Sistema gera senha temporária aleatória (12 chars, atende política)
+   835→6. Sistema criptografa com bcrypt
+   836→7. Sistema marca como temporária (exige troca no próximo login)
+   837→8. Sistema revoga tokens ativos
+   838→9. Sistema registra auditoria
+   839→10. Sistema exibe senha temporária UMA VEZ (não envia por e-mail por segurança)
+   840→11. Admin entrega senha ao usuário presencialmente ou via canal seguro
+   841→
+   842→**Critérios de aceite:**
+   843→- [ ] Senha temporária atende política
+   844→- [ ] Senha exibida uma vez apenas
+   845→- [ ] Senha NÃO enviada por e-mail (segurança)
+   846→- [ ] Troca obrigatória no próximo login
+   847→- [ ] Tokens antigos revogados
+   848→- [ ] Auditoria registra quem resetou
+   849→
+   850→---
+   851→
+   852→### RF-017 — Desbloquear conta
+   853→
+   854→**Descrição:** O sistema deverá permitir desbloquear conta bloqueada por tentativas.
+   855→
+   856→**Ator principal:** Admin da Empresa, Admin Master
+   857→
+   858→**Pré-condições:** Conta bloqueada, permissão `users.unlock`
+   859→
+   860→**Fluxo principal:**
+   861→1. Admin acessa usuário bloqueado
+   862→2. Sistema exibe motivo do bloqueio e horário
+   863→3. Admin clica em "Desbloquear"
+   864→4. Sistema remove bloqueio
+   865→5. Sistema registra auditoria
+   866→6. Sistema notifica usuário por e-mail
+   867→
+   868→**Critérios de aceite:**
+   869→- [ ] Bloqueio removido imediatamente
+   870→- [ ] Auditoria registra quem desbloqueou
+   871→- [ ] Usuário notificado por e-mail
+   872→
+   873→---
+   874→
+   875→### RF-018 — Importar usuários em lote
+   876→
+   877→**Descrição:** O sistema deverá permitir importar usuários via Excel.
+   878→
+   879→**Ator principal:** Admin da Empresa
+   880→
+   881→**Pré-condições:** Permissão `users.import`
+   882→
+   883→**Fluxo principal:**
+   884→1. Admin acessa Usuários > Importar
+   885→2. Sistema oferece download de template Excel
+   886→3. Admin preenche template (uma linha por usuário)
+   887→4. Admin faz upload do arquivo
+   888→5. Sistema valida formato (XLSX)
+   889→6. Sistema valida cada linha: CPF, e-mail, login, campos obrigatórios
+   890→7. Sistema exibe preview: válidos X inválidos Y
+   891→8. Sistema mostra erros detalhados por linha
+   892→9. Admin corrige e reenvia OU decide importar só os válidos
+   893→10. Sistema cria usuários válidos em lote
+   894→11. Sistema envia e-mails de boas-vindas
+   895→12. Sistema gera relatório de importação (sucessos, falhas)
+   896→13. Sistema registra auditoria
+   897→
+   898→**Fluxos alternativos:**
+   899→
+   900→**A1 — Arquivo não é XLSX:**
+   901→- Sistema rejeita
+   902→- Exige formato correto
+   903→
+   904→**A2 — Linhas duplicadas no arquivo:**
+   905→- Sistema detecta
+   906→- Mantém apenas primeira ocorrência
+   907→- Alerta sobre duplicatas
+   908→
+   909→**A3 — CPFs já cadastrados:**
+   910→- Sistema pula linha
+   911→- Registra no relatório
+   912→
+   913→**Critérios de aceite:**
+   914→- [ ] Template disponível para download
+   915→- [ ] Validação linha por linha
+   916→- [ ] Preview antes de confirmar
+   917→- [ ] Erros detalhados por linha
+   918→- [ ] Importação parcial permitida (só válidos)
+   919→- [ ] E-mails enviados para criados
+   920→- [ ] Relatório de importação gerado
+   921→- [ ] Auditoria registra operação em lote
+   922→
+   923→---
+   924→
+   925→### RF-019 — Listar usuários
+   926→
+   927→**Descrição:** O sistema deverá listar usuários com filtros.
+   928→
+   929→**Ator principal:** Admin, Gerente, Supervisor (escopo limitado)
+   930→
+   931→**Pré-condições:** Autenticado, permissão `users.read`
+   932→
+   933→**Fluxo principal:**
+   934→1. Usuário acessa lista de usuários
+   935→2. Sistema aplica filtro de escopo (Gerente vê só sua equipe, etc.)
+   936→3. Sistema exibe tabela: nome, login, e-mail, filial, cargo, status, último acesso
+   937→4. Suporta paginação, busca, ordenação
+   938→5. Suporta filtros: filial, cargo, status, supervisor
+   939→6. Permite ações em lote: ativar, desativar, exportar
+   940→
+   941→**Critérios de aceite:**
+   942→- [ ] Escopo respeitado (Gerente não vê outras equipes)
+   943→- [ ] Paginação (default 20, max 100)
+   944→- [ ] Busca por nome, login ou e-mail
+   945→- [ ] Filtros combináveis
+   946→- [ ] Ações em lote disponíveis
+   947→- [ ] Performance < 500ms com 1000+ usuários
+   948→
+   949→---
+   950→
+   951→### RF-020 — Consultar usuário
+   952→
+   953→**Descrição:** O sistema deverá permitir consultar detalhes de um usuário.
+   954→
+   955→**Ator principal:** Admin, Gerente (escopo)
+   956→
+   957→**Pré-condições:** Usuário existe, escopo permitido
+   958→
+   959→**Fluxo principal:**
+   960→1. Usuário clica em usuário da lista
+   961→2. Sistema exibe detalhes: dados pessoais, cargo, filial, metas ativas, resultados recentes, ranking atual, último acesso, auditoria de ações
+   962→3. Permite editar (se permissão), desativar, resetar senha
+   963→
+   964→**Critérios de aceite:**
+   965→- [ ] Detalhes completos em uma tela
+   966→- [ ] Metas e resultados atuais
+   967→- [ ] Ranking atual
+   968→- [ ] Histórico de acessos
+   969→- [ ] Ações rápidas (editar, desativar, resetar)
+   970→
+   971→---
+   972→
+   973→### RF-021 — Cadastrar cargos
+   974→
+   975→**Descrição:** O sistema deverá permitir cadastrar cargos personalizados.
+   976→
+   977→**Ator principal:** Admin da Empresa
+   978→
+   979→**Pré-condições:** Permissão `roles.create`
+   980→
+   981→**Fluxo principal:**
+   982→1. Admin acessa Configurações > Cargos > Novo
+   983→2. Preenche: nome, descrição, é cargo de sistema (não)
+   984→3. Define permissões granulares por módulo (criar, ler, editar, excluir, etc.)
+   985→4. Define hierarquia (herda de qual cargo?)
+   986→5. Salva
+   987→6. Sistema valida, persiste, audita
+   988→
+   989→**Critérios de aceite:**
+   990→- [ ] Permissões granulares por módulo
+   991→- [ ] Hierarquia (herança de permissões)
+   992→- [ ] Cargo de sistema não pode ser excluído
+   993→- [ ] Auditoria registrada
+   994→
+   995→---
+   996→
+   997→### RF-022 — Editar cargo
+   998→
+   999→**Descrição:** O sistema deverá permitir editar cargos.
+  1000→
+  1001→**Ator principal:** Admin da Empresa
+  1002→
+  1003→**Pré-condições:** Cargo existe, permissão `roles.update`
+  1004→
+  1005→**Fluxo principal:**
+  1006→1. Admin acessa cargo
+  1007→2. Edita nome, descrição, permissões
+  1008→3. Salva
+  1009→4. Sistema aplica mudanças a todos os usuários com esse cargo
+  1010→5. Sistema registra auditoria
+  1011→6. Sistema emite evento `role.updated`
+  1012→
+  1013→**Critérios de aceite:**
+  1014→- [ ] Mudanças aplicadas imediatamente
+  1015→- [ ] Usuários com cargo são afetados
+  1016→- [ ] Auditoria registra diff de permissões
+  1017→
+  1018→---
+  1019→
+  1020→### RF-023 — Excluir cargo
+  1021→
+  1022→**Descrição:** O sistema deverá permitir excluir cargos (soft delete).
+  1023→
+  1024→**Ator principal:** Admin da Empresa
+  1025→
+  1026→**Pré-condições:**
+  1027→- Cargo não é de sistema (is_system = false)
+  1028→- Nenhum usuário vinculado
+  1029→- Permissão `roles.delete`
+  1030→
+  1031→**Fluxo principal:**
+  1032→1. Admin clica em excluir
+  1033→2. Sistema valida: não é sistema, não tem usuários
+  1034→3. Sistema executa soft delete
+  1035→4. Sistema registra auditoria
+  1036→
+  1037→**Fluxos alternativos:**
+  1038→
+  1039→**A1 — Cargo é de sistema:**
+  1040→- Sistema bloqueia
+  1041→- Exibe: "Cargos de sistema não podem ser excluídos"
+  1042→
+  1043→**A2 — Há usuários vinculados:**
+  1044→- Sistema bloqueia
+  1045→- Exibe: "X usuários vinculados. Transfira para outro cargo antes."
+  1046→
+  1047→**Critérios de aceite:**
+  1048→- [ ] Cargos de sistema não excluídos
+  1049→- [ ] Validação de usuários vinculados
+  1050→- [ ] Soft delete
+  1051→
+  1052→---
+  1053→
+  1054→### RF-024 — Atribuir permissões a cargo
+  1055→
+  1056→**Descrição:** O sistema deverá permitir atribuir permissões granulares a cargos.
+  1057→
+  1058→**Ator principal:** Admin da Empresa
+  1059→
+  1060→**Pré-condições:** Cargo existe, permissão `roles.update`
+  1061→
+  1062→**Fluxo principal:**
+  1063→1. Admin acessa cargo > Permissões
+  1064→2. Sistema exibe matriz: módulos × ações
+  1065→3. Admin marca/desmarca permissões
+  1066→4. Salva
+  1067→5. Sistema recalcula permissões de todos os usuários com o cargo
+  1068→6. Sistema registra auditoria (diff de permissões)
+  1069→
+  1070→**Critérios de aceite:**
+  1071→- [ ] Matriz visual módulo × ação
+  1072→- [ ] Mudanças aplicadas imediatamente
+  1073→- [ ] Auditoria com diff
+  1074→- [ ] Permissões especiais (audit.read, system.admin) destacadas
+  1075→
+  1076→---
+  1077→
+  1078→### RF-025 — Atribuir múltiplos cargos a usuário
+  1079→
+  1080→**Descrição:** O sistema deverá permitir que um usuário tenha múltiplos cargos.
+  1081→
+  1082→**Ator principal:** Admin da Empresa
+  1083→
+  1084→**Pré-condições:** Permissão `users.update`
+  1085→
+  1086→**Fluxo principal:**
+  1087→1. Admin acessa usuário > Cargos
+  1088→2. Adiciona cargos adicionais (ex: Supervisor + Gerente)
+  1089→3. Salva
+  1090→4. Sistema calcula permissões como UNIÃO de todos os cargos
+  1091→5. Sistema registra auditoria
+  1092→
+  1093→**Critérios de aceite:**
+  1094→- [ ] Múltiplos cargos permitidos
+  1095→- [ ] Permissões são união (não interseção)
+  1096→- [ ] Auditoria registra atribuição
+  1097→
+  1098→---
+  1099→
+  1100→### RF-026 — Listar cargos
+  1101→
+  1102→**Descrição:** O sistema deverá listar cargos da empresa.
+  1103→
+  1104→**Ator principal:** Admin da Empresa
+  1105→
+  1106→**Critérios de aceite:**
+  1107→- [ ] Lista cargos ativos
+  1108→- [ ] Mostra: nome, descrição, é sistema, nº de usuários
+  1109→- [ ] Permite editar, excluir (se não sistema)
+  1110→
+  1111→---
+  1112→
+  1113→### RF-027 — Consultar cargo
+  1114→
+  1115→**Descrição:** O sistema deverá permitir consultar detalhes de um cargo.
+  1116→
+  1117→**Ator principal:** Admin da Empresa
+  1118→
+  1119→**Critérios de aceite:**
+  1120→- [ ] Detalhes do cargo
+  1121→- [ ] Lista de permissões
+  1122→- [ ] Lista de usuários com o cargo
+  1123→- [ ] Hierarquia (herda de, herdado por)
+  1124→
+  1125→---
+  1126→
+  1127→### RF-028 — Autenticar usuário (login)
+  1128→
+  1129→**Descrição:** O sistema deverá autenticar usuários via login e senha.
+  1130→
+  1131→**Ator principal:** Qualquer usuário
+  1132→
+  1133→**Pré-condições:** Conta existe e está ativa
+  1134→
+  1135→**Fluxo principal:**
+  1136→1. Usuário acessa tela de login
+  1137→2. Informa login (e-mail, matrícula, CPF ou username)
+  1138→3. Informa senha
+  1139→4. Sistema valida credenciais
+  1140→5. Sistema verifica se conta não está bloqueada
+  1141→6. Sistema verifica se conta está ativa
+  1142→7. Sistema verifica se 2FA está habilitado
+  1143→8. Se 2FA: solicita código TOTP
+  1144→9. Sistema valida código TOTP
+  1145→10. Sistema cria sessão JWT (access + refresh tokens)
+  1146→11. Sistema registra último acesso
+  1147→12. Sistema emite evento `user.login`
+  1148→13. Sistema redireciona para dashboard conforme cargo
+  1149→
+  1150→**Fluxos alternativos:**
+  1151→
+  1152→**A1 — Credenciais inválidas:**
+  1153→- Sistema incrementa contador de tentativas
+  1154→- Após 5 tentativas: bloqueia por 15min
+  1155→- Exibe: "Credenciais inválidas. Tentativa X de 5."
+  1156→
+  1157→**A2 — Conta bloqueada:**
+  1158→- Sistema exibe: "Conta bloqueada. Tente novamente em X minutos."
+  1159→- Não revela qual campo está errado
+  1160→
+  1161→**A3 — Conta desativada:**
+  1162→- Sistema exibe: "Conta inativa. Contate o administrador."
+  1163→
+  1164→**A4 — 2FA habilitado:**
+  1165→- Após senha correta, solicita código TOTP
+  1166→- Se código inválido: conta como tentativa inválida
+  1167→
+  1168→**A5 — Primeiro login (senha temporária):**
+  1169→- Sistema detecta senha temporária
+  1170→- Redireciona para tela de troca de senha
+  1171→- Só libera acesso após troca
+  1172→
+  1173→**A6 — Login via OAuth (Google/Microsoft):**
+  1174→- Sistema redireciona para provedor
+  1175→- Recebe code, troca por token
+  1176→- Busca e-mail do provedor
+  1177→- Se e-mail existe no Orion: cria sessão
+  1178→- Se não existe: bloqueia (cadastro via admin apenas)
+  1179→
+  1180→**Critérios de aceite:**
+  1181→- [ ] Login aceita e-mail, matrícula, CPF ou username
+  1182→- [ ] 5 tentativas → bloqueio 15min
+  1183→- [ ] 10 tentativas em 24h → bloqueio 24h
+  1184→- [ ] 2FA validado se habilitado
+  1185→- [ ] Senha temporária exige troca
+  1186→- [ ] OAuth funcional (Google, Microsoft)
+  1187→- [ ] JWT gerado (15min access, 7d refresh)
+  1188→- [ ] Auditoria registra login (IP, User-Agent)
+  1189→
+  1190→---
+  1191→
+  1192→### RF-029 — Logout
+  1193→
+  1194→**Descrição:** O sistema deverá permitir logout do usuário.
+  1195→
+  1196→**Ator principal:** Qualquer usuário autenticado
+  1197→
+  1198→**Fluxo principal:**
+  1199→1. Usuário clica em Sair
+  1200→2. Sistema revoga tokens (access + refresh)
+  1201→3. Sistema adiciona tokens à blacklist Redis (TTL = expiração)
+  1202→4. Sistema registra auditoria
+  1203→5. Sistema redireciona para login
+  1204→
+  1205→**Critérios de aceite:**
+  1206→- [ ] Tokens revogados imediatamente
+  1207→- [ ] Blacklist Redis evita reuso
+  1208→- [ ] Auditoria registra logout
+  1209→
+  1210→---
+  1211→
+  1212→### RF-030 — Recuperar senha (esqueci minha senha)
+  1213→
+  1214→**Descrição:** O sistema deverá permitir recuperação de senha via e-mail.
+  1215→
+  1216→**Ator principal:** Qualquer usuário
+  1217→
+  1218→**Fluxo principal:**
+  1219→1. Usuário clica em "Esqueci minha senha"
+  1220→2. Informa e-mail ou matrícula
+  1221→3. Sistema verifica se usuário existe
+  1222→4. Se existe: gera token único (UUID), válido 1h
+  1223→5. Sistema envia e-mail com link contendo token
+  1224→6. Sistema exibe: "Se o e-mail existir, você receberá instruções"
+  1225→7. Usuário clica no link
+  1226→8. Sistema valida token (existe, não expirou, não usado)
+  1227→9. Usuário cadastra nova senha (2x)
+  1228→10. Sistema valida política de senha
+  1229→11. Sistema criptografa (bcrypt)
+  1230→12. Sistema invalida token (uso único)
+  1231→13. Sistema revoga tokens antigos
+  1232→14. Sistema registra auditoria
+  1233→15. Sistema envia e-mail "Senha alterada"
+  1234→16. Sistema redireciona para login
+  1235→
+  1236→**Fluxos alternativos:**
+  1237→
+  1238→**A1 — E-mail não existe:**
+  1239→- Sistema exibe mesma mensagem (não revela)
+  1240→- Não envia e-mail
+  1241→- Previne enumeração de usuários
+  1242→
+  1243→**A2 — Token expirado:**
+  1244→- Sistema exibe: "Link expirado"
+  1245→- Botão: "Solicitar novo link"
+  1246→
+  1247→**A3 — Token já usado:**
+  1248→- Sistema exibe: "Link já utilizado"
+  1249→- Botão: "Solicitar novo link"
+  1250→
+  1251→**A4 — Nova senha igual à atual:**
+  1252→- Sistema bloqueia
+  1253→- Exige senha diferente
+  1254→
+  1255→**Critérios de aceite:**
+  1256→- [ ] Token único (UUID)
+  1257→- [ ] Token expira em 1h
+  1258→- [ ] Token de uso único
+  1259→- [ ] Não revela se e-mail existe (anti-enumeração)
+  1260→- [ ] Nova senha segue política
+  1261→- [ ] Nova senha diferente das 5 últimas
+  1262→- [ ] Tokens antigos revogados
+  1263→- [ ] E-mail de confirmação enviado
+  1264→- [ ] Auditoria registra operação
+  1265→
+  1266→---
+  1267→
+  1268→### RF-031 — Alterar própria senha
+  1269→
+  1270→**Descrição:** O sistema deverá permitir que usuário altere própria senha.
+  1271→
+  1272→**Ator principal:** Qualquer usuário autenticado
+  1273→
+  1274→**Fluxo principal:**
+  1275→1. Usuário acessa Perfil > Segurança > Alterar Senha
+  1276→2. Informa senha atual
+  1277→3. Informa nova senha (2x)
+  1278→4. Sistema valida senha atual
+  1279→5. Sistema valida política da nova senha
+  1280→6. Sistema verifica não é igual às 5 últimas
+  1281→7. Sistema criptografa nova (bcrypt)
+  1282→8. Sistema revoga outros tokens (exceto atual)
+  1283→9. Sistema registra auditoria
+  1284→10. Sistema exibe sucesso
+  1285→
+  1286→**Critérios de aceite:**
+  1287→- [ ] Senha atual validada
+  1288→- [ ] Nova senha segue política
+  1289→- [ ] Nova senha diferente das 5 últimas
+  1290→- [ ] Outros tokens revogados
+  1291→- [ ] Auditoria registrada
+  1292→
+  1293→---
+  1294→
+  1295→### RF-032 — Ativar 2FA
+  1296→
+  1297→**Descrição:** O sistema deverá permitir ativar autenticação em dois fatores.
+  1298→
+  1299→**Ator principal:** Qualquer usuário autenticado
+  1300→
+  1301→**Fluxo principal:**
+  1302→1. Usuário acessa Perfil > Segurança > 2FA
+  1303→2. Clica em "Ativar"
+  1304→3. Sistema gera secret TOTP
+  1305→4. Sistema exibe QR code
+  1306→5. Usuário escaneia com Google Authenticator/Authy
+  1307→6. Sistema exibe 10 códigos de backup
+  1308→7. Usuário salva códigos
+  1309→8. Sistema solicita código TOTP atual para confirmar
+  1310→9. Usuário digita código
+  1311→10. Sistema valida
+  1312→11. Sistema ativa 2FA para o usuário
+  1313→12. Sistema registra auditoria
+  1314→13. Sistema exibe sucesso
+  1315→
+  1316→**Critérios de aceite:**
+  1317→- [ ] QR code compatível com Google Authenticator
+  1318→- [ ] 10 códigos de backup gerados
+  1319→- [ ] Confirmação com código TOTP
+  1320→- [ ] 2FA obrigatório para Admin Master e Admin Empresa
+  1321→- [ ] Auditoria registra ativação
+  1322→
+  1323→---
+  1324→
+  1325→### RF-033 — Desativar 2FA
+  1326→
+  1327→**Descrição:** O sistema deverá permitir desativar 2FA.
+  1328→
+  1329→**Ator principal:** Qualquer usuário autenticado
+  1330→
+  1331→**Pré-condições:** 2FA ativo
+  1332→
+  1333→**Fluxo principal:**
+  1334→1. Usuário acessa Perfil > Segurança > 2FA
+  1335→2. Clica em "Desativar"
+  1336→3. Sistema solicita: senha + código TOTP atual
+  1337→4. Usuário informa
+  1338→5. Sistema valida
+  1339→6. Sistema desativa 2FA
+  1340→7. Sistema invalida códigos de backup
+  1341→8. Sistema registra auditoria
+  1342→9. Sistema exibe sucesso
+  1343→
+  1344→**Fluxos alternativos:**
+  1345→
+  1346→**A1 — Usuário é Admin Master ou Admin Empresa:**
+  1347→- Sistema bloqueia (2FA obrigatório)
+  1348→- Exige manter 2FA ativo
+  1349→
+  1350→**Critérios de aceite:**
+  1351→- [ ] Exige senha + TOTP para desativar
+  1352→- [ ] Códigos de backup invalidados
+  1353→- [ ] Admin Master/Empresa não pode desativar
+  1354→- [ ] Auditoria registra
+  1355→
+  1356→---
+  1357→
+  1358→### RF-034 — Login com 2FA
+  1359→
+  1360→**Descrição:** O sistema deverá validar 2FA no login.
+  1361→
+  1362→**Ator principal:** Qualquer usuário com 2FA ativo
+  1363→
+  1364→**Fluxo principal:**
+  1365→1. Usuário faz login normal (senha correta)
+  1366→2. Sistema detecta 2FA ativo
+  1367→3. Sistema solicita código TOTP
+  1368→4. Usuário digita código de 6 dígitos
+  1369→5. Sistema valida (janela de 30s, aceita anterior e atual)
+  1370→6. Se válido: continua login
+  1371→7. Se inválido: conta como tentativa inválida
+  1372→
+  1373→**Fluxos alternativos:**
+  1374→
+  1375→**A1 — Usuário perdeu acesso ao TOTP:**
+  1376→- Clica em "Usar código de backup"
+  1377→- Digita um dos 10 códigos
+  1378→- Sistema valida (uso único)
+  1379→- Sistema invalida código usado
+  1380→
+  1381→**A2 — 5 códigos TOTP inválidos:**
+  1382→- Sistema bloqueia por 15min
+  1383→- Exige senha + 2FA no próximo login
+  1384→
+  1385→**Critérios de aceite:**
+  1386→- [ ] Código TOTP validado
+  1387→- [ ] Janela aceita anterior + atual (anti-desync)
+  1388→- [ ] Códigos de backup aceitos (uso único)
+  1389→- [ ] Tentativas inválidas contam para bloqueio
+  1390→
+  1391→---
+  1392→
+  1393→### RF-035 — Gerenciar sessões ativas
+  1394→
+  1395→**Descrição:** O sistema deverá permitir visualizar e revogar sessões ativas.
+  1396→
+  1397→**Ator principal:** Admin Master, Admin Empresa
+  1398→
+  1399→**Pré-condições:** Permissão `users.manage_sessions`
+  1400→
+  1401→**Fluxo principal:**
+  1402→1. Admin acessa usuário > Sessões
+  1403→2. Sistema lista sessões ativas: IP, User-Agent, último acesso, localização aproximada
+  1404→3. Admin pode revogar sessão específica ou todas
+  1405→4. Sistema remove tokens da sessão
+  1406→5. Sistema registra auditoria
+  1407→6. Sistema notifica usuário por e-mail
+  1408→
+  1409→**Critérios de aceite:**
+  1410→- [ ] Lista todas as sessões ativas
+  1411→- [ ] Mostra IP, dispositivo, localização
+  1412→- [ ] Revogação individual ou em massa
+  1413→- [ ] Notificação por e-mail ao usuário
+  1414→- [ ] Auditoria registrada
+  1415→
+  1416→---
+  1417→
+  1418→## 5.3 Módulo: Indicadores (RF-036 a RF-060)
+  1419→
+  1420→### RF-036 — Cadastrar indicador personalizado
+  1421→
+  1422→**Descrição:** O sistema deverá permitir cadastrar indicadores personalizados via Construtor de Indicadores.
+  1423→
+  1424→**Ator principal:** Admin da Empresa
+  1425→
+  1426→**Pré-condições:** Permissão `indicators.create`
+  1427→
+  1428→**Fluxo principal:**
+  1429→1. Admin acessa Configurações > Indicadores > Novo
+  1430→2. Sistema exibe formulário:
+  1431→   - Nome (1-255 chars, obrigatório)
+  1432→   - Descrição (texto livre)
+  1433→   - Categoria (selecionar ou criar nova)
+  1434→   - Tipo (currency, percentage, integer, decimal, score, time, custom)
+  1435→   - Ícone (biblioteca de ícones)
+  1436→   - Cor (paleta de cores)
+  1437→   - Unidade (R$, %, unidades, etc.)
+  1438→   - Casas decimais (0-3)
+  1439→   - Fórmula (opcional, avançado)
+  1440→   - Peso (para ranking, 0.1-10.0)
+  1441→   - Meta padrão (opcional)
+  1442→   - Valor mínimo (opcional)
+  1443→   - Valor máximo (opcional)
+  1444→   - Exibir em Dashboard (sim/não)
+  1445→   - Exibir em Ranking (sim/não)
+  1446→   - Exibir em Relatórios (sim/não)
+  1447→   - Obrigatório (vendedor deve lançar)
+  1448→   - Ordem (para exibição)
+  1449→3. Admin preenche campos
+  1450→4. Sistema valida nome único na empresa
+  1451→5. Se fórmula: sistema valida sintaxe
+  1452→6. Admin clica em Criar
+  1453→7. Sistema persiste com versionamento (v1)
+  1454→8. Sistema registra auditoria
+  1455→9. Sistema emite evento `indicator.created`
+  1456→10. Sistema exibe sucesso
+  1457→
+  1458→**Fluxos alternativos:**
+  1459→
+  1460→**A1 — Nome já existe:**
+  1461→- Sistema bloqueia
+  1462→- Exige nome único
+  1463→
+  1464→**A2 — Fórmula inválida:**
+  1465→- Sistema valida sintaxe
+  1466→- Exibe erro específico
+  1467→- Bloqueia até correção
+  1468→
+  1469→**A3 — Cor fora da paleta:**
+  1470→- Sistema sugere cores próximas
+  1471→- Permite custom mas avisa sobre contraste
+  1472→
+  1473→**Pós-condições:**
+  1474→- Indicador criado com versão 1
+  1475→- Disponível para atribuição em metas
+  1476→- Auditoria registrada
+  1477→- Evento emitido
+  1478→
+  1479→**Critérios de aceite:**
+  1480→- [ ] Nome único por empresa
+  1481→- [ ] Tipo valida formato de entrada
+  1482→- [ ] Fórmula validada sintaticamente
+  1483→- [ ] Peso afeta ranking
+  1484→- [ ] Configurações de exibição respeitadas
+  1485→- [ ] Versionamento ativo
+  1486→- [ ] Auditoria registrada
+  1487→
+  1488→---
+  1489→
+  1490→### RF-037 — Editar indicador
+  1491→
+  1492→**Descrição:** O sistema deverá permitir editar indicadores existentes.
+  1493→
+  1494→**Ator principal:** Admin da Empresa
+  1495→
+  1496→**Pré-condições:** Indicador existe, permissão `indicators.update`
+  1497→
+  1498→**Fluxo principal:**
+  1499→1. Admin acessa indicador
+  1500→2. Edita campos
+  1501→3. Salva
+  1502→4. Sistema cria nova versão (v2, v3, etc.)
+  1503→5. Sistema mantém versão anterior para histórico
+  1504→6. Sistema atualiza configurações em tempo real
+  1505→7. Sistema registra auditoria com diff
+  1506→8. Sistema emite evento `indicator.updated`
+  1507→
+  1508→**Critérios de aceite:**
+  1509→- [ ] Edição cria nova versão
+  1510→- [ ] Versão anterior preservada
+  1511→- [ ] Histórico de versões disponível
+  1512→- [ ] Auditoria com diff
+  1513→- [ ] Mudanças aplicadas em tempo real
+  1514→
+  1515→---
+  1516→
+  1517→### RF-038 — Desativar indicador
+  1518→
+  1519→**Descrição:** O sistema deverá permitir desativar indicadores.
+  1520→
+  1521→**Ator principal:** Admin da Empresa
+  1522→
+  1523→**Pré-condições:** Indicador existe, permissão `indicators.delete`
+  1524→
+  1525→**Fluxo principal:**
+  1526→1. Admin acessa indicador
+  1527→2. Clica em "Desativar"
+  1528→3. Sistema alerta: "Indicador será desativado. Novos lançamentos não serão aceitos. Histórico preservado."
+  1529→4. Se há metas ativas com o indicador:
+  1530→   - Sistema alerta: "X metas ativas usam este indicador"
+  1531→   - Pergunta: "Cancelar metas ou manter?"
+  1532→5. Admin confirma
+  1533→6. Sistema desativa (active = false)
+  1534→7. Sistema trata metas conforme decisão
+  1535→8. Sistema registra auditoria
+  1536→9. Sistema emite evento `indicator.deactivated`
+  1537→
+  1538→**Critérios de aceite:**
+  1539→- [ ] Soft delete (não exclui)
+  1540→- [ ] Novos lançamentos bloqueados
+  1541→- [ ] Histórico preservado
+  1542→- [ ] Metas ativas tratadas
+  1543→- [ ] Auditoria registrada
+  1544→
+  1545→---
+  1546→
+  1547→### RF-039 — Criar categoria de indicadores
+  1548→
+  1549→**Descrição:** O sistema deverá permitir criar categorias para organizar indicadores.
+  1550→
+  1551→**Ator principal:** Admin da Empresa
+  1552→
+  1553→**Fluxo principal:**
+  1554→1. Admin acessa Indicadores > Categorias > Nova
+  1555→2. Preenche: nome, descrição, cor (opcional)
+  1556→3. Salva
+  1557→4. Sistema valida, persiste, audita
+  1558→
+  1559→**Critérios de aceite:**
+  1560→- [ ] Nome único por empresa
+  1561→- [ ] Cor opcional (para organização visual)
+  1562→- [ ] Pode ser atribuída a múltiplos indicadores
+  1563→
+  1564→---
+  1565→
+  1566→### RF-040 — Listar indicadores
+  1567→
+  1568→**Descrição:** O sistema deverá listar indicadores da empresa.
+  1569→
+  1570→**Ator principal:** Admin da Empresa
+  1571→
+  1572→**Fluxo principal:**
+  1573→1. Admin acessa lista de indicadores
+  1574→2. Sistema exibe: nome, tipo, categoria, peso, status (ativo/inativo), versão atual
+  1575→3. Suporta filtros: categoria, tipo, status
+  1576→4. Suporta busca por nome
+  1577→5. Permite ações: editar, desativar, ver versões
+  1578→
+  1579→**Critérios de aceite:**
+  1580→- [ ] Lista apenas indicadores da empresa (multi-tenant)
+  1581→- [ ] Filtros funcionais
+  1582→- [ ] Busca por nome
+  1583→- [ ] Ações disponíveis
+  1584→
+  1585→---
+  1586→
+  1587→### RF-041 — Consultar indicador
+  1588→
+  1589→**Descrição:** O sistema deverá permitir consultar detalhes de um indicador.
+  1590→
+  1591→**Ator principal:** Admin da Empresa
+  1592→
+  1593→**Critérios de aceite:**
+  1594→- [ ] Detalhes completos
+  1595→- [ ] Histórico de versões
+  1596→- [ ] Metas usando o indicador
+  1597→- [ ] Resultados lançados (estatísticas)
+  1598→
+  1599→---
+  1600→
+  1601→### RF-042 — Validar fórmula de indicador
+  1602→
+  1603→**Descrição:** O sistema deverá validar sintaxe de fórmulas personalizadas.
+  1604→
+  1605→**Ator principal:** Admin da Empresa
+  1606→
+  1607→**Fluxo principal:**
+  1608→1. Admin digita fórmula
+  1609→2. Clica em "Validar"
+  1610→3. Sistema faz parse da fórmula
+  1611→4. Sistema verifica: funções válidas, variáveis definidas, parênteses balanceados
+  1612→5. Sistema executa em dados de exemplo
+  1613→6. Sistema exibe: "Válida" ou erro específico
+  1614→
+  1615→**Critérios de aceite:**
+  1616→- [ ] Funções suportadas: SUM, AVG, COUNT, MIN, MAX, IF
+  1617→- [ ] Variáveis: outros indicadores por ID ou nome
+  1618→- [ ] Operadores: +, -, *, /, (, )
+  1619→- [ ] Erros específicos (não genéricos)
+  1620→- [ ] Teste com dados reais
+  1621→
+  1622→---
+  1623→
+  1624→### RF-043 — Importar indicadores de template
+  1625→
+  1626→**Descrição:** O sistema deverá permitir importar indicadores de templates por segmento.
+  1627→
+  1628→**Ator principal:** Admin da Empresa
+  1629→
+  1630→**Fluxo principal:**
+  1631→1. Admin acessa Indicadores > Importar Template
+  1632→2. Sistema lista segmentos: Farmácia, Supermercado, Varejo, Cosméticos, Construção, etc.
+  1633→3. Admin seleciona segmento
+  1634→4. Sistema exibe preview dos indicadores do template
+  1635→5. Admin seleciona quais importar
+  1636→6. Sistema cria indicadores (versão 1)
+  1637→7. Sistema registra auditoria
+  1638→
+  1639→**Critérios de aceite:**
+  1640→- [ ] Múltiplos templates por segmento
+  1641→- [ ] Preview antes de importar
+  1642→- [ ] Seleção individual de indicadores
+  1643→- [ ] Indicadores criados como ativos
+  1644→
+  1645→---
+  1646→
+  1647→### RF-044 — Exportar indicadores
+  1648→
+  1649→**Descrição:** O sistema deverá permitir exportar configuração de indicadores.
+  1650→
+  1651→**Ator principal:** Admin da Empresa
+  1652→
+  1653→**Critérios de aceite:**
+  1654→- [ ] Exportação em JSON
+  1655→- [ ] Inclui todas as configurações
+  1656→- [ ] Útil para backup ou migração
+  1657→
+  1658→---
+  1659→
+  1660→### RF-045 — Restaurar versão anterior de indicador
+  1661→
+  1662→**Descrição:** O sistema deverá permitir restaurar versões anteriores.
+  1663→
+  1664→**Ator principal:** Admin da Empresa
+  1665→
+  1666→**Fluxo principal:**
+  1667→1. Admin acessa indicador > Versões
+  1668→2. Sistema lista todas as versões com data e mudanças
+  1669→3. Admin seleciona versão antiga
+  1670→4. Clica em "Restaurar"
+  1671→5. Sistema cria nova versão (atual) com dados da antiga
+  1672→6. Sistema mantém histórico completo
+  1673→7. Sistema registra auditoria
+  1674→
+  1675→**Critérios de aceite:**
+  1676→- [ ] Histórico completo de versões
+  1677→- [ ] Restauração cria nova versão (não sobrescreve)
+  1678→- [ ] Auditoria registra restauração
+  1679→
+  1680→---
+  1681→
+  1682→### RF-046 — Calcular valor de indicador
+  1683→
+  1684→**Descrição:** O sistema deverá calcular valores de indicadores com fórmula.
+  1685→
+  1686→**Ator principal:** Sistema (automático)
+  1687→
+  1688→**Pré-condições:** Indicador tem fórmula, dados disponíveis
+  1689→
+  1690→**Fluxo principal:**
+  1691→1. Trigger: novo resultado lançado, ou cálculo agendado
+  1692→2. Sistema identifica indicadores dependentes
+  1693→3. Sistema busca dados necessários
+  1694→4. Sistema executa fórmula (sandbox seguro)
+  1695→5. Sistema armazena resultado calculado
+  1696→6. Sistema atualiza ranking se necessário
+  1697→7. Sistema emite evento `indicator.calculated`
+  1698→
+  1699→**Critérios de aceite:**
+  1700→- [ ] Cálculo automático quando dependências mudam
+  1701→- [ ] Sandbox seguro (sem acesso a sistema)
+  1702→- [ ] Timeout de 5s por cálculo
+  1703→- [ ] Tratamento de erros (divisão por zero, etc.)
+  1704→- [ ] Cache de resultados
+  1705→
+  1706→---
+  1707→
+  1708→### RF-047 — Definir meta padrão para indicador
+  1709→
+  1710→**Descrição:** O sistema deverá permitir definir meta padrão.
+  1711→
+  1712→**Ator principal:** Admin da Empresa
+  1713→
+  1714→**Critérios de aceite:**
+  1715→- [ ] Meta padrão usada ao criar nova meta
+  1716→- [ ] Pode ser sobrescrita individualmente
+  1717→- [ ] Não afeta metas existentes
+  1718→
+  1719→---
+  1720→
+  1721→### RF-048 — Configurar alertas de indicador
+  1722→
+  1723→**Descrição:** O sistema deverá permitir configurar alertas automáticos.
+  1724→
+  1725→**Ator principal:** Admin da Empresa
+  1726→
+  1727→**Fluxo principal:**
+  1728→1. Admin acessa indicador > Alertas
+  1729→2. Define regras:
+  1730→   - "Se valor < X% da meta, alertar gerente"
+  1731→   - "Se valor > Y% da meta, parabenizar vendedor"
+  1732→3. Salva
+  1733→4. Sistema monitora em tempo real
+  1734→5. Quando condição atendida, dispara alerta
+  1735→
+  1736→**Critérios de aceite:**
+  1737→- [ ] Múltiplas regras por indicador
+  1738→- [ ] Condições: >, <, =, >=, <=
+  1739→- [ ] Ações: notificar, e-mail, webhook
+  1740→- [ ] Monitoramento em tempo real
+  1741→
+  1742→---
+  1743→
+  1744→### RF-049 — Listar categorias de indicadores
+  1745→
+  1746→**Descrição:** O sistema deverá listar categorias.
+  1747→
+  1748→**Critérios de aceite:**
+  1749→- [ ] Lista categorias ativas
+  1750→- [ ] Mostra nº de indicadores por categoria
+  1751→- [ ] Permite editar, excluir
+  1752→
+  1753→---
+  1754→
+  1755→### RF-050 — Editar categoria de indicadores
+  1756→
+  1757→**Descrição:** O sistema deverá permitir editar categorias.
+  1758→
+  1759→**Critérios de aceite:**
+  1760→- [ ] Edição não afeta indicadores vinculados
+  1761→- [ ] Auditoria registrada
+  1762→
+  1763→---
+  1764→
+  1765→### RF-051 — Excluir categoria de indicadores
+  1766→
+  1767→**Descrição:** O sistema deverá permitir excluir categorias.
+  1768→
+  1769→**Pré-condições:** Categoria não tem indicadores vinculados
+  1770→
+  1771→**Critérios de aceite:**
+  1772→- [ ] Bloqueia se há indicadores vinculados
+  1773→- [ ] Soft delete
+  1774→- [ ] Auditoria registrada
+  1775→
+  1776→---
+  1777→
+  1778→### RF-052 — Atribuir indicador a vendedor
+  1779→
+  1780→**Descrição:** O sistema deverá permitir atribuir indicadores a vendedores específicos.
+  1781→
+  1782→**Ator principal:** Gerente, Admin da Empresa
+  1783→
+  1784→**Fluxo principal:**
+  1785→1. Gerente acessa vendedor > Indicadores
+  1786→2. Seleciona indicadores que o vendedor deve lançar
+  1787→3. Salva
+  1788→4. Sistema atualiza formulário de lançamento do vendedor
+  1789→
+  1790→**Critérios de aceite:**
+  1791→- [ ] Múltiplos indicadores por vendedor
+  1792→- [ ] Ordem de exibição configurável
+  1793→- [ ] Mudança reflete imediatamente no formulário
+  1794→
+  1795→---
+  1796→
+  1797→### RF-053 — Remover indicador de vendedor
+  1798→
+  1799→**Descrição:** O sistema deverá permitir remover indicadores de vendedores.
+  1800→
+  1801→**Critérios de aceite:**
+  1802→- [ ] Remoção não afeta histórico
+  1803→- [ ] Vendedor não vê mais o indicador no formulário
+  1804→- [ ] Metas ativas mantidas (alerta)
+  1805→
+  1806→---
+  1807→
+  1808→### RF-054 — Listar indicadores por vendedor
+  1809→
+  1810→**Descrição:** O sistema deverá listar quais indicadores cada vendedor lança.
+  1811→
+  1812→**Critérios de aceite:**
+  1813→- [ ] Visão por vendedor
+  1814→- [ ] Visão por indicador (quais vendedores lançam)
+  1815→- [ ] Exportação disponível
+  1816→
+  1817→---
+  1818→
+  1819→### RF-055 — Clonar indicador
+  1820→
+  1821→**Descrição:** O sistema deverá permitir clonar indicadores.
+  1822→
+  1823→**Ator principal:** Admin da Empresa
+  1824→
+  1825→**Fluxo principal:**
+  1826→1. Admin acessa indicador
+  1827→2. Clica em "Clonar"
+  1828→3. Sistema cria cópia com nome "Cópia de X"
+  1829→4. Admin edita nome e configurações
+  1830→5. Salva como novo indicador
+  1831→
+  1832→**Critérios de aceite:**
+  1833→- [ ] Cópia idêntica exceto nome
+  1834→- [ ] Novo indicador independente
+  1835→- [ ] Auditoria registra clonagem
+  1836→
+  1837→---
+  1838→
+  1839→### RF-056 — Definir indicador como obrigatório
+  1840→
+  1841→**Descrição:** O sistema deverá permitir definir indicadores como obrigatórios.
+  1842→
+  1843→**Ator principal:** Admin da Empresa
+  1844→
+  1845→**Critérios de aceite:**
+  1846→- [ ] Indicador obrigatório bloqueia salvamento se vazio
+  1847→- [ ] Aplicado por vendedor ou global
+  1848→- [ ] Auditoria registrada
+  1849→
+  1850→---
+  1851→
+  1852→### RF-057 — Configurar precisão decimal
+  1853→
+  1854→**Descrição:** O sistema deverá permitir configurar precisão decimal por indicador.
+  1855→
+  1856→**Critérios de aceite:**
+  1857→- [ ] 0-3 casas decimais
+  1858→- [ ] Aplicado em formulários e relatórios
+  1859→- [ ] Arredondamento bancário (não truncamento)
+  1860→
+  1861→---
+  1862→
+  1863→### RF-058 — Configurar unidade de indicador
+  1864→
+  1865→**Descrição:** O sistema deverá permitir configurar unidade.
+  1866→
+  1867→**Critérios de aceite:**
+  1868→- [ ] Unidades padrão: R$, %, un, kg, L, h, min
+  1869→- [ ] Unidade customizada permitida
+  1870→- [ ] Exibida em formulários e relatórios
+  1871→
+  1872→---
+  1873→
+  1874→### RF-059 — Definir ordem de exibição
+  1875→
+  1876→**Descrição:** O sistema deverá permitir definir ordem de indicadores.
+  1877→
+  1878→**Critérios de aceite:**
+  1879→- [ ] Ordem por vendedor ou global
+  1880→- [ ] Drag-and-drop na configuração
+  1881→- [ ] Reflete no formulário de lançamento
+  1882→
+  1883→---
+  1884→
+  1885→### RF-060 — Validar range de valor
+  1886→
+  1887→**Descrição:** O sistema deverá validar valores dentro de range configurado.
+  1888→
+  1889→**Ator principal:** Sistema (automático)
+  1890→
+  1891→**Fluxo principal:**
+  1892→1. Vendedor lança valor
+  1893→2. Sistema verifica min/max do indicador
+  1894→3. Se fora do range: alerta mas permite salvar com justificativa
+  1895→4. Sistema registra justificativa
+  1896→
+  1897→**Critérios de aceite:**
+  1898→- [ ] Validação em tempo real
+  1899→- [ ] Alerta se fora do range
+  1900→- [ ] Permite salvar com justificativa
+  1901→- [ ] Auditoria registra justificativa
+  1902→
+  1903→---
+  1904→
+  1905→## 5.4 Módulo: Metas (RF-061 a RF-085)
+  1906→
+  1907→### RF-061 — Criar meta individual
+  1908→
+  1909→**Descrição:** O sistema deverá permitir criar metas individuais para vendedores.
+  1910→
+  1911→**Ator principal:** Gerente, Admin da Empresa
+  1912→
+  1913→**Pré-condições:**
+  1914→- Vendedor existe e está ativo
+  1915→- Indicador existe e está ativo
+  1916→- Permissão `goals.create`
+  1917→
+  1918→**Fluxo principal:**
+  1919→1. Gerente acessa Metas > Nova Meta
+  1920→2. Seleciona escopo: Individual
+  1921→3. Seleciona vendedor
+  1922→4. Seleciona indicador
+  1923→5. Seleciona tipo: Diária, Semanal, Mensal, Trimestral, Anual, Campanha, Livre
+  1924→6. Define período: data início e data fim
+  1925→7. Define valor-alvo (positivo)
+  1926→8. Define peso (0.1-10.0, default 1.0)
+  1927→9. Opcional: observações
+  1928→10. Sistema valida:
+  1929→    - Vendedor ativo
+  1930→    - Indicador ativo
+  1931→    - Data fim > data início
+  1932→    - Valor-alvo > 0
+  1933→    - Não há meta sobreposta para mesmo vendedor+indicador+período
+  1934→11. Sistema persiste com versionamento
+  1935→12. Sistema registra auditoria
+  1936→13. Sistema notifica vendedor (push + e-mail)
+  1937→14. Sistema emite evento `goal.created`
+  1938→15. Sistema exibe sucesso
+  1939→
+  1940→**Fluxos alternativos:**
+  1941→
+  1942→**A1 — Meta sobreposta existe:**
+  1943→- Sistema detecta conflito
+  1944→- Oferece: substituir, somar, ou cancelar
+  1945→- Substituir: desativa antiga, cria nova
+  1946→- Somar: mantém ambas (raro)
+  1947→
+  1948→**A2 — Indicador inativo:**
+  1949→- Sistema bloqueia
+  1950→- Exige ativar indicador primeiro
+  1951→
+  1952→**A3 — Vendedor desativado:**
+  1953→- Sistema bloqueia
+  1954→- Exige ativar vendedor
+  1955→
+  1956→**A4 — Período no passado:**
+  1957→- Sistema alerta mas permite (meta retroativa)
+  1958→
+  1959→**Pós-condições:**
+  1960→- Meta criada com versão 1
+  1961→- Vendedor notificado
+  1962→- Auditoria registrada
+  1963→- Evento emitido
+  1964→
+  1965→**Critérios de aceite:**
+  1966→- [ ] Validações de vendedor, indicador, período
+  1967→- [ ] Detecção de sobreposição
+  1968→- [ ] Notificação ao vendedor
+  1969→- [ ] Versionamento
+  1970→- [ ] Auditoria
+  1971→- [ ] Evento emitido
+  1972→
+  1973→---
+  1974→
+  1975→### RF-062 — Criar meta em lote (equipe)
+  1976→
+  1977→**Descrição:** O sistema deverá permitir criar metas para toda a equipe de uma vez.
+  1978→
+  1979→**Ator principal:** Gerente
+  1980→
+  1981→**Pré-condições:** Permissão `goals.create`
+  1982→
+  1983→**Fluxo principal:**
+  1984→1. Gerente acessa Metas > Nova Meta > Escopo: Equipe
+  1985→2. Seleciona equipe (todos da filial, ou equipe específica)
+  1986→3. Seleciona indicador
+  1987→4. Define tipo, período, valor-alvo, peso
+  1988→5. Sistema lista vendedores afetados (preview)
+  1989→6. Gerente confirma
+  1990→7. Sistema cria uma meta para cada vendedor
+  1991→8. Sistema notifica todos os vendedores
+  1992→9. Sistema registra auditoria (operação em lote)
+  1993→10. Sistema exibe relatório: X criadas, Y falhas
+  1994→
+  1995→**Fluxos alternativos:**
+  1996→
+  1997→**A1 — Alguns vendedores já têm meta sobreposta:**
+  1998→- Sistema lista conflitos
+  1999→- Gerente decide: pular, substituir, ou somar para cada um
+  2000→
+
+[showing lines 1-2000 of 4490; use offset=2001 with limit to continue reading]

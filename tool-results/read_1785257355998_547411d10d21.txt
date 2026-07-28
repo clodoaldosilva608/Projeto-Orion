@@ -1,0 +1,1972 @@
+     1→# DOSSIÊ MASTER DO PRODUTO
+     2→
+     3→## DOCUMENTO 16
+     4→
+     5→# ROADMAP ESTRATÉGICO
+     6→
+     7→**Projeto:** Orion (Nome interno)
+     8→**Versão:** 1.0
+     9→**Status:** Em Desenvolvimento
+    10→**Documento:** Roadmap de Produto (5 anos)
+    11→
+    12→---
+    13→
+    14→# Capítulo 1 — Objetivo
+    15→
+    16→Este documento apresenta o roadmap de longo prazo do Projeto Orion, organizado por versões maiores (v1.0 a v5.0+), por trimestres e por áreas estratégicas (produto, técnico, mercado, contratações, budget). Serve como guia para priorização de features, alocação de recursos, comunicação com stakeholders, planejamento de contratações e gestão financeira.
+    17→
+    18→**Público-alvo:** Liderança executiva (CEO, CTO, CFO), product managers, tech leads, investidores e stakeholders estratégicos.
+    19→
+    20→**Disclaimer:** Este roadmap é uma declaração de intenção estratégica, não um contrato. Datas e features específicas estão sujeitas a mudanças baseadas em feedback de clientes, evolução do mercado, capacidade da equipe e discover contínuo.
+    21→
+    22→---
+    23→
+    24→# Capítulo 2 — Visão de 5 Anos
+    25→
+    26→| Ano | Marco | Foco | MRR Alvo | Clientes |
+    27→|-----|-------|------|----------|----------|
+    28→| 2025 | v1.0 Lançamento | Plataforma core, primeiros 100 clientes | R$ 80.000 | 100 |
+    29→| 2026 | v2.0 IA + Marketplace | IA avançada, plugins de terceiros | R$ 500.000 | 1.000 |
+    30→| 2027 | v3.0 BI + Mobile Nativo | Business Intelligence, apps iOS/Android | R$ 2.500.000 | 5.000 |
+    31→| 2028 | v4.0 Internacional | Expansão América Latina, multi-idioma | R$ 8.000.000 | 15.000 |
+    32→| 2029 | v5.0 Plataforma | Ecossistema completo, IPO ready | R$ 20.000.000 | 30.000+ |
+    33→
+    34→### Princípios Norteadores
+    35→
+    36→1. **Product-led growth:** produto excelente gera expansão orgânica
+    37→2. **Platform play:** marketplace + API pública criam lock-in positivo
+    38→3. **Vertical depth antes de horizontal breadth:** dominar gestão comercial antes de expandir vertical
+    39→4. **Latin America first:** conquistar LATAM antes de pensar em outros continentes
+    40→5. **AI-native:** IA não é feature, é camada transversal
+    41→
+    42→---
+    43→
+    44→# Capítulo 3 — v1.0 (2025 Q3-Q4)
+    45→
+    46→## 3.1 Objetivo
+    47→
+    48→Lançar a plataforma core, validar produto-mercado, conquistar primeiros 100 clientes pagantes.
+    49→
+    50→## 3.2 Escopo
+    51→
+    52→### Q3 2025 (Julho-Setembro)
+    53→
+    54→| Feature | Descrição | Esforço (SP) | Dependências | Métricas de Sucesso |
+    55→|---------|-----------|--------------|--------------|---------------------|
+    56→| Setup do projeto | Repo, CI/CD, infraestrutura | 50 | — | Deploy automático em staging |
+    57→| Módulo Core + Auth | Login, JWT, refresh, MFA | 80 | Setup | 95% cobertura de testes |
+    58→| Módulo Empresas + Filiais | CRUD completo, hierarquia | 40 | Core | Criação de empresa < 2min |
+    59→| Módulo Usuários + Permissões (RBAC) | Roles, permissions, atribuição | 60 | Empresas | Atribuição de role < 5s |
+    60→| Módulo Indicadores + Construtor | Custom fields, fórmulas | 100 | Usuários | Criar indicador < 1min |
+    61→| Módulo Metas + Atribuição | Individual, grupo, distribuição | 80 | Indicadores | Distribuir 100 metas < 5s |
+    62→
+    63→### Q4 2025 (Outubro-Dezembro)
+    64→
+    65→| Feature | Descrição | Esforço (SP) | Dependências | Métricas de Sucesso |
+    66→|---------|-----------|--------------|--------------|---------------------|
+    67→| Módulo Resultados + Aprovação | Workflow de aprovação | 70 | Metas | Aprovação < 2s |
+    68→| Módulo Ranking (tempo real) | WebSocket, cache Redis | 60 | Resultados | Update em < 1s |
+    69→| Módulo Dashboard (widgets arrastáveis) | Grid customizável | 80 | Todos módulos | Carrega < 1s |
+    70→| Módulo Campanhas + Premiações | Regras, awards, participantes | 90 | Metas, Resultados | Criar campanha < 5min |
+    71→| Módulo Auditoria | Log imutável de mudanças | 40 | Todos módulos | Log criado em < 100ms |
+    72→| Módulo Licenciamento | Ativação, validação, expiração | 50 | Core | Validação < 50ms |
+    73→| Módulo Backup | Backup automático S3 | 30 | Core | Restore < 30min |
+    74→| Módulo Atualizações | Update automático | 40 | Licenciamento | Update < 10min |
+    75→| Empacotamento Electron | Windows, macOS, Linux | 60 | Web | Installer < 100MB |
+    76→| PWA instalável | Service worker, manifest | 30 | Web | Lighthouse > 90 |
+    77→| Painel admin separado | admin.suaempresa.com | 50 | Core | Isolamento total |
+    78→| Primeiros 10 pilotos | Onboarding assistido | — | Tudo acima | NPS piloto > 50 |
+    79→
+    80→## 3.3 Métricas de Sucesso v1.0
+    81→
+    82→| Métrica | Meta | Como Medir | Frequência |
+    83→|---------|------|------------|------------|
+    84→| Clientes pagantes | 100 | Stripe + CRM | Diário |
+    85→| MRR | R$ 80.000 | Stripe | Diário |
+    86→| Churn mensal | < 3% | Stripe + análise | Mensal |
+    87→| NPS | > 40 | Pesquisa pós-onboarding | Trimestral |
+    88→| Tempo médio de implantação | < 2 dias | Métrica de onboarding | Por cliente |
+    89→| Uptime | 99.5% | Status page | Mensal |
+    90→| Bugs P0 em produção | 0 | Sentry + Linear | Semanal |
+    91→| p95 latência API | < 500ms | Datadog APM | Contínuo |
+    92→| Cobertura de testes | > 70% | Vitest coverage | Por PR |
+    93→| CSAT suporte | > 90% | Pesquisa pós-ticket | Por ticket |
+    94→
+    95→## 3.4 Recursos Necessários
+    96→
+    97→### Equipe
+    98→
+    99→| Cargo | Qtd | Custo Anual (R$) |
+   100→|-------|-----|------------------|
+   101→| CEO | 1 | 240.000 |
+   102→| CTO | 1 | 240.000 |
+   103→| Tech Lead | 1 | 180.000 |
+   104→| Dev Backend Sênior | 1 | 168.000 |
+   105→| Dev Frontend Sênior | 1 | 168.000 |
+   106→| Dev Full-stack Pleno | 2 | 240.000 |
+   107→| Designer UX/UI | 1 | 120.000 |
+   108→| QA Engineer | 1 | 96.000 |
+   109→| DevOps | 1 | 144.000 |
+   110→| Product Manager | 1 | 144.000 |
+   111→| Customer Success | 1 | 84.000 |
+   112→| **Total** | **12** | **1.824.000** |
+   113→
+   114→### Infraestrutura (Anual)
+   115→
+   116→| Item | Custo Mensal | Custo Anual |
+   117→|------|--------------|-------------|
+   118→| AWS (Vercel + RDS + ElastiCache + S3) | R$ 8.000 | R$ 96.000 |
+   119→| Sentry + Datadog | R$ 3.000 | R$ 36.000 |
+   120→| OpenAI API | R$ 2.000 | R$ 24.000 |
+   121→| GitHub + Linear + Slack | R$ 1.500 | R$ 18.000 |
+   122→| Domínios + SSL | R$ 200 | R$ 2.400 |
+   123→| Email (SendGrid) | R$ 500 | R$ 6.000 |
+   124→| **Total** | **R$ 15.200** | **R$ 182.400** |
+   125→
+   126→### Total Anual v1.0: ~R$ 2.006.400
+   127→
+   128→### Receita Projetada
+   129→
+   130→| Trimestre | Clientes | MRR Final | Receita Trimestre |
+   131→|-----------|----------|-----------|-------------------|
+   132→| Q3 2025 | 30 | R$ 24.000 | R$ 36.000 |
+   133→| Q4 2025 | 100 | R$ 80.000 | R$ 156.000 |
+   134→| **Total 2025** | **100** | **R$ 80.000** | **R$ 192.000** |
+   135→
+   136→**Burn rate anual:** R$ 1.814.400 (após receita)
+   137→**Runway necessário:** 18-24 meses de runway a partir do início de 2025
+   138→
+   139→---
+   140→
+   141→# Capítulo 4 — v2.0 (2026)
+   142→
+   143→## 4.1 Objetivo
+   144→
+   145→Adicionar inteligência artificial, marketplace de plugins e expansão comercial agressiva.
+   146→
+   147→## 4.2 Escopo
+   148→
+   149→### Q1 2026 (Janeiro-Março)
+   150→
+   151→| Feature | Descrição | Esforço (SP) | Dependências | Métricas de Sucesso |
+   152→|---------|-----------|--------------|--------------|---------------------|
+   153→| Módulo IA Básico | Chat interativo, insight diário, previsão de meta, relatório narrativo | 120 | v1.0 | 100k queries/mês |
+   154→| Notificações Push | Web + PWA mobile | 40 | Auth | 90% entrega < 5s |
+   155→| Mural da Empresa | Rede social interna (posts, likes, comentários) | 80 | Users | 30% MAU usa |
+   156→
+   157→**Feature Detail: IA Básico**
+   158→
+   159→- **Descrição:** Sistema de IA que permite aos usuários fazer perguntas em linguagem natural sobre seus dados ("Quantos vendedores bateram a meta em outubro?"), recebe insights automáticos diários ("João está 15% abaixo da meta, sugerir acompanhamento"), prevê meta mensal baseado em tendência, e gera relatório narrativo semanal.
+   160→- **Esforço:** 120 story points (~6 devs × 4 semanas)
+   161→- **Dependências:** v1.0 completo (metas, resultados, ranking)
+   162→- **Stack:** OpenAI GPT-4o-mini (custo otimizado), pgvector para embeddings, Redis para cache
+   163→- **Métricas:**
+   164→  - Latência p95 chat: < 3s
+   165→  - Custo por query: < R$ 0,15
+   166→  - Satisfação (thumbs up/down): > 75% positivo
+   167→  - Adesão: 60% das empresas ativas usam IA no mês
+   168→- **Riscos:**
+   169→  - Custo de IA explode → mitigar com cache agressivo + fallback para GPT-3.5
+   170→  - Alucinação → mitigar com prompt engineering + RAG com dados estruturados
+   171→  - LGPD → dados pessoais NUNCA enviados à IA (anonimização prévia)
+   172→
+   173→### Q2 2026 (Abril-Junho)
+   174→
+   175→| Feature | Descrição | Esforço (SP) | Dependências | Métricas de Sucesso |
+   176→|---------|-----------|--------------|--------------|---------------------|
+   177→| Marketplace de Plugins v1 | API pública estável, SDKs (JS/Python/PHP), 5 plugins oficiais | 150 | v1.0 | 20+ plugins em 6 meses |
+   178→| Gamificação Avançada | Medalhas, troféus, níveis, conquistas | 60 | Users | Aumenta engajamento 25% |
+   179→| Calendário Comercial | Datas comemorativas, feriados, eventos | 30 | Core | 80% preenche calendário |
+   180→
+   181→**Feature Detail: Marketplace de Plugins v1**
+   182→
+   183→- **Descrição:** Plataforma que permite desenvolvedores terceiros criarem plugins que estendem o Orion. Plugins podem adicionar: integrações (WhatsApp, Telegram, CRM), novos tipos de widgets, automações customizadas, relatórios específicos.
+   184→- **Esforço:** 150 SP (~8 devs × 6 semanas)
+   185→- **Stack:** API REST pública versionada (`/api/v1/public/`), OAuth2 para apps, webhooks bidirecionais, sandbox para testes
+   186→- **5 Plugins Oficiais:**
+   187→  1. WhatsApp Business — notifica vendedores via WhatsApp
+   188→  2. Telegram Bot — ranking diário no Telegram
+   189→  3. CRM Básico — pipeline de vendas integrado
+   190→  4. Estoque Básico — sincroniza com ERPs
+   191→  5. Comissões — cálculo automático de comissões
+   192→- **Métricas:**
+   193→  - 20+ plugins publicados em 6 meses
+   194→  - 30% das empresas instalam ao menos 1 plugin
+   195→  - SDK downloads: 500+ no primeiro mês
+   196→  - Documentação: 95% satisfação em DX survey
+   197→- **Receita esperada:** Revenue share 70/30 (plugin dev / Orion)
+   198→
+   199→### Q3 2026 (Julho-Setembro)
+   200→
+   201→| Feature | Descrição | Esforço (SP) | Dependências | Métricas de Sucesso |
+   202→|---------|-----------|--------------|--------------|---------------------|
+   203→| API Pública v1 | REST + Webhooks, documentação OpenAPI | 80 | v1.0 | 100 devs ativos |
+   204→| Integração ERPs | Totvs, SAP B1, Sankhya | 120 | API Pública | 200 empresas integradas |
+   205→| Painel TV | Smart TV (Tizen, webOS) para ranking em tempo real | 50 | Ranking | 50 TVs ativas |
+   206→| App Mobile PWA otimizado | Offline-first completo | 80 | PWA v1.0 | 1.000 instalações |
+   207→
+   208→### Q4 2026 (Outubro-Dezembro)
+   209→
+   210→| Feature | Descrição | Esforço (SP) | Dependências | Métricas de Sucesso |
+   211→|---------|-----------|--------------|--------------|---------------------|
+   212→| Checklist Diário | Para vendedores (tarefas do dia) | 40 | Users | 60% uso diário |
+   213→| Biblioteca de Treinamentos | PDFs, vídeos, certificados | 60 | Core | 30% completa treinamento |
+   214→| Central de Documentos | Por colaborador | 40 | Users | — |
+   215→| Sistema de Feedback | Estruturado, anônimo opcional | 50 | Users | 50% participa |
+   216→| Multi-idioma | Português + Inglês | 70 | Core | 100% traduzido |
+   217→
+   218→## 4.3 Métricas de Sucesso v2.0
+   219→
+   220→| Métrica | Meta | Como Medir | Frequência |
+   221→|---------|------|------------|------------|
+   222→| Clientes ativos | 1.000 | Stripe | Diário |
+   223→| MRR | R$ 500.000 | Stripe | Diário |
+   224→| Plugins no marketplace | 20+ | Marketplace dashboard | Mensal |
+   225→| Uso mensal de IA | 100k queries | Logs | Mensal |
+   226→| País | Brasil | — | — |
+   227→| Parceiros implementadores | 10 | CRM | Mensal |
+   228→| NPS | > 50 | Pesquisa | Trimestral |
+   229→| Churn | < 2% | Análise | Mensal |
+   230→| DAU/MAU | > 40% | Analytics | Mensal |
+   231→| API calls/dia (públicas) | 100k | Logs | Diário |
+   232→
+   233→## 4.4 Recursos Necessários v2.0
+   234→
+   235→### Equipe (expansão)
+   236→
+   237→| Novo Cargo | Qtd | Custo Anual |
+   238→|------------|-----|-------------|
+   239→| Engenheiro de IA | 1 | 240.000 |
+   240→| Dev Backend Sênior | 1 | 168.000 |
+   241→| Dev Frontend Pleno | 1 | 120.000 |
+   242→| Dev Mobile (React Native prep) | 1 | 144.000 |
+   243→| Product Designer | 1 | 96.000 |
+   244→| Customer Success | 2 | 168.000 |
+   245→| Sales Rep | 2 | 240.000 (comissão) |
+   246→| Marketing | 1 | 96.000 |
+   247→| **Total novos** | **10** | **1.272.000** |
+   248→
+   249→### Total equipe v2.0: 22 pessoas, ~R$ 3.096.000/ano
+   250→
+   251→### Infraestrutura v2.0 (Anual)
+   252→
+   253→| Item | Custo Mensal | Custo Anual |
+   254→|------|--------------|-------------|
+   255→| AWS (escala 10×) | R$ 25.000 | R$ 300.000 |
+   256→| OpenAI API (escala 100×) | R$ 20.000 | R$ 240.000 |
+   257→| Sentry + Datadog + Logs | R$ 8.000 | R$ 96.000 |
+   258→| Ferramentas (GitHub, Linear, Slack, etc.) | R$ 3.000 | R$ 36.000 |
+   259→| CDN (Cloudflare) | R$ 2.000 | R$ 24.000 |
+   260→| Email (escala) | R$ 2.000 | R$ 24.000 |
+   261→| **Total** | **R$ 60.000** | **R$ 720.000** |
+   262→
+   263→### Total Anual v2.0: ~R$ 3.816.000
+   264→
+   265→### Receita Projetada v2.0
+   266→
+   267→| Trimestre | Clientes | MRR Final | Receita Trimestre |
+   268→|-----------|----------|-----------|-------------------|
+   269→| Q1 2026 | 200 | R$ 160.000 | R$ 360.000 |
+   270→| Q2 2026 | 400 | R$ 320.000 | R$ 720.000 |
+   271→| Q3 2026 | 700 | R$ 560.000 | R$ 1.320.000 |
+   272→| Q4 2026 | 1.000 | R$ 500.000 | R$ 1.590.000 |
+   273→| **Total 2026** | **1.000** | **R$ 500.000** | **R$ 3.990.000** |
+   274→
+   275→**Break-even projetado:** Q3 2026
+   276→
+   277→---
+   278→
+   279→# Capítulo 5 — v3.0 (2027)
+   280→
+   281→## 5.1 Objetivo
+   282→
+   283→Lançar Business Intelligence, apps nativos mobile, expandir para 5.000 clientes.
+   284→
+   285→## 5.2 Escopo
+   286→
+   287→### Q1 2027
+   288→
+   289→| Feature | Descrição | Esforço (SP) | Dependências | Métricas de Sucesso |
+   290→|---------|-----------|--------------|--------------|---------------------|
+   291→| Apps Nativos iOS/Android | React Native, push nativas, biometria, offline completo | 200 | API Pública | 50k instalações |
+   292→| BI - Business Intelligence | Cubos OLAP, relatórios ad-hoc, drill-down | 180 | v2.0 | 1M queries/mês |
+   293→
+   294→**Feature Detail: Apps Nativos iOS/Android**
+   295→
+   296→- **Descrição:** Apps nativos (React Native) para iOS e Android, com notificações push nativas, autenticação biométrica (Face ID/Touch ID), modo offline completo (sincronização quando volta online).
+   297→- **Esforço:** 200 SP (~8 devs mobile × 12 semanas)
+   298→- **Stack:** React Native + Expo EAS, SQLite local para offline, MMKV para storage rápido, WatermelonDB para sync
+   299→- **Métricas:**
+   300→  - Crash-free sessions: > 99.5%
+   301→  - App Store rating: > 4.5
+   302→  - Tempo médio de startup: < 2s
+   303→  - 50k instalações em 6 meses
+   304→  - Retenção D30: > 40%
+   305→
+   306→### Q2 2027
+   307→
+   308→| Feature | Descrição | Esforço (SP) | Dependências | Métricas de Sucesso |
+   309→|---------|-----------|--------------|--------------|---------------------|
+   310→| IA Avançada | Agente autônomo, visão computacional, previsão churn, benchmarking | 150 | IA Básico | 30% usa recursos avançados |
+   311→| Automações Power User | Motor de regras visual, workflows, triggers | 100 | Core | 20% empresas criam automação |
+   312→
+   313→### Q3 2027
+   314→
+   315→| Feature | Descrição | Esforço (SP) | Dependências | Métricas de Sucesso |
+   316→|---------|-----------|--------------|--------------|---------------------|
+   317→| Integração CRMs | Salesforce, HubSpot, Pipedrive | 90 | API Pública | 100 empresas integradas |
+   318→| Chat Corporativo | Interno, mensagens diretas e em grupo | 70 | Users | 40% MAU usa |
+   319→| Gestão de Comissões | Completa, multi-cenários | 80 | Metas, Resultados | 50% empresas usam |
+   320→| Assinatura Eletrônica | Documentos com validade jurídica | 50 | Core | — |
+   321→
+   322→### Q4 2027
+   323→
+   324→| Feature | Descrição | Esforço (SP) | Dependências | Métricas de Sucesso |
+   325→|---------|-----------|--------------|--------------|---------------------|
+   326→| Multi-moeda | USD, EUR, ARS, MXN | 60 | Core | 100% conversão automática |
+   327→| Multi-timezone aprimorado | Display por user, conversão automática | 30 | Core | Zero conflitos |
+   328→| App Smartwatch | Apple Watch, Wear OS | 50 | Mobile | 5k instalações |
+   329→| Voice Assistant | Alexa, Google Assistant | 40 | API | 1k usuários ativos |
+   330→
+   331→## 5.3 Métricas de Sucesso v3.0
+   332→
+   333→| Métrica | Meta | Como Medir | Frequência |
+   334→|---------|------|------------|------------|
+   335→| Clientes ativos | 5.000 | Stripe | Diário |
+   336→| MRR | R$ 2.500.000 | Stripe | Diário |
+   337→| Apps mobile ativos | 50.000 | Analytics | Mensal |
+   338→| BI queries/mês | 1M | Logs | Mensal |
+   339→| País | Brasil + Argentina | — | — |
+   340→| NPS | > 55 | Pesquisa | Trimestral |
+   341→| Churn | < 1.5% | Análise | Mensal |
+   342→| Net Revenue Retention | > 120% | Stripe | Mensal |
+   343→
+   344→## 5.4 Recursos Necessários v3.0
+   345→
+   346→### Equipe (expansão para 50 pessoas)
+   347→
+   348→| Novo Cargo | Qtd | Custo Anual |
+   349→|------------|-----|-------------|
+   350→| Dev Mobile Sênior | 2 | 336.000 |
+   351→| Dev BI/Data | 2 | 336.000 |
+   352→| Dev Backend Sênior | 2 | 336.000 |
+   353→| Data Scientist | 1 | 240.000 |
+   354→| DevOps Sênior | 1 | 180.000 |
+   355→| Product Manager | 1 | 144.000 |
+   356→| Product Designer | 2 | 192.000 |
+   357→| Customer Success | 4 | 336.000 |
+   358→| Sales Rep | 4 | 480.000 (comissão) |
+   359→| Marketing | 2 | 192.000 |
+   360→| Suporte N1/N2 | 4 | 240.000 |
+   361→| Financeiro/Admin | 2 | 168.000 |
+   362→| **Total novos** | **28** | **3.180.000** |
+   363→
+   364→### Total equipe v3.0: ~50 pessoas, ~R$ 6.276.000/ano
+   365→
+   366→### Infraestrutura v3.0 (Anual)
+   367→
+   368→| Item | Custo Anual |
+   369→|------|-------------|
+   370→| AWS (multi-region) | R$ 800.000 |
+   371→| OpenAI API (escala 1000×) | R$ 1.500.000 |
+   372→| Observabilidade | R$ 200.000 |
+   373→| CDN global | R$ 100.000 |
+   374→| Ferramentas | R$ 100.000 |
+   375→| Marketing tools | R$ 80.000 |
+   376→| **Total** | **R$ 2.780.000** |
+   377→
+   378→### Total Anual v3.0: ~R$ 9.056.000
+   379→
+   380→### Receita Projetada v3.0
+   381→
+   382→| Trimestre | Clientes | MRR Final | Receita Trimestre |
+   383→|-----------|----------|-----------|-------------------|
+   384→| Q1 2027 | 1.500 | R$ 750.000 | R$ 1.875.000 |
+   385→| Q2 2027 | 2.500 | R$ 1.250.000 | R$ 3.000.000 |
+   386→| Q3 2027 | 3.500 | R$ 1.750.000 | R$ 4.500.000 |
+   387→| Q4 2027 | 5.000 | R$ 2.500.000 | R$ 6.375.000 |
+   388→| **Total 2027** | **5.000** | **R$ 2.500.000** | **R$ 15.750.000** |
+   389→
+   390→**Lucro líquido projetado 2027:** ~R$ 6.694.000
+   391→
+   392→---
+   393→
+   394→# Capítulo 6 — v4.0 (2028)
+   395→
+   396→## 6.1 Objetivo
+   397→
+   398→Expansão internacional completa, ecossistema de marketplace maduro, 15.000+ clientes.
+   399→
+   400→## 6.2 Escopo
+   401→
+   402→| Feature | Descrição | Esforço (SP) | Dependências | Métricas de Sucesso |
+   403→|---------|-----------|--------------|--------------|---------------------|
+   404→| Expansão América Latina | Espanhol LATAM, conformidade fiscal (MX, AR, CL, CO, PE) | 200 | Multi-idioma | 6 países ativos |
+   405→| Marketplace Maduro | 100+ plugins, revenue share 70/30, certificação | 150 | Marketplace v1 | 100+ plugins |
+   406→| IA Generativa Avançada | Geração de campanhas, dashboards, onboarding conversacional | 120 | IA v3 | 50% usa |
+   407→| Integração E-commerce | Shopify, WooCommerce, VTEX, Mercado Livre | 100 | API Pública | 200 empresas |
+   408→| SSO Empresarial | SAML 2.0, AD, Okta, Azure AD, Google Workspace | 80 | Auth | 100 empresas |
+   409→| Compliance Avançado | SOC 2 Type II, ISO 27001, PCI DSS | 100 | — | Certificações obtidas |
+   410→
+   411→**Feature Detail: Expansão América Latina**
+   412→
+   413→- **Descrição:** Localizar produto para espanhol LATAM, adaptar conformidade fiscal para México (CFDI), Argentina (AFIP), Chile (SII), Colômbia (DIAN), Peru (SUNAT). Estabelecer parcerias de distribuição locais.
+   414→- **Esforço:** 200 SP (~10 devs × 6 meses)
+   415→- **Métricas:**
+   416→  - 6 países com clientes ativos
+   417→  - 20% da receita fora do Brasil
+   418→  - 5 parceiros implementadores internacionais
+   419→  - Localização 100% completa (UI, docs, suporte)
+   420→
+   421→## 6.3 Métricas de Sucesso v4.0
+   422→
+   423→| Métrica | Meta | Como Medir | Frequência |
+   424→|---------|------|------------|------------|
+   425→| Clientes ativos | 15.000 | Stripe | Diário |
+   426→| MRR | R$ 8.000.000 | Stripe | Diário |
+   427→| Países | 6 | Stripe | Mensal |
+   428→| Plugins marketplace | 100+ | Dashboard | Mensal |
+   429→| Funcionários | 80+ | RH | Mensal |
+   430→| NPS | > 55 | Pesquisa | Trimestral |
+   431→| Churn | < 1.5% | Análise | Mensal |
+   432→| Net Revenue Retention | > 130% | Stripe | Mensal |
+   433→
+   434→## 6.4 Recursos Necessários v4.0
+   435→
+   436→### Equipe (expansão para 80 pessoas)
+   437→
+   438→| Novo Cargo | Qtd | Custo Anual |
+   439→|------------|-----|-------------|
+   440→| Dev Backend Sênior | 4 | 672.000 |
+   441→| Dev Frontend Sênior | 3 | 504.000 |
+   442→| Dev Mobile | 2 | 336.000 |
+   443→| DevOps/SRE | 2 | 360.000 |
+   444→| Security Engineer | 1 | 240.000 |
+   445→| Data Scientist | 2 | 480.000 |
+   446→| Product Manager | 2 | 288.000 |
+   447→| Product Designer | 2 | 240.000 |
+   448→| Customer Success | 6 | 540.000 |
+   449→| Sales (internacional) | 4 | 600.000 |
+   450→| Marketing (internacional) | 2 | 240.000 |
+   451→| Suporte (multi-idioma) | 6 | 420.000 |
+   452→| Legal/Compliance | 1 | 240.000 |
+   453→| **Total novos** | **37** | **5.160.000** |
+   454→
+   455→### Total equipe v4.0: ~87 pessoas, ~R$ 11.436.000/ano
+   456→
+   457→### Infraestrutura v4.0 (Anual)
+   458→
+   459→| Item | Custo Anual |
+   460→|------|-------------|
+   461→| AWS (multi-region global) | R$ 2.500.000 |
+   462→| OpenAI API | R$ 3.000.000 |
+   463→| Observabilidade | R$ 400.000 |
+   464→| CDN global premium | R$ 200.000 |
+   465→| Security (WAF, DDoS) | R$ 200.000 |
+   466→| Compliance (auditorias) | R$ 300.000 |
+   467→| Marketing tools | R$ 200.000 |
+   468→| **Total** | **R$ 6.800.000** |
+   469→
+   470→### Total Anual v4.0: ~R$ 18.236.000
+   471→
+   472→### Receita Projetada v4.0
+   473→
+   474→| Trimestre | Clientes | MRR Final | Receita Trimestre |
+   475→|-----------|----------|-----------|-------------------|
+   476→| Q1 2028 | 7.500 | R$ 4.000.000 | R$ 9.750.000 |
+   477→| Q2 2028 | 10.000 | R$ 5.500.000 | R$ 14.250.000 |
+   478→| Q3 2028 | 12.500 | R$ 7.000.000 | R$ 18.750.000 |
+   479→| Q4 2028 | 15.000 | R$ 8.000.000 | R$ 22.500.000 |
+   480→| **Total 2028** | **15.000** | **R$ 8.000.000** | **R$ 65.250.000** |
+   481→
+   482→**Lucro líquido projetado 2028:** ~R$ 47.014.000
+   483→
+   484→---
+   485→
+   486→# Capítulo 7 — v5.0+ (2029)
+   487→
+   488→## 7.1 Objetivo
+   489→
+   490→Consolidar como plataforma de referência LATAM, ecossistema robusto, IPO ready.
+   491→
+   492→## 7.2 Escopo (Visão)
+   493→
+   494→| Feature | Descrição | Esforço (SP) | Métricas de Sucesso |
+   495→|---------|-----------|--------------|---------------------|
+   496→| Plataforma Aberta | SDKs multi-linguagem, webhooks bidirecionais, embedded mode | 150 | 5 SDKs ativos |
+   497→| IA Multimodal | Texto + Imagem + Áudio + Vídeo, análise de fotos de treinamento | 180 | 30% usa |
+   498→| Orion for Developers | Certificação oficial, hackathons, comunidade open-source | 80 | 1k certificados |
+   499→| Expansão Vertical | Orion Saúde, Varejo, Indústria, Serviços | 300 | 4 verticais ativas |
+   500→| Analytics Network | Benchmarking anônimo opt-in, insights de mercado | 100 | 500 empresas |
+   501→| IPO Ready | Auditoria Big Four, governança madura, compliance SEC/CVM | 200 | Pronto para S-1 |
+   502→
+   503→## 7.3 Métricas de Sucesso v5.0
+   504→
+   505→| Métrica | Meta | Como Medir | Frequência |
+   506→|---------|------|------------|------------|
+   507→| Clientes ativos | 30.000+ | Stripe | Diário |
+   508→| MRR | R$ 20.000.000 | Stripe | Diário |
+   509→| Países | 10+ | Stripe | Mensal |
+   510→| Funcionários | 200+ | RH | Mensal |
+   511→| ARR | R$ 250M+ | Stripe | Mensal |
+   512→| Marketplace GMV | R$ 50M/ano | Dashboard | Mensal |
+   513→| Comunidade devs | 10k+ | Discord + GitHub | Mensal |
+   514→
+   515→## 7.4 Recursos Necessários v5.0
+   516→
+   517→### Equipe (expansão para 200+ pessoas)
+   518→
+   519→- Engenharia: 80 (40 backend, 25 frontend, 10 mobile, 5 devops)
+   520→- Produto: 20 (10 PMs, 10 designers)
+   521→- Data/IA: 15
+   522→- Sales: 30 (15 Brasil, 15 internacional)
+   523→- Customer Success: 25
+   524→- Suporte: 15
+   525→- Marketing: 10
+   526→- G&A (Financeiro, RH, Legal, Admin): 15
+   527→- **Total: ~210 pessoas**
+   528→
+   529→### Custo Anual v5.0: ~R$ 30.000.000 equipe + R$ 15.000.000 infra = R$ 45.000.000
+   530→
+   531→### Receita Projetada v5.0
+   532→
+   533→| Trimestre | Clientes | MRR Final | Receita Trimestre |
+   534→|-----------|----------|-----------|-------------------|
+   535→| Q1 2029 | 20.000 | R$ 12.000.000 | R$ 30.000.000 |
+   536→| Q2 2029 | 24.000 | R$ 15.000.000 | R$ 40.500.000 |
+   537→| Q3 2029 | 27.000 | R$ 17.500.000 | R$ 48.750.000 |
+   538→| Q4 2029 | 30.000 | R$ 20.000.000 | R$ 56.250.000 |
+   539→| **Total 2029** | **30.000** | **R$ 20.000.000** | **R$ 175.500.000** |
+   540→
+   541→**Lucro líquido projetado 2029:** ~R$ 130.500.000
+   542→
+   543→---
+   544→
+   545→# Capítulo 8 — Funcionalidades por Versão (Resumo)
+   546→
+   547→## 8.1 Tabela Cross-Versão
+   548→
+   549→| Funcionalidade | v1.0 | v2.0 | v3.0 | v4.0 | v5.0 |
+   550→|----------------|------|------|------|------|------|
+   551→| Cadastro de empresas | ✅ | — | — | — | — |
+   552→| Indicadores personalizados | ✅ | — | — | — | — |
+   553→| Metas e resultados | ✅ | — | — | — | — |
+   554→| Dashboard configurável | ✅ | — | — | — | — |
+   555→| Ranking em tempo real | ✅ | — | — | — | — |
+   556→| Campanhas e premiações | ✅ | — | — | — | — |
+   557→| Auditoria | ✅ | — | — | — | — |
+   558→| Licenciamento | ✅ | — | — | — | — |
+   559→| Painel admin separado | ✅ | — | — | — | — |
+   560→| PWA instalável | ✅ | — | — | — | — |
+   561→| IA básica (chat + insights) | — | ✅ | — | — | — |
+   562→| Marketplace v1 | — | ✅ | — | — | — |
+   563→| API pública | — | ✅ | — | — | — |
+   564→| Integração ERPs | — | ✅ | — | — | — |
+   565→| Gamificação avançada | — | ✅ | — | — | — |
+   566→| Apps nativos iOS/Android | — | — | ✅ | — | — |
+   567→| Business Intelligence | — | — | ✅ | — | — |
+   568→| IA avançada (autônoma) | — | — | ✅ | — | — |
+   569→| Integração CRMs | — | — | ✅ | — | — |
+   570→| Multi-moeda | — | — | ✅ | — | — |
+   571→| Expansão LATAM | — | — | — | ✅ | — |
+   572→| Marketplace maduro | — | — | — | ✅ | — |
+   573→| SSO empresarial | — | — | — | ✅ | — |
+   574→| IA multimodal | — | — | — | — | ✅ |
+   575→| Expansão vertical | — | — | — | — | ✅ |
+   576→
+   577→---
+   578→
+   579→# Capítulo 9 — Roadmap Técnico Paralelo
+   580→
+   581→Além das features de produto, o roadmap técnico inclui:
+   582→
+   583→## 9.1 2025
+   584→
+   585→| Item | Esforço | Prioridade | Métricas |
+   586→|------|---------|------------|----------|
+   587→| Setup CI/CD completo | 40 SP | P0 | Deploy < 10min |
+   588→| Observabilidade (logs, métricas, traces) | 30 SP | P0 | MTTR < 30min |
+   589→| Testes automatizados > 70% cobertura | 60 SP | P0 | Cobertura 70%+ |
+   590→| Primeiros runbooks de incidente | 20 SP | P1 | 10 runbooks |
+   591→| Storybook completo | 30 SP | P1 | 100% componentes |
+   592→| ESLint rules customizadas | 15 SP | P2 | 0 warnings |
+   593→| ADRs das decisões críticas | 20 SP | P1 | 15 ADRs |
+   594→
+   595→## 9.2 2026
+   596→
+   597→| Item | Esforço | Prioridade | Métricas |
+   598→|------|---------|------------|----------|
+   599→| Migração para microsserviços (seletiva) | 200 SP | P1 | Auth como MS |
+   600→| Event sourcing para módulos críticos | 100 SP | P2 | Results + Rankings |
+   601→| Cache distribuído avançado | 50 SP | P1 | Hit rate > 80% |
+   602→| CDN global | 20 SP | P1 | Latência < 100ms |
+   603→| Multi-region read replicas | 80 SP | P2 | Latência global < 200ms |
+   604→| Performance monitoring automatizado | 30 SP | P1 | p95 < 300ms |
+   605→| Zero-downtime deploy | 40 SP | P1 | 0 drops em deploy |
+   606→
+   607→## 9.3 2027
+   608→
+   609→| Item | Esforço | Prioridade | Métricas |
+   610→|------|---------|------------|----------|
+   611→| Multi-region deployment | 150 SP | P0 | Failover < 60s |
+   612→| Disaster recovery automatizado | 80 SP | P0 | RTO < 4h, RPO < 15min |
+   613→| Performance: p95 < 200ms global | 100 SP | P0 | p95 monitorado |
+   614→| Zero-downtime deploys | 60 SP | P1 | 0 incidentes em deploy |
+   615→| Service mesh (Istio/Linkerd) | 100 SP | P2 | Observabilidade ms |
+   616→| Feature flags system | 40 SP | P1 | 100% features flag |
+   617→| Database sharding | 200 SP | P2 | 10x scale |
+   618→
+   619→## 9.4 2028
+   620→
+   621→| Item | Esforço | Prioridade | Métricas |
+   622→|------|---------|------------|----------|
+   623→| Service mesh (Istio/Linkerd) | 150 SP | P1 | mTLS entre serviços |
+   624→| Políticas zero-trust | 80 SP | P0 | Zero breach |
+   625→| Compliance automation (SOC2, ISO) | 100 SP | P0 | Certificações |
+   626→| FinOps (controle de custos cloud) | 60 SP | P1 | Custo por cliente < R$ 50/mês |
+   627→| Self-service infra (Terraform) | 80 SP | P2 | Provisionamento < 1h |
+   628→| Data warehouse (Snowflake/BigQuery) | 120 SP | P1 | BI queries < 5s |
+   629→
+   630→## 9.5 2029
+   631→
+   632→| Item | Esforço | Prioridade | Métricas |
+   633→|------|---------|------------|----------|
+   634→| Multi-cloud (AWS + GCP) | 200 SP | P1 | Vendor lock-in mitigado |
+   635→| Edge computing | 100 SP | P2 | Latência < 50ms global |
+   636→| AI infrastructure própria | 150 SP | P1 | Custo IA -50% |
+   637→| Observabilidade 2.0 (eBPF) | 80 SP | P2 | Overhead < 1% |
+   638→| Compliance SEC/CVM | 100 SP | P0 | IPO ready |
+   639→
+   640→---
+   641→
+   642→# Capítulo 10 — Tech Debt Roadmap
+   643→
+   644→Tech debt é inevitável em startup de crescimento rápido. A estratégia é **reservar 20% da capacidade de cada sprint para tech debt** e ter um roadmap explícito de pagamento.
+   645→
+   646→## 10.1 Tech Debt Identificado (Q4 2025)
+   647→
+   648→| ID | Descrição | Severidade | Esforço | Prazo |
+   649→|----|-----------|------------|---------|-------|
+   650→| TD-001 | Auth usa NextAuth; migrar para solução própria para suportar refresh token rotation | Alta | 60 SP | Q1 2026 |
+   651→| TD-002 | Sem particionamento em `results` (table scan em relatórios mensais) | Alta | 80 SP | Q1 2026 |
+   652→| TD-003 | Cache de ranking expira em 60s, deveria ser event-driven | Média | 30 SP | Q2 2026 |
+   653→| TD-004 | Sem rate limiting em API pública | Alta | 20 SP | Q1 2026 |
+   654→| TD-005 | Cobertura de testes em módulo de IA é 50% (meta 80%) | Média | 40 SP | Q2 2026 |
+   655→| TD-006 | Console.log em produção em 12 arquivos | Baixa | 8 SP | Q1 2026 |
+   656→| TD-007 | Sem migrations online (deploy causa downtime de 30s) | Alta | 60 SP | Q2 2026 |
+   657→| TD-008 | Storybook desatualizado (30% componentes sem stories) | Baixa | 20 SP | Q2 2026 |
+   658→| TD-009 | Sem ADRs para decisões de v1.0 (retroativo) | Média | 15 SP | Q1 2026 |
+   659→| TD-010 | Bulkhead ausente (uma empresa grande pode degradar serviço) | Alta | 50 SP | Q2 2026 |
+   660→
+   661→## 10.2 Tech Debt Planejado por Versão
+   662→
+   663→### v2.0 (2026)
+   664→- Migrar auth para solução própria com refresh rotation (TD-001)
+   665→- Particionar tabela `results` por mês (TD-002)
+   666→- Cache event-driven para ranking (TD-003)
+   667→- Rate limiting API pública (TD-004)
+   668→- Migrations online (TD-007)
+   669→- Bulkhead por tenant (TD-010)
+   670→
+   671→### v3.0 (2027)
+   672→- Migrar para microsserviços seletivamente (auth, notifications, IA)
+   673→- Implementar event sourcing em `results` e `rankings`
+   674→- Data warehouse separado para BI (não consultar OLTP)
+   675→- Service mesh para observabilidade
+   676→
+   677→### v4.0 (2028)
+   678→- Multi-region active-active
+   679→- Database sharding por tenant (enterprise)
+   680→- Substituir monolito Next.js API por serviços dedicados onde fizer sentido
+   681→- Infraestrutura como código 100% (Terraform)
+   682→
+   683→### v5.0 (2029)
+   684→- Multi-cloud (reduz vendor lock-in)
+   685→- Edge computing para latência global
+   686→- AI infrastructure própria (reduz custo OpenAI)
+   687→- Observabilidade 2.0 com eBPF
+   688→
+   689→## 10.3 Processo de Gestão de Tech Debt
+   690→
+   691→1. **Identificação:** qualquer dev pode criar um TD no Linear com label `tech-debt`
+   692→2. **Triagem:** tech lead avalia severidade (Alta/Média/Baixa) quinzenalmente
+   693→3. **Planejamento:** TDs de severidade Alta entram automaticamente na próxima sprint
+   694→4. **Execução:** 20% da capacidade de cada sprint é reservada para TD
+   695→5. **Acompanhamento:** dashboard de TD aberto vs fechado revisado mensalmente
+   696→
+   697→## 10.4 Métricas de Tech Debt
+   698→
+   699→| Métrica | Alvo | Como Medir |
+   700→|---------|------|------------|
+   701→| TDs Alta severidade abertos | < 5 | Linear filter |
+   702→| TDs Média severidade abertos | < 15 | Linear filter |
+   703→| Idade média de TD Alta | < 60 dias | Linear |
+   704→| % capacidade sprint para TD | 20% | Sprint planning |
+   705→| Cobertura de testes | > 80% | Vitest |
+   706→| Complexidade ciclomática média | < 8 | ESLint plugin |
+   707→| Duplicação de código | < 3% | SonarQube |
+   708→
+   709→---
+   710→
+   711→# Capítulo 11 — Migration Paths Entre Versões
+   712→
+   713→Cada versão maior (v1.0 → v2.0 → ...) envolve breaking changes que precisam de migração cuidadosa para clientes existentes.
+   714→
+   715→## 11.1 Princípios de Migration
+   716→
+   717→1. **Backward compatibility:** nova versão deve funcionar com dados antigos
+   718→2. **Progressive rollout:** 5% → 25% → 50% → 100% dos clientes
+   719→3. **Automatic migration:** cliente não precisa fazer nada (sistema migra automaticamente)
+   720→4. **Rollback capability:** se algo quebrar, voltar em < 5min
+   721→5. **Communication:** clientes notificados 30 dias antes, com changelog
+   722→6. **Beta program:** clientes voluntários testam antes do rollout geral
+   723→
+   724→## 11.2 v1.0 → v2.0 Migration
+   725→
+   726→### Breaking Changes
+   727→
+   728→- Auth: troca de NextAuth para solução própria — requer re-login de todos os usuários
+   729→- Schema: tabela `results` particionada — migração online em janelas de baixo tráfego
+   730→- API: versãoamento `/api/v1/` mantido, `/api/v2/` para novos endpoints
+   731→
+   732→### Plano de Migration
+   733→
+   734→```
+   735→T-30 dias: Comunicado aos clientes (email + in-app)
+   736→T-15 dias: Beta program aberto (voluntários)
+   737→T-7 dias:  5% dos clientes migrados (canary)
+   738→T-3 dias:  25% migrados
+   739→T-1 dia:   50% migrados
+   740→T+0:       100% migrados
+   741→T+7 dias:  Encerramento v1.0 (end of life)
+   742→```
+   743→
+   744→### Script de Migration
+   745→
+   746→```typescript
+   747→// scripts/migrate-v1-to-v2.ts
+   748→import { prisma } from '@/lib/prisma';
+   749→
+   750→async function migrateTenant(companyId: number) {
+   751→  console.log(`Migrating company ${companyId}...`);
+   752→  
+   753→  // 1. Backup
+   754→  await backupTenant(companyId);
+   755→  
+   756→  // 2. Migrate auth (force re-login)
+   757→  await prisma.session.deleteMany({ where: { companyId } });
+   758→  await prisma.refreshToken.deleteMany({ where: { companyId } });
+   759→  
+   760→  // 3. Partition results (online)
+   761→  await partitionResultsTable(companyId);
+   762→  
+   763→  // 4. Update settings
+   764→  await prisma.systemSettings.updateMany({
+   765→    where: { companyId },
+   766→    data: { version: '2.0.0' },
+   767→  });
+   768→  
+   769→  console.log(`Company ${companyId} migrated successfully`);
+   770→}
+   771→
+   772→async function main() {
+   773→  const companies = await prisma.company.findMany({ where: { active: true }});
+   774→  for (const company of companies) {
+   775→    try {
+   776→      await migrateTenant(company.id);
+   777→    } catch (err) {
+   778→      console.error(`Failed to migrate ${company.id}:`, err);
+   779→      await rollbackTenant(company.id);
+   780→    }
+   781→  }
+   782→}
+   783→
+   784→main();
+   785→```
+   786→
+   787→## 11.3 v2.0 → v3.0 Migration
+   788→
+   789→### Breaking Changes
+   790→
+   791→- Mobile apps nativos substituem PWA (PWA ainda funciona, mas deprecated)
+   792→- BI requer data warehouse separado (migração de dados históricos)
+   793→- API v1 deprecated (mantida por 12 meses, depois removida)
+   794→
+   795→### Plano
+   796→
+   797→- 6 meses de overlap (v2 e v3 simultâneos)
+   798→- Migração assistida (CSM acompanha cada cliente enterprise)
+   799→- Self-migration para clientes self-service
+   800→
+   801→## 11.4 v3.0 → v4.0 Migration
+   802→
+   803→### Breaking Changes
+   804→
+   805→- Multi-moeda requer configuração por empresa
+   806→- SSO requer setup admin (opcional, mas recomendado)
+   807→- Compliance SOC2 requer aceites de termos
+   808→
+   809→## 11.5 v4.0 → v5.0 Migration
+   810→
+   811→### Breaking Changes
+   812→
+   813→- Expansão vertical: clientes podem optar por vertical específica
+   814→- Analytics Network: opt-in explícito (LGPD)
+   815→- IPO ready: sem breaking change técnico, mas mudanças de governança
+   816→
+   817→---
+   818→
+   819→# Capítulo 12 — Beta Program Structure
+   820→
+   821→## 12.1 Objetivo
+   822→
+   823→Validar features com clientes reais antes do rollout geral, coletar feedback estruturado, identificar bugs em ambiente real.
+   824→
+   825→## 12.2 Estrutura
+   826→
+   827→### Tiers de Beta
+   828→
+   829→| Tier | Descrição | Acesso | Compromisso |
+   830→|------|-----------|--------|-------------|
+   831→| **Alpha** | Interno + 3-5 clientes próximos | Features em desenvolvimento | Feedback semanal |
+   832→| **Closed Beta** | 20-50 clientes voluntários | Feature completa, em staging | Feedback quinzenal |
+   833→| **Open Beta** | Qualquer cliente pode optar | Feature em produção, com flag | Feedback opcional |
+   834→| **GA** (General Availability) | Todos os clientes | Feature estável | Suporte normal |
+   835→
+   836→### Critérios para Promoção de Tier
+   837→
+   838→| Transição | Critérios |
+   839→|-----------|-----------|
+   840→| Alpha → Closed Beta | 0 bugs P0, 90% testes passando, CSAT alpha > 70% |
+   841→| Closed Beta → Open Beta | 0 bugs P0/P1, CSAT > 80%, 20+ clientes testaram |
+   842→| Open Beta → GA | 0 bugs P0/P1/P2, CSAT > 85%, 100+ clientes, 30 dias estável |
+   843→
+   844→## 12.3 Processo de Beta Program
+   845→
+   846→### Recrutamento
+   847→
+   848→1. **Email para base:** "Seja o primeiro a testar X"
+   849→2. **In-app:** banner para clientes elegíveis
+   850→3. **Segmentação:** features específicas para segmentos específicos
+   851→4. **Incentivo:** desconto de 10% por 3 meses para participantes ativos
+   852→
+   853→### Onboarding Beta
+   854→
+   855→```
+   856→1. Cliente aceita termo de beta (riscos, suporte limitado)
+   857→2. Feature flag ativada para a empresa
+   858→3. CSM agenda call de onboarding (30min)
+   859→4. Documentação específica enviada
+   860→5. Canal Slack exclusivo #orion-beta-X criado
+   861→6. Check-in semanal do CSM
+   862→```
+   863→
+   864→### Coleta de Feedback
+   865→
+   866→- **In-app feedback widget:** "Como avalia esta feature?" (1-5 estrelas + comentário)
+   867→- **Survey NPS da feature:** após 30 dias de uso
+   868→- **Entrevistas qualitativas:** 5 clientes por mês, 30min cada
+   869→- **Telemetria:** uso real (queries, ações, fluxos)
+   870→- **Bugs reportados:** via Sentry + Linear
+   871→
+   872→### Decisão de GA
+   873→
+   874→Após 30 dias em Open Beta com:
+   875→- ✅ CSAT > 85%
+   876→- ✅ 0 bugs P0/P1 abertos
+   877→- ✅ 100+ clientes ativos usando
+   878→- ✅ NPS da feature > 50
+   879→
+   880→→ Promover para GA (remover feature flag).
+   881→
+   882→Se não bater metas:
+   883→- ❌ Iterar com base no feedback
+   884→- ❌ Adicionar mais 30 dias de beta
+   885→- ❌ Em último caso, descontinuar feature
+   886→
+   887→## 12.4 Cases de Beta Program
+   888→
+   889→### Beta IA Básico (Q1 2026)
+   890→
+   891→- 15 clientes alpha (3 meses)
+   892→- 30 clientes closed beta (2 meses)
+   893→- 80 clientes open beta (1 mês)
+   894→- Resultado: 4 bugs P1 capturados, 12 melhorias de UX, GA em 6 meses
+   895→
+   896→### Beta Marketplace (Q2 2026)
+   897→
+   898→- 5 plugins oficiais em alpha interno (2 meses)
+   899→- 20 desenvolvedores terceiros convidados (closed beta)
+   900→- 100 empresas open beta (1 mês)
+   901→- Resultado: 3 plugins adicionais criados pela comunidade antes do GA
+   902→
+   903→---
+   904→
+   905→# Capítulo 13 — Customer Feedback Loop
+   906→
+   907→## 13.1 Fontes de Feedback
+   908→
+   909→| Fonte | Frequência | Volume | Tipo |
+   910→|-------|------------|--------|------|
+   911→| NPS survey | Trimestral | ~80% response | Quantitativo |
+   912→| In-app feedback widget | Contínuo | ~5% dos usuários | Quantitativo + qualitativo |
+   913→| Entrevistas com clientes | Mensal | 10 clientes | Qualitativo profundo |
+   914→| Tickets de suporte | Contínuo | ~50/semana | Issues específicas |
+   915→- Customer Success Manager calls | Semanal | 20 clientes top | Estratégico |
+   916→| Sales lost/gained analysis | Mensal | 10 perdas + 10 ganhos | Competitivo |
+   917→- Beta program feedback | Por feature | Variável | Específico |
+   918→| Social media (LinkedIn, Twitter) | Contínuo | Baixo | Marke-aware |
+   919→| Reviews (G2, Capterra) | Contínuo | ~2/mês | Público |
+   920→| Churn interviews | Por churn | 100% dos churns | Crítico |
+   921→
+   922→## 13.2 Processo de Feedback Loop
+   923→
+   924→```
+   925→1. Coleta (múltiplas fontes)
+   926→2. Triagem (PM + CSM + Support lead, semanal)
+   927→3. Categorização (bug, feature request, improvement, complaint)
+   928→4. Priorização (RICE scoring)
+   929→5. Planejamento (sprint planning, quarterly)
+   930→6. Implementação
+   931→7. Comunicação ("você pediu, nós fizemos")
+   932→8. Medição de impacto (uso da feature, NPS delta)
+   933→```
+   934→
+   935→## 13.3 Ferramentas
+   936→
+   937→- **Linear:** bugs e feature requests
+   938→- **Productboard:** product feedback aggregation
+   939→- **Vitally:** customer health + NPS
+   940→- **Slack:** canais `#feedback` e `#feature-requests`
+   941→- **Notion:** entrevistas e notes de calls
+   942→- **Zoom:** gravações de entrevistas (com transcrição)
+   943→
+   944→## 13.4 Comunicação "You Asked, We Built"
+   945→
+   946→Toda feature implementada baseada em feedback deve ser comunicada:
+   947→
+   948→1. **Email para quem pediu:** "Você pediu X em [data], está pronto!"
+   949→2. **Release notes:** destacar "Baseado em feedback de N clientes"
+   950→3. **In-app notification:** banner na primeira vez que abre
+   951→4. **Blog post:** para features maiores
+   952→5. **Social media:** para features de destaque
+   953→
+   954→## 13.5 Métricas de Feedback Loop
+   955→
+   956→| Métrica | Alvo | Como Medir |
+   957→|---------|------|------------|
+   958→| Time to acknowledge feedback | < 48h | Linear |
+   959→| Time to resolve feature request | < 90 dias (média) | Linear |
+   960→| % features vindas de feedback | > 60% | Sprint planning |
+   961→| NPS de feature recém-lançada | > 50 | Survey |
+   962→| CSAT suporte | > 90% | Por ticket |
+   963→| % clientes que sentem "ouvem" | > 70% | Survey anual |
+   964→
+   965→---
+   966→
+   967→# Capítulo 14 — Competitive Monitoring
+   968→
+   969→## 14.1 Competidores Diretos
+   970→
+   971→| Competidor | Mercado | Forças | Fraquezas | Diferencial Orion |
+   972→|------------|---------|--------|-----------|-------------------|
+   973→| Movdesk | Brasil, gestão comercial | Bom produto, base estabelecida | UX datada, sem IA | UX moderna + IA |
+   974→| Salesforce Sales Cloud | Global | Brand, ecossistema | Caro, complexo | Acessível + simples |
+   975→| Pipedrive | Global PMEs | Simples, barato | Pouco customizável | Customizável + LATAM |
+   976→| HubSpot Sales Hub | Global | Marketing integrado | Caro em escala | Pricing justo |
+   977→| RD Station Sales | Brasil | Marketing integrado, brand | Foco marketing não vendas | Foco puro em vendas |
+   978→| Meetime | Brasil | Inside sales bom | Escala limitada | Multi-canal |
+   979→| Agendor | Brasil PMEs | Simples, app mobile bom | Sem IA, sem BI | IA + BI |
+   980→
+   981→## 14.2 Competidores Indiretos
+   982→
+   983→- **ERPs com módulo comercial:** Totvs, SAP B1, Sankhya
+   984→- **Planilhas:** Excel, Google Sheets (fase inicial do cliente)
+   985→- **CRMs genéricos:** Zoho, Insightly
+   986→- **Ferramentas de gamificação:** Gametize, Centrical
+   987→
+   988→## 14.3 Monitoramento Contínuo
+   989→
+   990→### Fontes
+   991→
+   992→| Fonte | Frequência | Insight |
+   993→|-------|------------|---------|
+   994→| Site do competidor | Mensal | Novidades, pricing |
+   995→| Blog / changelog | Semanal | Roadmap inferido |
+   996→| Reviews (G2, Capterra) | Quinzenal | Pontos fortes/fracos |
+   997→- LinkedIn (empleados) | Diário | Contratações, expansão |
+   998→| Customer interviews | Mensal | Por que ganhamos/perdemos |
+   999→| Win/loss analysis | Mensal | Competidores citados |
+  1000→| Google Alerts | Diário | Notícias, anúncios |
+  1001→| App Store / Play Store | Mensal | Reviews de apps mobile |
+  1002→| SEO tools (Ahrefs, SEMrush) | Mensal | Tráfego, keywords |
+  1003→
+  1004→### Processo
+  1005→
+  1006→1. **Coleta quinzenal:** PM responsável atualizaNotion de competitive intel
+  1007→2. **Análise mensal:** time de produto revisa, identifica padrões
+  1008→3. **Reunião trimestral:** leadership review, ajusta roadmap
+  1009→4. **Comunicação:** newsletter interna `#orion-competitive`
+  1010→
+  1011→## 14.4 Framework de Resposta Competitiva
+  1012→
+  1013→Quando competidor lança feature relevante:
+  1014→
+  1015→| Avaliar | Decisão |
+  1016→|---------|---------|
+  1017→| É diferencial competitivo? | Sim → Acelerar no roadmap |
+  1018→| Tabela stakes | Não → Ignorar (não correr atrás) |
+  1019→| Tem impacto em vendas? | Sim → Comunicar para sales (objection handling) |
+  1020→| Pode ser commodity? | Sim → Planejar feature equivalente em 6 meses |
+  1021→
+  1022→## 14.5 Diferenciais Sustentáveis (Moat)
+  1023→
+  1024→1. **Network effects:** marketplace de plugins (mais plugins → mais clientes → mais plugins)
+  1025→2. **Switching costs:** dados históricos, integrações configuradas, treinamento
+  1026→3. **Economies of scale:** custos de IA e infra diminuem por cliente
+  1027→4. **Brand:** Orion como referência em gestão comercial LATAM
+  1028→5. **Patents/IP:** algoritmos de ranking e IA patenteados (quando aplicável)
+  1029→6. **Data:** Analytics Network gera insights exclusivos
+  1030→
+  1031→---
+  1032→
+  1033→# Capítulo 15 — Market Analysis por Ano
+  1034→
+  1035→## 15.1 2025 — Brasil PMEs
+  1036→
+  1037→### Mercado Endereçável (TAM)
+  1038→
+  1039→- 19 milhões de PMEs no Brasil (SEBRAE)
+  1040→- 4 milhões com equipe comercial estruturada (5+ vendedores)
+  1041→- 1,5 milhão com potencial de usar gestão comercial
+  1042→- **TAM:** 1.500.000 empresas × R$ 800/mês = R$ 14.4B/ano
+  1043→
+  1044→### Mercado Atendível (SAM)
+  1045→
+  1046→- PMEs com faturamento R$ 1M-50M/ano
+  1047→- Equipe comercial 5-50 vendedores
+  1048→- Digital mature (usam softwares)
+  1049→- **SAM:** 200.000 empresas × R$ 1.200/mês = R$ 2.88B/ano
+  1050→
+  1051→### Mercado Alvo (SOM) — 5 anos
+  1052→
+  1053→- 30.000 clientes (v5.0)
+  1054→- **SOM:** R$ 288M/ano (10% do SAM)
+  1055→
+  1056→### Tendências 2025
+  1057→
+  1058→- IA generativa mainstream (ChatGPT desde 2023)
+  1059→- LGPD compliance virou prioridade
+  1060→- Mobile-first virou default
+  1061→- Cloud aceito até por setores conservadores
+  1062→- Pix consolidado (integração futura)
+  1063→
+  1064→## 15.2 2026 — Brasil + canais
+  1065→
+  1066→### Expansão
+  1067→
+  1068→- Canais: revendas, consultorias, contadores
+  1069→- Parcerias: SEBRAE, Sebraetec, Apex-Brasil
+  1070→- Segmentos varejo, serviços, indústria inicial
+  1071→
+  1072→### Tendências 2026
+  1073→
+  1074→- IA agents autônomos
+  1075→- Embedded finance
+  1076→- Voice commerce
+  1077→- Realidade aumentada em vendas (nicho)
+  1078→
+  1079→## 15.3 2027 — LATAM inicial (Argentina)
+  1080→
+  1081→### Mercado Argentino
+  1082→
+  1083→- 600k PMEs
+  1084→- Inflação torna pricing complexo (USD)
+  1085→- Cultura próxima ao Brasil
+  1086→- **SAM AR:** 50.000 empresas × USD 100/mês = USD 60M/ano
+  1087→
+  1088→### Tendências 2027
+  1089→
+  1090→- IA multimodal
+  1091→- Edge AI
+  1092→- Web3 em nichos
+  1093→- Regulação IA (UE AI Act influência LATAM)
+  1094→
+  1095→## 15.4 2028 — LATAM completo
+  1096→
+  1097→### Mercados Adicionais
+  1098→
+  1099→- México: 4M PMEs, SAM USD 400M/ano
+  1100→- Chile: 800k PMEs, SAM USD 80M/ano
+  1101→- Colômbia: 1.5M PMEs, SAM USD 150M/ano
+  1102→- Peru: 1M PMEs, SAM USD 80M/ano
+  1103→
+  1104→### Tendências 2028
+  1105→
+  1106→- IA regulada globalmente
+  1107→- Quantum computing em nichos
+  1108→- Sustainability reporting obrigatório
+  1109→
+  1110→## 15.5 2029 — Plataforma consolidada
+  1111→
+  1112→### Posicionamento
+  1113→
+  1114→- Líder em gestão comercial LATAM
+  1115→- Expansão vertical (Saúde, Varejo, Indústria, Serviços)
+  1116→- Ecossistema de marketplace robusto
+  1117→- IPO ready
+  1118→
+  1119→### Tendências 2029
+  1120→
+  1121→- IA generativa virou commodity
+  1122→- Edge computing mainstream
+  1123→- Realidade virtual em vendas (early adopters)
+  1124→- Web4 / Spatial computing
+  1125→
+  1126→---
+  1127→
+  1128→# Capítulo 16 — Hiring Plan por Ano
+  1129→
+  1130→## 16.1 Visão Geral
+  1131→
+  1132→| Ano | Headcount Início | Headcount Fim | Contratações | Churn Estimado |
+  1133→|-----|------------------|---------------|--------------|----------------|
+  1134→| 2025 | 5 | 12 | 7 | 0 |
+  1135→| 2026 | 12 | 22 | 10 | 2 |
+  1136→| 2027 | 22 | 50 | 28 | 5 |
+  1137→| 2028 | 50 | 87 | 37 | 8 |
+  1138→| 2029 | 87 | 210 | 123 | 15 |
+  1139→
+  1140→## 16.2 Plano Detalhado por Ano
+  1141→
+  1142→### 2025 — Time Fundacional
+  1143→
+  1144→| Cargo | Q1 | Q2 | Q3 | Q4 | Total |
+  1145→|-------|----|----|----|----|----|
+  1146→| Tech Lead | 1 | — | — | — | 1 |
+  1147→| Dev Backend Sênior | — | 1 | — | — | 1 |
+  1148→| Dev Frontend Sênior | — | 1 | — | — | 1 |
+  1149→| Dev Full-stack Pleno | — | — | 1 | 1 | 2 |
+  1150→| Designer UX/UI | — | — | 1 | — | 1 |
+  1151→| QA Engineer | — | — | — | 1 | 1 |
+  1152→| DevOps | — | — | — | 1 | 1 |
+  1153→| Product Manager | — | — | 1 | — | 1 |
+  1154→| Customer Success | — | — | — | 1 | 1 |
+  1155→
+  1156→### 2026 — Expansão V2.0
+  1157→
+  1158→| Cargo | Q1 | Q2 | Q3 | Q4 | Total |
+  1159→|-------|----|----|----|----|----|
+  1160→| Engenheiro de IA | 1 | — | — | — | 1 |
+  1161→| Dev Backend Sênior | — | 1 | — | — | 1 |
+  1162→| Dev Frontend Pleno | — | 1 | — | — | 1 |
+  1163→| Dev Mobile | — | — | 1 | — | 1 |
+  1164→| Product Designer | — | 1 | — | — | 1 |
+  1165→| Customer Success | — | 1 | 1 | — | 2 |
+  1166→| Sales Rep | — | — | 1 | 1 | 2 |
+  1167→| Marketing | — | — | — | 1 | 1 |
+  1168→
+  1169→### 2027 — Scale-up V3.0
+  1170→
+  1171→| Cargo | Q1 | Q2 | Q3 | Q4 | Total |
+  1172→|-------|----|----|----|----|----|
+  1173→| Dev Mobile Sênior | 1 | 1 | — | — | 2 |
+  1174→| Dev BI/Data | 1 | 1 | — | — | 2 |
+  1175→| Dev Backend Sênior | — | 1 | 1 | — | 2 |
+  1176→| Data Scientist | 1 | — | — | — | 1 |
+  1177→| DevOps Sênior | — | 1 | — | — | 1 |
+  1178→| Product Manager | — | 1 | — | — | 1 |
+  1179→| Product Designer | — | 1 | 1 | — | 2 |
+  1180→| Customer Success | 1 | 1 | 1 | 1 | 4 |
+  1181→| Sales Rep | 1 | 1 | 1 | 1 | 4 |
+  1182→| Marketing | — | 1 | 1 | — | 2 |
+  1183→| Suporte N1/N2 | — | 1 | 1 | 1 | 3 (revisado para 4) |
+  1184→| Financeiro/Admin | — | — | 1 | 1 | 2 |
+  1185→
+  1186→### 2028 — Internacional V4.0
+  1187→
+  1188→| Cargo | Q1 | Q2 | Q3 | Q4 | Total |
+  1189→|-------|----|----|----|----|----|
+  1190→| Dev Backend Sênior | 1 | 1 | 1 | 1 | 4 |
+  1191→| Dev Frontend Sênior | 1 | 1 | 1 | — | 3 |
+  1192→| Dev Mobile | — | 1 | 1 | — | 2 |
+  1193→| DevOps/SRE | 1 | 1 | — | — | 2 |
+  1194→| Security Engineer | 1 | — | — | — | 1 |
+  1195→| Data Scientist | 1 | 1 | — | — | 2 |
+  1196→| Product Manager | 1 | 1 | — | — | 2 |
+  1197→| Product Designer | 1 | 1 | — | — | 2 |
+  1198→| Customer Success | 2 | 1 | 2 | 1 | 6 |
+  1199→| Sales (internacional) | 1 | 1 | 1 | 1 | 4 |
+  1200→| Marketing (internacional) | 1 | 1 | — | — | 2 |
+  1201→| Suporte (multi-idioma) | 2 | 1 | 2 | 1 | 6 |
+  1202→| Legal/Compliance | 1 | — | — | — | 1 |
+  1203→
+  1204→### 2029 — Plataforma V5.0
+  1205→
+  1206→| Cargo | Total |
+  1207→|-------|----|
+  1208→| Engenharia | 80 (40 backend, 25 frontend, 10 mobile, 5 devops) |
+  1209→| Produto | 20 (10 PMs, 10 designers) |
+  1210→| Data/IA | 15 |
+  1211→| Sales | 30 |
+  1212→| Customer Success | 25 |
+  1213→| Suporte | 15 |
+  1214→| Marketing | 10 |
+  1215→| G&A | 15 |
+  1216→| **Total** | **210** |
+  1217→
+  1218→## 16.3 Estratégia de Contratação
+  1219→
+  1220→### Fontes
+  1221→
+  1222→| Fonte | % esperado | Custo médio |
+  1223→|-------|------------|-------------|
+  1224→| Referral interno | 40% | R$ 5k bounty |
+  1225→| LinkedIn Recruiter | 25% | R$ 8k/seat/mês |
+  1226→| Portais (Gupy, LinkedIn Jobs) | 15% | R$ 500/vaga |
+  1227→| Comunidades (Discord, meetups) | 10% | Tempo |
+  1228→| Headhunter (sênior/especialista) | 5% | 20% salário anual |
+  1229→- Universities (estágios) | 5% | Tempo + baixo salário |
+  1230→
+  1231→### Tempo Médio de Contratação
+  1232→
+  1233→| Cargo | Tempo Médio |
+  1234→|-------|-------------|
+  1235→| Dev Júnior | 30 dias |
+  1236→| Dev Pleno | 45 dias |
+  1237→| Dev Sênior | 60 dias |
+  1238→| Tech Lead / Especialista | 90 dias |
+  1239→| Sales / CS | 30 dias |
+  1240→| G&A | 45 dias |
+  1241→
+  1242→### Critérios de Seleção
+  1243→
+  1244→**Cultura:** Add value, ownership bias, customer obsession, growth mindset, collaboration
+  1245→**Técnico (devs):** código limpo, testes, padrões, systems thinking
+  1246→**Comportamental:** comunicação, resilência, adaptabilidade
+  1247→
+  1248→## 16.4 Onboarding
+  1249→
+  1250→Ver Documento 15 — Capítulo 16 (Onboarding 30-60-90 days).
+  1251→
+  1252→## 16.5 Retenção
+  1253→
+  1254→| Iniciativa | Frequência | Custo |
+  1255→|------------|------------|-------|
+  1256→| Review de carreira | Semestral | Tempo |
+  1257→- Plano de desenvolvimento individual (PDI) | Anual | Tempo |
+  1258→- 1:1 com gestor | Semanal | Tempo |
+  1259→- Feedback 360 | Anual | Tempo |
+  1260→- Treinamentos/cursos | Contínuo | R$ 5k/funcionário/ano |
+  1261→- Conferências | Anual | R$ 10k/funcionário
+  1262→- Hack days | Trimestral | 1 dia
+  1263→- Sábados livres (não trabalhar) | Sempre | — |
+  1264→- Health/Wellness | Contínuo | R$ 2k/ano
+  1265→- Stock options (a partir de 2027) | Anual | Equity pool 10% |
+  1266→- Home office flexível | Sempre | — |
+  1267→- Equipamento premium | Onboarding | R$ 15k/funcionário |
+  1268→
+  1269→**Meta churn voluntário:** < 10% ao ano (excelência: < 5%)
+  1270→
+  1271→---
+  1272→
+  1273→# Capítulo 17 — Budget por Ano
+  1274→
+  1275→## 17.1 Visão Geral
+  1276→
+  1277→| Ano | Receita | Custos | Resultado | Margem |
+  1278→|-----|---------|--------|-----------|--------|
+  1279→| 2025 | R$ 192.000 | R$ 2.006.400 | -R$ 1.814.400 | -944% |
+  1280→| 2026 | R$ 3.990.000 | R$ 3.816.000 | +R$ 174.000 | +4% |
+  1281→| 2027 | R$ 15.750.000 | R$ 9.056.000 | +R$ 6.694.000 | +43% |
+  1282→| 2028 | R$ 65.250.000 | R$ 18.236.000 | +R$ 47.014.000 | +72% |
+  1283→| 2029 | R$ 175.500.000 | R$ 45.000.000 | +R$ 130.500.000 | +74% |
+  1284→
+  1285→## 17.2 Breakdown 2025 (Burn)
+  1286→
+  1287→| Categoria | Valor Anual | % |
+  1288→|-----------|-------------|---|
+  1289→| Pessoal (12) | R$ 1.824.000 | 91% |
+  1290→| Infraestrutura | R$ 182.400 | 9% |
+  1291→| **Total** | **R$ 2.006.400** | **100%** |
+  1292→
+  1293→### Capex (One-time)
+  1294→
+  1295→| Item | Valor |
+  1296→|------|-------|
+  1297→| Setup infraestrutura | R$ 50.000 |
+  1298→| Equipamentos (12 pessoas) | R$ 180.000 |
+  1299→| Branding (logo, site) | R$ 50.000 |
+  1300→| Marketing inicial | R$ 100.000 |
+  1301→| Reserva de contingência | R$ 200.000 |
+  1302→| **Total Capex** | **R$ 580.000** |
+  1303→
+  1304→### Total 2025: R$ 2.586.400
+  1305→
+  1306→### Funding Necessário
+  1307→
+  1308→- Seed: R$ 3.000.000 (out 2024)
+  1309→- Runway: 18 meses (até Q2 2026)
+  1310→- Próxima rodada: Series A em Q1 2026
+  1311→
+  1312→## 17.3 Breakdown 2026 (Break-even)
+  1313→
+  1314→| Categoria | Valor Anual | % |
+  1315→|-----------|-------------|---|
+  1316→| Pessoal (22) | R$ 3.096.000 | 81% |
+  1317→| Infraestrutura | R$ 720.000 | 19% |
+  1318→| **Total** | **R$ 3.816.000** | **100%** |
+  1319→
+  1320→### Capex 2026
+  1321→
+  1322→| Item | Valor |
+  1323→|------|-------|
+  1324→| Equipamentos (10 novos) | R$ 150.000 |
+  1325→- Marketing campanhas | R$ 300.000 |
+  1326→- Eventos (feira, patrocínio) | R$ 100.000 |
+  1327→- **Total Capex** | **R$ 550.000** |
+  1328→
+  1329→### Lucro 2026: +R$ 174.000 (break-even em Q3)
+  1330→
+  1331→## 17.4 Breakdown 2027 (Scale-up)
+  1332→
+  1333→| Categoria | Valor Anual | % |
+  1334→|-----------|-------------|---|
+  1335→| Pessoal (50) | R$ 6.276.000 | 69% |
+  1336→| Infraestrutura | R$ 2.780.000 | 31% |
+  1337→| **Total** | **R$ 9.056.000** | **100%** |
+  1338→
+  1339→### Capex 2027
+  1340→
+  1341→| Item | Valor |
+  1342→|------|-------|
+  1343→- Equipamentos (28 novos) | R$ 420.000 |
+  1344→- Marketing | R$ 600.000 |
+  1345→- Eventos | R$ 200.000 |
+  1346→- Filial Buenos Aires | R$ 150.000 |
+  1347→- **Total Capex** | **R$ 1.370.000** |
+  1348→
+  1349→### Lucro 2027: +R$ 6.694.000 (43% margem)
+  1350→
+  1351→## 17.5 Breakdown 2028 (Internacional)
+  1352→
+  1353→| Categoria | Valor Anual | % |
+  1354→|-----------|-------------|---|
+  1355→| Pessoal (87) | R$ 11.436.000 | 63% |
+  1356→| Infraestrutura | R$ 6.800.000 | 37% |
+  1357→| **Total** | **R$ 18.236.000** | **100%** |
+  1358→
+  1359→### Capex 2028
+  1360→
+  1361→| Item | Valor |
+  1362→|------|-------|
+  1363→- Equipamentos (37 novos) | R$ 555.000 |
+  1364→- Marketing internacional | R$ 1.500.000 |
+  1365→- Filiais (MX, CL, CO, PE) | R$ 800.000 |
+  1366→- Compliance (SOC2, ISO) | R$ 300.000 |
+  1367→- **Total Capex** | **R$ 3.155.000** |
+  1368→
+  1369→### Lucro 2028: +R$ 47.014.000 (72% margem)
+  1370→
+  1371→## 17.6 Breakdown 2029 (IPO Ready)
+  1372→
+  1373→| Categoria | Valor Anual | % |
+  1374→|-----------|-------------|---|
+  1375→| Pessoal (210) | R$ 30.000.000 | 67% |
+  1376→| Infraestrutura | R$ 15.000.000 | 33% |
+  1377→| **Total** | **R$ 45.000.000** | **100%** |
+  1378→
+  1379→### Capex 2029
+  1380→
+  1381→| Item | Valor |
+  1382→|------|-------|
+  1383→- Equipamentos | R$ 1.000.000 |
+  1384→- Marketing | R$ 3.000.000 |
+  1385→- Compliance IPO | R$ 2.000.000 |
+  1386→- Aquisições | R$ 5.000.000 |
+  1387→- **Total Capex** | **R$ 11.000.000** |
+  1388→
+  1389→### Lucro 2029: +R$ 130.500.000 (74% margem)
+  1390→
+  1391→## 17.7 Plano de Funding
+  1392→
+  1393→| Rodada | Data | Valor | Valuation | Uso |
+  1394→|--------|------|-------|-----------|-----|
+  1395→| Seed | Out 2024 | R$ 3M | R$ 15M post | MVP + primeiros clientes |
+  1396→| Series A | Mar 2026 | R$ 15M | R$ 60M post | Expansão v2.0, IA, marketplace |
+  1397→| Series B | Set 2027 | R$ 50M | R$ 250M post | Internacional, BI, mobile nativo |
+  1398→| Series C | Mar 2029 | R$ 150M | R$ 800M post | IPO prep, aquisições |
+  1399→| IPO | 2030 | R$ 500M+ | R$ 2B+ | Liquidez, expansão global |
+  1400→
+  1401→## 17.8 Unit Economics
+  1402→
+  1403→### CAC (Customer Acquisition Cost)
+  1404→
+  1405→| Ano | CAC | Payback (meses) |
+  1406→|-----|-----|-----------------|
+  1407→| 2025 | R$ 5.000 | 8 |
+  1408→| 2026 | R$ 3.500 | 4 |
+  1409→| 2027 | R$ 2.500 | 2 |
+  1410→| 2028 | R$ 2.000 | 1.5 |
+  1411→| 2029 | R$ 1.800 | 1.2 |
+  1412→
+  1413→### LTV (Lifetime Value)
+  1414→
+  1415→| Ano | LTV | LTV/CAC |
+  1416→|-----|-----|---------|
+  1417→| 2025 | R$ 15.000 | 3× |
+  1418→| 2026 | R$ 25.000 | 7× |
+  1419→| 2027 | R$ 40.000 | 16× |
+  1420→| 2028 | R$ 60.000 | 30× |
+  1421→| 2029 | R$ 80.000 | 44× |
+  1422→
+  1423→### ARPU (Average Revenue Per User)
+  1424→
+  1425→| Ano | ARPU mensal |
+  1426→|-----|-------------|
+  1427→| 2025 | R$ 800 |
+  1428→| 2026 | R$ 500 |
+  1429→| 2027 | R$ 500 |
+  1430→| 2028 | R$ 530 |
+  1431→| 2029 | R$ 665 |
+  1432→
+  1433→(ARPU diminui em 2026-2027 porque aumenta % de PMEs menores; cresce em 2028-2029 por upsell de IA/marketplace)
+  1434→
+  1435→---
+  1436→
+  1437→# Capítulo 18 — Risk Register Detalhado
+  1438→
+  1439→## 18.1 Categorias de Risco
+  1440→
+  1441→| Categoria | Riscos Identificados |
+  1442→|-----------|---------------------|
+  1443→| Produto | Bugs P0, performance, UX ruim |
+  1444→| Técnico | Tech debt, scaling, security breach |
+  1445→| Mercado | Competidor, mudança regulatória, desaceleração |
+  1446→| Operacional | Churn de talentos, falha de vendor, processo ineficiente |
+  1447→| Financeiro | Burn alto, receita abaixo do esperado, funding não fecha |
+  1448→| Compliance | LGPD, ISO, SOC2, IPO |
+  1449→| Estratégico | Pivot errado, M&A falha, expansão malsucedida |
+  1450→
+  1451→## 18.2 Risk Register
+  1452→
+  1453→| ID | Risco | Categoria | Probabilidade | Impacto | Score | Mitigação | Owner | Status |
+  1454→|----|-------|-----------|---------------|---------|-------|-----------|-------|--------|
+  1455→| R-001 | Concorrente lança similar mais barato | Mercado | Alta | Médio | 12 | Diferenciação via IA + marketplace; lock-in via ecossistema | CEO | Monitorando |
+  1456→| R-002 | Custo de IA explode (OpenAI) | Técnico | Média | Alto | 12 | Cache agressivo, fallback para GPT-3.5, modelos open-source (Llama), próprio modelo em 2029 | CTO | Ativo |
+  1457→| R-003 | LGPD multa | Compliance | Baixa | Alto | 8 | Compliance desde v1.0, DPO dedicado, auditoria anual | Legal | Ativo |
+  1458→| R-004 | Key dev sai (key person risk) | Operacional | Média | Alto | 12 | Documentação rigorosa, pareamento, salary review competitivo, stock options | CTO | Ativo |
+  1459→| R-005 | Cloud provider outage (AWS) | Técnico | Baixa | Alto | 8 | Multi-region, backup em provedor diferente (GCP em 2029), DR testado | DevOps | Ativo |
+  1460→| R-006 | Data breach / security incident | Técnico | Baixa | Crítico | 12 | WAF, pentest anual, bug bounty, encryption at rest, MFA obrigatório | Security | Ativo |
+  1461→| R-007 | Funding não fecha (Series A) | Financeiro | Média | Crítico | 16 | Pipeline de 5+ VCs, runway estendido até 18 meses, break-even sem Series A (v2.0 com receita menor) | CEO | Ativo |
+  1462→| R-008 | Churn explode (>5%) | Mercado | Baixa | Crítico | 10 | NPS quarterly, CS proactive, churn interviews, fix issues rapidamente | CS | Monitorando |
+  1463→| R-009 | Performance degrada com escala | Técnico | Média | Médio | 9 | Performance testing em CI, capacity planning, scalability tests mensais | CTO | Ativo |
+  1464→| R-010 | Bug P0 em produção | Produto | Média | Alto | 12 | 2 approvals, testes automatizados, canary deploy, rollback em < 5min | CTO | Ativo |
+  1465→| R-011 | Beta program não atrai voluntários | Produto | Baixa | Médio | 4 | Incentivos (desconto), CS indica clientes, comunicação clara | PM | Monitorando |
+  1466→| R-012 | Expansão LATAM falha (cultura/produto) | Estratégico | Média | Alto | 12 | PM local contratado, parcerias de distribuição, adaptação cultural | CEO | Planejado |
+  1467→| R-013 | Compliance SOC2 demora | Compliance | Média | Médio | 9 | Iniciar em 2027, consultoria especializada, automation | Legal | Planejado |
+  1468→| R-014 | Marketplace não atrai devs | Mercado | Média | Alto | 12 | 5 plugins oficiais como prova de valor, hackathon, revenue share atrativo (70/30) | PM | Planejado |
+  1469→| R-015 | IA gera respostas erradas/alucinação | Produto | Média | Médio | 9 | RAG com dados estruturados, prompt engineering, human-in-the-loop para ações críticas | PM IA | Ativo |
+  1470→| R-016 | Refactor gigante quebra produção | Técnico | Baixa | Alto | 8 | Strangler fig pattern, feature flags, canary deploy, testes antes/depois | Tech Lead | Ativo |
+  1471→| R-017 | Vendedor não adapta ao produto | Mercado | Média | Médio | 9 | Treinamento, scripts de objeção, demo personalizada | Sales | Ativo |
+  1472→| R-018 | Concorrente adquire competidor | Mercado | Baixa | Alto | 8 | Diferenciação contínua, lock-in via ecossistema, M&A próprio | CEO | Monitorando |
+  1473→| R-019 | Custo cloud explode com escala | Financeiro | Média | Médio | 9 | FinOps, reserved instances, multi-cloud, otimização contínua | DevOps | Ativo |
+  1474→| R-020 | Funcionário descontente / cultura tóxica | Operacional | Baixa | Alto | 8 | Cultura forte, eNPS quarterly, 1:1 semanais, action plans | HR | Ativo |
+  1475→| R-021 | Cliente enterprise pede feature que conflita com produto | Produto | Média | Médio | 9 | Product council, feature requests priorizadas com RICE, custom development pago | PM | Ativo |
+  1476→| R-022 | API pública tem breaking change | Técnico | Baixa | Alto | 8 | Versionamento (/v1/, /v2/), deprecation policy 12 meses, communication | DevRel | Ativo |
+  1477→| R-023 | PWA deprecated por browsers | Técnico | Baixa | Médio | 4 | Apps nativos (v3.0) como alternativa, monitorar W3C | CTO | Monitorando |
+  1478→| R-024 | Perda de cliente enterprise (10%+ MRR) | Mercado | Baixa | Crítico | 10 | QBRs, CSM dedicado, health score, escalonamento | CS | Ativo |
+  1479→| R-025 | Inflação explode custos no Brasil | Financeiro | Média | Médio | 9 | Reajuste anual, contratos em USD para enterprise, hedge | CFO | Ativo |
+  1480→
+  1481→## 18.3 Top 5 Riscos Críticos (Score ≥ 12)
+  1482→
+  1483→### R-007 — Funding não fecha (Series A)
+  1484→
+  1485→- **Impacto:** Crítico (company killer)
+  1486→- **Mitigação ativa:**
+  1487→  1. Pipeline de 5+ VCs desde Q4 2025
+  1488→  2. Manter runway de 18+ meses sempre
+  1489→  3. Plano break-even sem Series A (cortar gastos em 30%, focar em lucratividade vs crescimento)
+  1490→  4. Bridge loan de R$ 5M disponível (investidores atuais)
+  1491→- **Owner:** CEO
+  1492→- **Review:** Mensal
+  1493→
+  1494→### R-002 — Custo de IA explode
+  1495→
+  1496→- **Impacto:** Alto (margem comprimida, feature degradada)
+  1497→- **Mitigação ativa:**
+  1498→  1. Cache de respostas em Redis (hit rate alvo: 60%)
+  1499→  2. Fallback para GPT-3.5-turbo quando custo > threshold
+  1500→  3. Avaliação de Llama 3.1 / Mistral self-hosted (Q3 2026)
+  1501→  4. Budget por empresa (limite duro mensal)
+  1502→  5. Self-hosted LLM em 2029 (reduz custo em 80%)
+  1503→- **Owner:** CTO
+  1504→- **Review:** Quinzenal
+  1505→
+  1506→### R-004 — Key dev sai
+  1507→
+  1508→- **Mitigação ativa:**
+  1509→  1. Stock options vesting 4 anos (cliff 1 ano)
+  1510→  2. Salário acima de mercado (P75)
+  1511→  3. Documentação rigorosa (ADRs, este Developer Guide)
+  1512→  4. Pair programming espalha conhecimento
+  1513→  5. Plano de carreira claro
+  1514→  6. 1:1 semanais, eNPS quarterly
+  1515→- **Owner:** CTO + HR
+  1516→- **Review:** Mensal
+  1517→
+  1518→### R-006 — Data breach
+  1519→
+  1520→- **Mitigação ativa:**
+  1521→  1. Pentest anual (terceirizado)
+  1522→  2. Bug bounty program (HackerOne)
+  1523→  3. WAF (Cloudflare) + DDoS protection
+  1524→  4. Encryption at rest (AES-256) e in transit (TLS 1.3)
+  1525→  5. MFA obrigatório para todos
+  1526→  6. Least privilege access
+  1527→  7. Audit logs imutáveis
+  1528→  8. Incident response plan testado trimestralmente
+  1529→- **Owner:** Security Lead
+  1530→- **Review:** Contínuo
+  1531→
+  1532→### R-010 — Bug P0 em produção
+  1533→
+  1534→- **Mitigação ativa:**
+  1535→  1. 2 approvals obrigatórios em todo PR
+  1536→  2. Cobertura de testes > 80% em módulos críticos
+  1537→  3. Canary deploy (5% → 25% → 50% → 100%)
+  1538→  4. Feature flags para desligar instantaneamente
+  1539→  5. Rollback em < 5min
+  1540→  6. On-call rotation 24/7
+  1541→  7. Post-mortem obrigatório (blameless)
+  1542→- **Owner:** CTO
+  1543→- **Review:** Por incidente
+  1544→
+  1545→## 18.4 Processo de Gestão de Riscos
+  1546→
+  1547→1. **Identificação:** qualquer funcionário pode adicionar risco ao register (Linear)
+  1548→2. **Triagem:** CTO + COO revisam quinzenalmente novos riscos
+  1549→3. **Avaliação:** probabilidade × impacto = score (1-25)
+  1550→4. **Mitigação:** todo risco score ≥ 9 tem plano de mitigação documentado
+  1551→5. **Monitoramento:** revisão mensal de todos os riscos ativos
+  1552→6. **Comunicação:** top 10 riscos compartilhados em board meeting trimestral
+  1553→7. **Encerramento:** risco pode ser fechado quando mitigação implementada OU probabilidade diminui
+  1554→
+  1555→---
+  1556→
+  1557→# Capítulo 19 — Decision Framework
+  1558→
+  1559→## 19.1 RICE (Reach, Impact, Confidence, Effort)
+  1560→
+  1561→Toda feature candidata é avaliada:
+  1562→
+  1563→- **R**each: quantos usuários impacta (por trimestre)
+  1564→- **I**mpact: magnitude do impacto (3=muito, 2=médio, 1=baixo, 0.5=mínimo)
+  1565→- **C**onfidence: confiança na estimativa (100%, 80%, 50%)
+  1566→- **E**ffort: meses-pessoa necessários
+  1567→
+  1568→**Score = (R × I × C) / E**
+  1569→
+  1570→### Exemplo Prático
+  1571→
+  1572→| Feature | Reach | Impact | Confidence | Effort | Score |
+  1573→|---------|-------|--------|------------|--------|-------|
+  1574→| IA sugerir metas | 1000 | 3 | 80% | 2 | 1200 |
+  1575→| App nativo iOS | 500 | 3 | 80% | 4 | 300 |
+  1576→| Dark mode | 5000 | 1 | 100% | 0.5 | 1000 |
+  1577→| Multi-moeda | 200 | 2 | 80% | 1.5 | 213 |
+  1578→| BI cubos OLAP | 300 | 3 | 50% | 6 | 75 |
+  1579→
+  1580→Priorizar por score descendente.
+  1581→
+  1582→## 19.2 MoSCoW (Must, Should, Could, Won't)
+  1583→
+  1584→Para cada release:
+  1585→
+  1586→- **Must:** obrigatório, sem isto não lança
+  1587→- **Should:** importante, mas pode esperar uma release
+  1588→- **Could:** nice to have, se sobrar tempo
+  1589→- **Won't:** explicitamente fora do escopo desta release
+  1590→
+  1591→### Exemplo v1.0
+  1592→
+  1593→- **Must:** Auth, Empresas, Usuários, Indicadores, Metas, Resultados, Ranking, Dashboard, Campanhas, Auditoria, Licenciamento
+  1594→- **Should:** Backup, Atualizações, PWA, Painel admin
+  1595→- **Could:** Tema customizado por empresa, multi-idioma parcial
+  1596→- **Won't:** IA, Marketplace, Apps nativos, BI
+  1597→
+  1598→## 19.3 Kano Model
+  1599→
+  1600→Classifica features por tipo de necessidade:
+  1601→
+  1602→| Tipo | Descrição | Exemplo |
+  1603→|------|-----------|---------|
+  1604→| **Must-be** (básicas) | Ausência causa insatisfação; presença não causa satisfação | Login, CRUD básico, segurança |
+  1605→| **One-dimensional** (performance) | Mais é melhor | Velocidade, número de integrações |
+  1606→| **Attractive** (excitement) | Surpreende; ausência não frustra | IA insights, ranking em tempo real |
+  1607→| **Indifferent** | Não importa | Features que ninguém usa |
+  1608→| **Reverse** | Mais é pior | Anúncios no app |
+  1609→
+  1610→### Mapeamento Orion
+  1611→
+  1612→| Feature | Tipo Kano |
+  1613→|---------|-----------|
+  1614→| Login | Must-be |
+  1615→| Multi-tenant | Must-be |
+  1616→| Auditoria | Must-be |
+  1617→| Velocidade API | One-dimensional |
+  1618→| Número de integrações | One-dimensional |
+  1619→| IA sugerir metas | Attractive |
+  1620→| Gamificação | Attractive |
+  1621→| Analytics Network | Attractive |
+  1622→| Anúncios | Reverse (não faremos) |
+  1623→
+  1624→### Estratégia
+  1625→
+  1626→- **Must-be:** sempre ter, sem nunca falhar
+  1627→- **One-dimensional:** investir continuamente para melhorar
+  1628→- **Attractive:** 1-2 por release, para encantar
+  1629→- **Indifferent:** cortar do roadmap
+  1630→- **Reverse:** nunca fazer
+  1631→
+  1632→## 19.4 Processo de Decisão Combinado
+  1633→
+  1634→```
+  1635→1. Brainstorm features (qualquer um pode propor)
+  1636→2. Score RICE para cada uma
+  1637→3. Categorizar MoSCoW baseado em estratégia e timing
+  1638→4. Classificar Kano para balancear (não só Must-be)
+  1639→5. Mix final: 60% Must/Should (RICE alto) + 30% Could (Kano Attractive) + 10% Won't explícito
+  1640→6. Validate com 5 clientes (entrevistas)
+  1641→7. Ajustar com base no feedback
+  1642→8. Planejar nas sprints
+  1643→```
+  1644→
+  1645→## 19.5 Critérios de Go/No-Go
+  1646→
+  1647→Antes de iniciar uma feature:
+  1648→
+  1649→| Critério | Pergunta | Required |
+  1650→|----------|----------|----------|
+  1651→| Estratégia | Está alinhada com visão 5 anos? | Sim |
+  1652→| Demanda | Tem 5+ clientes pedindo? | Sim |
+  1653→| Viabilidade técnica | Sabe como fazer? | Sim |
+  1654→| Recursos | Tem devs disponíveis? | Sim |
+  1655→| ROI | LTV/CAC > 3× ou churn reduz? | Sim |
+  1656→| Risco | Pode quebrar algo crítico? | Não |
+  1657→| Compliance | Atravessa LGPD? | Não |
+  1658→- Suporte | Consegue treinar CS/suporte? | Sim |
+  1659→| Manutenção | Consegue manter pós-launch? | Sim |
+  1660→| Documentação | Consegue documentar? | Sim |
+  1661→
+  1662→Se todos "Sim/Não": **GO**. Qualquer "Não": **No-Go** ou **Defer**.
+  1663→
+  1664→---
+  1665→
+  1666→# Capítulo 20 — Processo de Planejamento
+  1667→
+  1668→## 20.1 Cadência
+  1669→
+  1670→- **Planejamento trimestral:** define escopo do próximo quarter (1 dia, todo time)
+  1671→- **Sprint bisemanal:** execução (kickoff + planning)
+  1672→- **Review mensal:** ajustes baseados em métricas (2h, leadership)
+  1673→- **Retrospectiva bisemanal:** melhoria contínua (1h, squad)
+  1674→- **All-hands mensal:** alinhamento geral (1h, empresa)
+  1675→- **Board meeting trimestral:** investidores (2h, board)
+  1676→
+  1677→## 20.2 Inputs para Roadmap
+  1678→
+  1679→- Feedback de clientes (NPS, entrevistas, suporte)
+  1680→- Métricas de uso (telemetria)
+  1681→- Análise competitiva
+  1682→- Visão estratégica da liderança
+  1683→- Tendências de mercado
+  1684→- Tech debt prioritário
+  1685→- Capacidade da equipe
+  1686→
+  1687→## 20.3 Output Esperado por Trimestre
+  1688→
+  1689→1. **OKRs do trimestre** (3-5 objetivos, 2-4 KRs cada)
+  1690→2. **Roadmap detalhado** (features por sprint)
+  1691→3. **Plano de capacity** (devs × sprints)
+  1692→4. **Plano de contratação** (se necessário)
+  1693→5. **Plano de budget** (ajustes se necessário)
+  1694→6. **Riscos atualizados** (risk register review)
+  1695→
+  1696→---
+  1697→
+  1698→# Capítulo 21 — Quarterly OKRs
+  1699→
+  1700→## 21.1 Q4 2025 (Lançamento v1.0)
+  1701→
+  1702→### Objetivo 1: Lançar v1.0 com qualidade excepcional
+  1703→
+  1704→- KR1: 100 clientes pagantes até 31/12
+  1705→- KR2: NPS > 40
+  1706→- KR3: 0 bugs P0 em produção
+  1707→- KR4: Cobertura de testes > 70%
+  1708→
+  1709→### Objetivo 2: Estabelecer operações de cliente
+  1710→
+  1711→- KR1: Tempo médio de implantação < 2 dias
+  1712→- KR2: CSAT suporte > 90%
+  1713→- KR3: 10 runbooks de incidente documentados
+  1714→- KR4: Onboarding automatizado (wizard)
+  1715→
+  1716→### Objetivo 3: Preparar v2.0
+  1717→
+  1718→- KR1: Tech debt Alta severidade fechado (TD-001, TD-002, TD-004)
+  1719→- KR2: Protótipo IA funcional
+  1720→- KR3: 5 parceiros implementadores treinados
+  1721→- KR4: Pipeline Series A com 5+ VCs
+  1722→
+  1723→## 21.2 Q1 2026 (IA + Marketplace Prep)
+  1724→
+  1725→### Objetivo 1: IA Básico em GA
+  1726→
+  1727→- KR1: 100k queries IA/mês
+  1728→- KR2: CSAT IA > 75%
+  1729→- KR3: Custo por query < R$ 0,15
+  1730→- KR4: 60% das empresas ativas usam IA
+  1731→
+  1732→### Objetivo 2: Marketplace Beta
+  1733→
+  1734→- KR1: API pública documentada (OpenAPI)
+  1735→- KR2: 3 SDKs (JS, Python, PHP)
+  1736→- KR3: 5 plugins oficiais em produção
+  1737→- KR4: 20 devs externos no beta program
+  1738→
+  1739→### Objetivo 3: Série A fechada
+  1740→
+  1741→- KR1: Term sheet assinado
+  1742→- KR2: Due diligence completa
+  1743→- KR3: R$ 15M captados
+  1744→- KR4: Runway estendido para 24 meses
+  1745→
+  1746→## 21.3 Q2 2026 (Marketplace GA + Scale)
+  1747→
+  1748→### Objetivo 1: Marketplace GA
+  1749→
+  1750→- KR1: 20+ plugins publicados
+  1751→- KR2: 30% das empresas instalam ao menos 1 plugin
+  1752→- KR3: Revenue share operacional
+  1753→- KR4: 100+ devs ativos
+  1754→
+  1755→### Objetivo 2: Scale comercial
+  1756→
+  1757→- KR1: 400 clientes ativos
+  1758→- KR2: MRR R$ 320.000
+  1759→- KR3: CAC < R$ 3.500
+  1760→- KR4: LTV/CAC > 7×
+  1761→
+  1762→### Objetivo 3: Performance
+  1763→
+  1764→- KR1: p95 API < 300ms
+  1765→- KR2: Uptime > 99.9%
+  1766→- KR3: 0 incidentes P0
+  1767→- KR4: Cobertura de testes > 80%
+  1768→
+  1769→## 21.4 Padrão de OKR por Quarter
+  1770→
+  1771→Cada quarter tem:
+  1772→
+  1773→- **3 objetivos** (máximo 5)
+  1774→- **3-4 KRs por objetivo** (máximo 5)
+  1775→- **1 owner por objetivo** (liderança)
+  1776→- **1 owner por KR** (executor)
+  1777→- **Check-in semanal** (15min, time de owners)
+  1778→- **Review no fim do quarter** (score 0.0-1.0)
+  1779→
+  1780→### Score de KR
+  1781→
+  1782→- 0.0 — Não alcançado (0% do alvo)
+  1783→- 0.3 — Parcialmente (50% do alvo)
+  1784→- 0.7 — Quase (70-90%)
+  1785→- 1.0 — Alcançado (100%)
+  1786→- 1.0+ — Excedeu (>100%)
+  1787→
+  1788→**Meta average:** 0.7 (70%). Se sempre 1.0, é porque objetivos foram conservadores demais.
+  1789→
+  1790→---
+  1791→
+  1792→# Capítulo 22 — Comunicação do Roadmap
+  1793→
+  1794→## 22.1 Públicos
+  1795→
+  1796→| Público | Nível de Detalhe | Canal | Frequência |
+  1797→|---------|------------------|-------|------------|
+  1798→| Clientes enterprise | Roadmap completo (12 meses) | Reuniões QBR | Trimestral |
+  1799→| Clientes self-service | Próximas 3 features | Email mensal + in-app | Mensal |
+  1800→| Investidores | Roadmap completo + financeiro | Board meetings | Trimestral |
+  1801→| Time interno | Roadmap completo | All-hands + Notion | Mensal |
+  1802→| Público geral | High-level | Blog posts | Trimestral |
+  1803→| Parceiros | Roadmap + integrações | Partner portal | Trimestral |
+  1804→| Imprensa | Releases principais | Press releases | Por release |
+  1805→
+  1806→## 22.2 Disclaimer Padrão
+  1807→
+  1808→> "Este roadmap apresenta nossa visão atual e está sujeito a mudanças baseadas em feedback de clientes, evolução do mercado e capacidade da equipe. Datas e features específicas não constituem compromisso formal."
+  1809→
+  1810→## 22.3 Templates de Comunicação
+  1811→
+  1812→### Email Mensal para Clientes Self-Service
+  1813→
+  1814→```markdown
+  1815→Assunto: Novidades Orion — [Mês/Ano]
+  1816→
+  1817→Olá, [Nome]!
+  1818→
+  1819→Novidades deste mês no Orion:
+  1820→
+  1821→🚀 Lançado: [Feature 1]
+  1822→- Descrição curta
+  1823→- Como usar
+  1824→
+  1825→🔧 Melhorias: [Feature 2, 3]
+  1826→- Resumo
+  1827→
+  1828→📅 Em breve (próximos 30 dias):
+  1829→- [Feature 4]
+  1830→- [Feature 5]
+  1831→
+  1832→Quer sugerir uma feature? Responda este email!
+  1833→
+  1834→— Time Orion
+  1835→```
+  1836→
+  1837→### QBR (Quarterly Business Review) para Enterprise
+  1838→
+  1839→```markdown
+  1840→## QBR — [Cliente] — [Trimestre]
+  1841→
+  1842→### 1. Sumário Executivo (5min)
+  1843→- ROI entregue
+  1844→- Saúde da conta
+  1845→- Próximos passos
+  1846→
+  1847→### 2. Uso e Adoção (10min)
+  1848→- MAU
+  1849→- Features mais usadas
+  1850→- Features subutilizadas
+  1851→
+  1852→### 3. Resultados de Negócio (10min)
+  1853→- Metas batidas
+  1854→- Ranking melhorou?
+  1855→- Campanhas executadas
+  1856→
+  1857→### 4. Roadmap Exclusivo (15min)
+  1858→- Próximas 3 features relevantes
+  1859→- Features pedidas pelo cliente
+  1860→- Beta programs disponíveis
+  1861→
+  1862→### 5. Suporte e Issues (10min)
+  1863→- Tickets abertos/fechados
+  1864→- Bugs P0/P1
+  1865→- SLA cumprido
+  1866→
+  1867→### 6. Próximos Passos (10min)
+  1868→- Action items
+  1869→- Próximo QBR
+  1870→```
+  1871→
+  1872→### Blog Post Trimestral
+  1873→
+  1874→```markdown
+  1875→# Orion Q[X] [Year]: O que lançamos e o que vem aí
+  1876→
+  1877→## Resumo do Trimestre
+  1878→- [X] clientes ativos
+  1879→- [Y] MRR
+  1880→- [Z] features lançadas
+  1881→
+  1882→## Destaques do Trimestre
+  1883→1. [Feature 1] — descrição + impacto
+  1884→2. [Feature 2] — descrição + impacto
+  1885→
+  1886→## O Que Vem a Seguir (próximos 3 meses)
+  1887→- [Feature 3]
+  1888→- [Feature 4]
+  1889→
+  1890→## Voz do Cliente
+  1891→> "Quote de cliente sobre feature lançada"
+  1892→> — [Nome], [Cargo] na [Empresa]
+  1893→
+  1894→## Métricas de Saúde
+  1895→- Uptime: 99.X%
+  1896→- p95 latency: Xms
+  1897→- NPS: X
+  1898→
+  1899→— Time Orion
+  1900→```
+  1901→
+  1902→---
+  1903→
+  1904→# Capítulo 23 — Métricas de Sucesso do Roadmap
+  1905→
+  1906→## 23.1 Métricas de Produto
+  1907→
+  1908→| Métrica | 2025 | 2026 | 2027 | 2028 | 2029 |
+  1909→|---------|------|------|------|------|------|
+  1910→| Clientes ativos | 100 | 1.000 | 5.000 | 15.000 | 30.000 |
+  1911→| MRR | R$ 80k | R$ 500k | R$ 2.5M | R$ 8M | R$ 20M |
+  1912→| NPS | 40 | 50 | 55 | 55 | 60 |
+  1913→| Churn mensal | 3% | 2% | 1.5% | 1.5% | 1% |
+  1914→| DAU/MAU | 35% | 40% | 45% | 45% | 50% |
+  1915→
+  1916→## 23.2 Métricas Técnicas
+  1917→
+  1918→| Métrica | 2025 | 2026 | 2027 | 2028 | 2029 |
+  1919→|---------|------|------|------|------|------|
+  1920→| Uptime | 99.5% | 99.9% | 99.95% | 99.99% | 99.99% |
+  1921→| p95 API | 500ms | 300ms | 200ms | 150ms | 100ms |
+  1922→| Cobertura testes | 70% | 80% | 85% | 85% | 90% |
+  1923→| Bugs P0/ano | < 5 | < 3 | < 2 | < 1 | 0 |
+  1924→| Deploy frequency | Semanal | Diário | Diário | Multi/dia | Multi/dia |
+  1925→| MTTR | 60min | 30min | 15min | 10min | 5min |
+  1926→
+  1927→## 23.3 Métricas Financeiras
+  1928→
+  1929→| Métrica | 2025 | 2026 | 2027 | 2028 | 2029 |
+  1930→|---------|------|------|------|------|------|
+  1931→| Receita anual | R$ 192k | R$ 3.99M | R$ 15.75M | R$ 65.25M | R$ 175.5M |
+  1932→| Margem | -944% | 4% | 43% | 72% | 74% |
+  1933→| CAC | R$ 5k | R$ 3.5k | R$ 2.5k | R$ 2k | R$ 1.8k |
+  1934→| LTV | R$ 15k | R$ 25k | R$ 40k | R$ 60k | R$ 80k |
+  1935→| LTV/CAC | 3× | 7× | 16× | 30× | 44× |
+  1936→
+  1937→## 23.4 Métricas de Pessoas
+  1938→
+  1939→| Métrica | 2025 | 2026 | 2027 | 2028 | 2029 |
+  1940→|---------|------|------|------|------|------|
+  1941→| Headcount fim ano | 12 | 22 | 50 | 87 | 210 |
+  1942→| eNPS | 50 | 50 | 45 | 45 | 50 |
+  1943→| Voluntary churn | < 5% | < 10% | < 10% | < 10% | < 10% |
+  1944→| Time to hire | 45 dias | 45 dias | 60 dias | 60 dias | 60 dias |
+  1945→
+  1946→---
+  1947→
+  1948→# Conclusão
+  1949→
+  1950→O roadmap do Projeto Orion é ambicioso mas executável. A chave do sucesso está em:
+  1951→
+  1952→1. **Foco** — não tentar fazer tudo em v1.0
+  1953→2. **Validação** — cada feature testada com clientes reais antes de escalar
+  1954→3. **Velocidade** — ship frequentemente, itere com base em dados
+  1955→4. **Excelência técnica** — não acumular débito técnico que atrapalhe versões futuras
+  1956→5. **Ecossistema** — marketplace e API criam lock-in positivo
+  1957→6. **Pessoas** — time excepcional com cultura forte
+  1958→7. **Disciplina financeira** — break-even em 2026, lucro em 2027+
+  1959→8. **Customer obsession** — ouvir, comunicar, encantar
+  1960→
+  1961→O Orion não é apenas um software, é uma plataforma de negócios que deve evoluir por décadas. Cada decisão hoje deve considerar impacto em 5 anos.
+  1962→
+  1963→**Próximos passos imediatos:**
+  1964→- Aprovar roadmap com board (Q3 2025)
+  1965→- Comunicar para time interno (all-hands)
+  1966→- Comunicar para clientes enterprise (QBRs)
+  1967→- Iniciar execução Q4 2025
+  1968→
+  1969→---
+  1970→
+  1971→*Fim do Roadmap Estratégico — Documento 16 do Dossiê Master do Projeto Orion*
+  1972→

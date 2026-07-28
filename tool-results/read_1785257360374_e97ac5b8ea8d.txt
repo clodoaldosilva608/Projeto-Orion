@@ -1,0 +1,2002 @@
+     1→# DOSSIÊ MASTER DO PRODUTO
+     2→
+     3→## DOCUMENTO 11
+     4→
+     5→# SECURITY & LGPD COMPLIANCE
+     6→
+     7→**Projeto:** Orion (Nome interno)
+     8→**Versão:** 1.0
+     9→**Status:** Em Desenvolvimento
+    10→**Documento:** Segurança e Conformidade LGPD
+    11→**Classificação:** Confidencial — Uso Interno
+    12→**Última revisão:** 2025-01-15
+    13→
+    14→---
+    15→
+    16→## Sumário
+    17→
+    18→1. Objetivo e Escopo
+    19→2. Princípios de Segurança e Modelo de Ameaças
+    20→3. Autenticação — Política de Senhas Completa
+    21→4. JWT — Estrutura, Claims, Rotação, Blacklisting
+    22→5. 2FA — Implementação TOTP, Backup Codes, Recuperação
+    23→6. OAuth 2.0 / OIDC — Google e Microsoft
+    24→7. Autorização (RBAC) — Matriz Completa de Permissões
+    25→8. Criptografia — AES-256, TLS 1.3, Key Rotation
+    26→9. Controles OWASP Top 10 (com implementação)
+    27→10. Headers de Segurança, CSP, CORS
+    28→11. Rate Limiting e Proteção contra Abuso
+    29→12. Segurança Multi-tenant (RLS)
+    30→13. LGPD — Direitos do Titular (18 direitos)
+    31→14. DPIA — Data Protection Impact Assessment
+    32→15. Auditoria e Logs
+    33→16. Incident Response Playbook
+    34→17. Pen Test Checklist
+    35→18. Preparação SOC 2 / ISO 27001
+    36→19. Backup e Disaster Recovery
+    37→20. Segurança Física, Operacional e Suply Chain
+    38→21. Apêndices
+    39→
+    40→---
+    41→
+    42→# Capítulo 1 — Objetivo e Escopo
+    43→
+    44→Este documento define a estratégia completa de segurança do Projeto Orion, plataforma SaaS multi-tenant de gestão comercial. Cobre autenticação, autorização, criptografia, proteção contra ataques OWASP, conformidade com a LGPD (Lei 13.709/2018), auditoria, resposta a incidentes, pen testing e preparação para certificações SOC 2 e ISO 27001.
+    45→
+    46→## 1.1 Escopo Técnico
+    47→
+    48→| Camada | Cobertura |
+    49→|---|---|
+    50→| Aplicação (Next.js, API REST/GraphQL) | Capítulos 3-11 |
+    51→| Banco de dados (PostgreSQL 16) | Capítulos 8, 12 |
+    52→| Infraestrutura cloud (AWS/GCP) | Capítulos 8, 16, 19 |
+    53→| Desktop (Electron) | Capítulo 20 |
+    54→| Mobile (PWA / React Native v2) | Capítulos 5, 6 |
+    55→| Integrações (webhooks, APIs externas) | Capítulos 8, 10 |
+    56→| IA (LLM gateway) | Capítulo 8, 11 |
+    57→
+    58→## 1.2 Stakeholders
+    59→
+    60→- **DPO (Encarregado de Dados):** responsável legal pela LGPD
+    61→- **CISO:** responsável técnico por segurança
+    62→- **Engineering Lead:** implementa controles
+    63→- **DevOps/SRE:** opera e monitora
+    64→- **Legal/Compliance:** revisa políticas
+    65→- **Auditor externo:** valida controles (SOC 2 / ISO)
+    66→
+    67→## 1.3 Ciclo de Vida do Documento
+    68→
+    69→- Revisão semestral obrigatória
+    70→- Revisão imediata após incidentes críticos
+    71→- Versionamento semântico (MAJOR.MINOR.PATCH)
+    72→- Aprovação tripartite: CISO + DPO + Engineering Lead
+    73→
+    74→---
+    75→
+    76→# Capítulo 2 — Princípios de Segurança e Modelo de Ameaças
+    77→
+    78→## 2.1 Princípios Fundamentais
+    79→
+    80→### 2.1.1 Defesa em Profundidade
+    81→Múltiplas camadas de proteção: rede (WAF, firewall), aplicação (validação, authz), banco (RLS, TDE), dados (criptografia aplicação). Falha de uma camada não compromete o sistema.
+    82→
+    83→### 2.1.2 Menor Privilégio
+    84→Cada usuário, serviço e processo tem apenas os privilégios mínimos necessários. Aplicado a:
+    85→- Usuários finais (RBAC granular)
+    86→- Serviços backend (service accounts com escopo restrito)
+    87→- Acesso a produção (just-in-time, time-boxed)
+    88→- Banco de dados (roles PostgreSQL separadas por função: `app_read`, `app_write`, `migration`)
+    89→
+    90→### 2.1.3 Fail-Safe Defaults
+    91→Em caso de falha, o sistema nega acesso (default deny). Exemplos:
+    92→- Token expirado → 401 (não renova automaticamente)
+    93→- Erro ao validar permissão → 403 (não permite)
+    94→- RLS falha ao setar `company_id` → query retorna vazio
+    95→
+    96→### 2.1.4 Segurança por Design
+    97→Segurança é considerada desde o design (threat modeling em cada RFC), nunca adicionada depois. Toda feature nova passa por:
+    98→1. Threat model (STRIDE)
+    99→2. Revisão de security champion
+   100→3. Testes de segurança automatizados (SAST, DAST, SCA)
+   101→4. Pen test antes de go-live (para features críticas)
+   102→
+   103→### 2.1.5 Auditoria Completa
+   104→Toda ação sensível é registrada e auditável (imutável, com hash encadeado para detecção de tampering).
+   105→
+   106→### 2.1.6 Zero Trust
+   107→Nunca confiar, sempre verificar. Mesmo dentro da VPC, comunicação é mTLS. Tokens JWT validados em cada hop.
+   108→
+   109→### 2.1.7 Privacy by Design
+   110→Minimização de dados coletados, propósito explícito, retenção limitada, transparência.
+   111→
+   112→## 2.2 Modelo de Ameaças (STRIDE)
+   113→
+   114→| Ameaça | Categoria | Controle Primário |
+   115→|---|---|---|
+   116→| Atacante externo rouba credenciais por phishing | Spoofing | 2FA obrigatório para admins, FIDO2 opcional |
+   117→| Atacante explora SQL injection | Tampering | Prisma ORM parametrizado, SAST em CI |
+   118→| Vendedor acessa dados de outra empresa | Info Disclosure | RLS + validação aplicação |
+   119→| Funcionário mal-intencionado vende base | Info Disclosure | Just-in-time prod access, DLP, audit logs imutáveis |
+   120→| Token JWT roubado e reusado | Spoofing | Rotação de refresh token, short-lived access tokens |
+   121→| Atacante DDoS API | DoS | Cloudflare/WAF, rate limit, autoscale |
+   122→| Supply chain: dependência maliciosa | Elevation of Privilege | Dependabot, npm audit, SBOM, Sigstore |
+   123→| LLM vaza dados via prompt injection | Info Disclosure | Guardrails, PII filter, sandbox de tool calling |
+   124→| Insider altera logs de auditoria | Tampering | Append-only com hash chain, WORM storage |
+   125→
+   126→---
+   127→
+   128→# Capítulo 3 — Autenticação — Política de Senhas Completa
+   129→
+   130→## 3.1 Política de Senhas
+   131→
+   132→### 3.1.1 Requisitos Mínimos (NIST SP 800-63B alinhado)
+   133→
+   134→| Requisito | Valor | Justificativa |
+   135→|---|---|---|
+   136→| Comprimento mínimo | 12 caracteres | NIST recomenda ≥8, adotamos 12 para sensibilidade financeira |
+   137→| Comprimento máximo | 128 caracteres | Evita DoS em bcrypt |
+   138→| Maiúsculas | ≥1 | Complexidade |
+   139→| Minúsculas | ≥1 | Complexidade |
+   140→| Dígitos | ≥1 | Complexidade |
+   141→| Especiais | ≥1 de `!@#$%^&*()-_=+[]{};:,.?` | Complexidade |
+   142→| Unicode | Permitido (emojis, acentos) | Conformidade NIST |
+   143→| Senhas vazadas | Bloqueadas (HIBP API + lista local 10k) | Prevenção credential stuffing |
+   144→| Histórico | Últimas 5 não podem repetir | Prevenção reuso |
+   145→| Senha = email/username | Bloqueado | Senhas triviais |
+   146→| Sequências | `1234`, `abcd`, `qwerty` bloqueadas | Senhas fracas |
+   147→| Repetição de caractere | ≥4 iguais consecutivos bloqueado | Ex: `aaaa1234` |
+   148→
+   149→### 3.1.2 Implementação — Validação com Zod
+   150→
+   151→```typescript
+   152→// src/lib/auth/password-policy.ts
+   153→import { z } from 'zod';
+   154→import { isPasswordPwned } from './hibp';
+   155→import { getUserPasswordHistory } from './password-history';
+   156→
+   157→const SEQUENCES = ['1234', '2345', '3456', '4567', '5678', '6789',
+   158→                   'abcd', 'bcde', 'cdef', 'qwerty', 'asdf', 'zxcv'];
+   159→const SPECIALS = '!@#$%^&*()-_=+[]{};:,.?';
+   160→
+   161→export const passwordSchema = z.string()
+   162→  .min(12, 'Senha deve ter no mínimo 12 caracteres')
+   163→  .max(128, 'Senha deve ter no máximo 128 caracteres')
+   164→  .refine(p => /[A-Z]/.test(p), 'Senha deve conter ao menos 1 maiúscula')
+   165→  .refine(p => /[a-z]/.test(p), 'Senha deve conter ao menos 1 minúscula')
+   166→  .refine(p => /[0-9]/.test(p), 'Senha deve conter ao menos 1 dígito')
+   167→  .refine(p => new RegExp(`[${escapeRegExp(SPECIALS)}]`).test(p),
+   168→          `Senha deve conter ao menos 1 especial: ${SPECIALS}`)
+   169→  .refine(p => !/(.)\1{3,}/.test(p),
+   170→          'Senha não pode ter 4+ caracteres repetidos consecutivos')
+   171→  .refine(p => !SEQUENCES.some(s => p.toLowerCase().includes(s)),
+   172→          'Senha contém sequência comum');
+   173→
+   174→export async function validatePassword(
+   175→  password: string,
+   176→  context: { userId?: number; email: string; username: string }
+   177→): Promise<{ valid: boolean; errors: string[] }> {
+   178→  const errors: string[] = [];
+   179→
+   180→  // 1. Schema validation
+   181→  const parsed = passwordSchema.safeParse(password);
+   182→  if (!parsed.success) {
+   183→    errors.push(...parsed.error.issues.map(i => i.message));
+   184→  }
+   185→
+   186→  // 2. Não pode ser igual a email ou username
+   187→  if (password.toLowerCase().includes(context.email.toLowerCase()) ||
+   188→      password.toLowerCase().includes(context.username.toLowerCase())) {
+   189→    errors.push('Senha não pode conter email ou usuário');
+   190→  }
+   191→
+   192→  // 3. Verificar contra HIBP (Have I Been Pwned)
+   193→  if (await isPasswordPwned(password)) {
+   194→    errors.push('Senha encontrada em vazamentos conhecidos. Escolha outra.');
+   195→  }
+   196→
+   197→  // 4. Histórico (apenas em troca, não em criação)
+   198→  if (context.userId) {
+   199→    const history = await getUserPasswordHistory(context.userId, 5);
+   200→    for (const oldHash of history) {
+   201→      if (await bcrypt.compare(password, oldHash)) {
+   202→        errors.push('Senha igual a uma das últimas 5. Escolha outra.');
+   203→        break;
+   204→      }
+   205→    }
+   206→  }
+   207→
+   208→  return { valid: errors.length === 0, errors };
+   209→}
+   210→
+   211→function escapeRegExp(s: string) {
+   212→  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+   213→}
+   214→```
+   215→
+   216→### 3.1.3 Implementação — HIBP (k-anonymity)
+   217→
+   218→```typescript
+   219→// src/lib/auth/hibp.ts
+   220→import crypto from 'crypto';
+   221→
+   222→export async function isPasswordPwned(password: string): Promise<boolean> {
+   223→  const hash = crypto.createHash('sha1').update(password).digest('hex').toUpperCase();
+   224→  const prefix = hash.substring(0, 5);
+   225→  const suffix = hash.substring(5);
+   226→
+   227→  const response = await fetch(`https://api.pwnedpasswords.com/range/${prefix}`, {
+   228→    headers: { 'User-Agent': 'Orion-Security/1.0' },
+   229→  });
+   230→  if (!response.ok) return false; // fail-open em indisponibilidade
+   231→
+   232→  const text = await response.text();
+   233→  const lines = text.split('\n');
+   234→  for (const line of lines) {
+   235→    const [s, count] = line.trim().split(':');
+   236→    if (s === suffix && parseInt(count) > 0) return true;
+   237→  }
+   238→  return false;
+   239→}
+   240→```
+   241→
+   242→### 3.1.4 Armazenamento — bcrypt
+   243→
+   244→- Algoritmo: **bcrypt** (Blowfish-based)
+   245→- Cost factor: **12** (~250ms por hash em hardware moderno; ajustado anualmente)
+   246→- Salt: único por senha, embutido no hash bcrypt
+   247→- Jamais armazenar em texto, MD5, SHA1, SHA256 puro (sem salt) ou PBKDF2 com < 600k iterações
+   248→
+   249→```typescript
+   250→import bcrypt from 'bcrypt';
+   251→
+   252→const BCRYPT_COST = 12;
+   253→
+   254→export async function hashPassword(plain: string): Promise<string> {
+   255→  return bcrypt.hash(plain, BCRYPT_COST);
+   256→}
+   257→
+   258→export async function verifyPassword(plain: string, hash: string): Promise<boolean> {
+   259→  // Constant-time comparison interna do bcrypt
+   260→  return bcrypt.compare(plain, hash);
+   261→}
+   262→```
+   263→
+   264→### 3.1.5 Migração de Hash (Argon2id futuro)
+   265→
+   266→Planejado para v2.0: troca para **Argon2id** (vencedor Password Hashing Competition), mantendo bcrypt legacy via re-hash on login:
+   267→
+   268→```typescript
+   269→export async function verifyAndUpgrade(plain: string, stored: string): Promise<boolean> {
+   270→  if (stored.startsWith('$argon2id$')) {
+   271→    return argon2verify(stored, plain);
+   272→  }
+   273→  if (stored.startsWith('$2')) {
+   274→    const ok = await bcrypt.compare(plain, stored);
+   275→    if (ok) {
+   276→      const newHash = await argon2id(plain);
+   277→      await updateUserHash(userId, newHash); // upgrade transparente
+   278→    }
+   279→    return ok;
+   280→  }
+   281→  return false;
+   282→}
+   283→```
+   284→
+   285→### 3.1.6 Reset de Senha
+   286→
+   287→| Atributo | Valor |
+   288→|---|---|
+   289→| Token | 32 bytes aleatórios (base64url) |
+   290→| Hashing armazenado | SHA-256 com pepper |
+   291→| Validade | 1 hora |
+   292→| Uso | Único (invalidado após uso) |
+   293→| Requer | E-mail confirmado OU pergunta de segurança (legacy) |
+   294→| Notificação | Email ao titular após reset |
+   295→
+   296→```typescript
+   297→export async function generateResetToken(userId: number): Promise<string> {
+   298→  const token = crypto.randomBytes(32).toString('base64url');
+   299→  const pepper = process.env.TOKEN_PEPPER!;
+   300→  const hash = crypto.createHmac('sha256', pepper).update(token).digest('hex');
+   301→
+   302→  await db.passwordReset.upsert({
+   303→    where: { userId },
+   304→    create: { userId, tokenHash: hash, expiresAt: addHours(new Date(), 1) },
+   305→    update: { tokenHash: hash, expiresAt: addHours(new Date(), 1), usedAt: null },
+   306→  });
+   307→
+   308→  await sendEmail({
+   309→    to: user.email,
+   310→    template: 'password-reset',
+   311→    context: { resetUrl: `https://app.orion.com/reset?token=${token}` },
+   312→  });
+   313→  return token; // só para testes; em prod não retorna
+   314→}
+   315→
+   316→export async function consumeResetToken(token: string, newPassword: string) {
+   317→  const hash = hashToken(token);
+   318→  const reset = await db.passwordReset.findFirst({
+   319→    where: { tokenHash: hash, usedAt: null, expiresAt: { gt: new Date() } },
+   320→  });
+   321→  if (!reset) throw new InvalidTokenError();
+   322→
+   323→  const { valid, errors } = await validatePassword(newPassword, { email: user.email, username: user.username });
+   324→  if (!valid) throw new PasswordPolicyError(errors);
+   325→
+   326→  await db.$transaction([
+   327→    db.user.update({ where: { id: reset.userId }, data: { password: await hashPassword(newPassword) } }),
+   328→    db.passwordReset.update({ where: { id: reset.id }, data: { usedAt: new Date() } }),
+   329→    db.passwordHistory.create({ data: { userId: reset.userId, hash: stored } }),
+   330→    // Revoga todas as sessões ativas
+   331→    db.session.deleteMany({ where: { userId: reset.userId } }),
+   332→    db.refreshToken.deleteMany({ where: { userId: reset.userId } }),
+   333→  ]);
+   334→
+   335→  await sendEmail({ to: user.email, template: 'password-changed' });
+   336→  await audit.log({ action: 'password.reset', userId: reset.userId });
+   337→}
+   338→```
+   339→
+   340→### 3.1.7 Expiração de Senha
+   341→
+   342→- Administradores: **90 dias**
+   343→- Demais usuários: **180 dias** (opcional, recomendado)
+   344→- Notificação: 14, 7, 3, 1 dias antes
+   345→- Bloqueio pós-expiração: usuário deve fazer reset antes de continuar
+   346→
+   347→### 3.1.8 Bloqueio de Conta
+   348→
+   349→| Trigger | Ação |
+   350→|---|---|
+   351→| 5 tentativas inválidas consecutivas | Bloqueio 15 min |
+   352→| 10 tentativas inválidas em 24h | Bloqueio 24h + notifica admin |
+   353→| 3 bloqueios em 7 dias | Exige reset de senha |
+   354→| 100 tentativas falhas por IP em 1h | IP ban (Cloudflare WAF) |
+   355→| Login de país não usual (geolocation IP) | Challenge 2FA mesmo se opcional |
+   356→
+   357→Implementação com Redis (janela deslizante):
+   358→
+   359→```typescript
+   360→// src/lib/auth/account-lockout.ts
+   361→const REDIS = redisClient();
+   362→
+   363→export async function recordFailedAttempt(email: string, ip: string) {
+   364→  const emailKey = `lockout:email:${email}`;
+   365→  const ipKey = `lockout:ip:${ip}`;
+   366→
+   367→  const pipeline = REDIS.multi();
+   368→  pipeline.incr(emailKey);
+   369→  pipeline.expire(emailKey, 24 * 3600); // 24h window
+   370→  pipeline.incr(ipKey);
+   371→  pipeline.expire(ipKey, 3600); // 1h window
+   372→  const [[, emailCount], _, [, ipCount]] = await pipeline.exec() as any;
+   373→
+   374→  if (ipCount >= 100) {
+   375→    await blockIp(ip, 3600); // 1h no WAF
+   376→  }
+   377→  if (emailCount >= 10) {
+   378→    await lockAccount(email, 24 * 3600);
+   379→    await notifyAdmin('account.locked', { email, reason: '10 failed attempts/24h' });
+   380→  } else if (emailCount >= 5) {
+   381→    await lockAccount(email, 15 * 60);
+   382→  }
+   383→}
+   384→
+   385→export async function isAccountLocked(email: string): Promise<{ locked: boolean; until?: Date }> {
+   386→  const ttl = await REDIS.ttl(`lockout:locked:${email}`);
+   387→  if (ttl > 0) return { locked: true, until: new Date(Date.now() + ttl * 1000) };
+   388→  return { locked: false };
+   389→}
+   390→```
+   391→
+   392→---
+   393→
+   394→# Capítulo 4 — JWT — Estrutura, Claims, Rotação, Blacklisting
+   395→
+   396→## 4.1 Estrutura do Token
+   397→
+   398→JWT é dividido em 3 partes separadas por `.`: `header.payload.signature`.
+   399→
+   400→### 4.1.1 Header
+   401→```json
+   402→{
+   403→  "alg": "RS256",
+   404→  "typ": "JWT",
+   405→  "kid": "orion-signing-key-2025-01"
+   406→}
+   407→```
+   408→
+   409→### 4.1.2 Payload (Claims)
+   410→
+   411→| Claim | Descrição | Exemplo |
+   412→|---|---|---|
+   413→| `iss` | Emissor | `https://api.orion.com` |
+   414→| `sub` | Subject (user ID) | `10` |
+   415→| `aud` | Audiência | `orion-app` |
+   416→| `exp` | Expiração (Unix ts) | `1692125100` |
+   417→| `nbf` | Not before | `1692124200` |
+   418→| `iat` | Emitido em | `1692124200` |
+   419→| `jti` | ID único do token (UUID v4) | `a1b2c3d4-...` |
+   420→| `email` | Email do usuário | `joao@empresa.com` |
+   421→| `companyId` | Tenant | `1` |
+   422→| `branchId` | Filial padrão | `1` |
+   423→| `role` | Cargo | `gerente` |
+   424→| `permissions` | Lista de permissões | `["goals.read","results.create"]` |
+   425→| `sessionId` | ID da sessão | `sess_abc123` |
+   426→| `2fa` | Se 2FA validado nesta sessão | `true` |
+   427→| `ver` | Versão do schema do token | `1` |
+   428→
+   429→Exemplo completo:
+   430→```json
+   431→{
+   432→  "iss": "https://api.orion.com",
+   433→  "sub": 10,
+   434→  "aud": "orion-app",
+   435→  "iat": 1692124200,
+   436→  "exp": 1692125100,
+   437→  "nbf": 1692124200,
+   438→  "jti": "f4a7b8c9-1d2e-3f4a-5b6c-7d8e9f0a1b2c",
+   439→  "email": "joao@farmaciasaojoao.com.br",
+   440→  "companyId": 1,
+   441→  "branchId": 1,
+   442→  "role": "gerente",
+   443→  "permissions": ["goals.read","goals.create","results.read","results.create","results.approve"],
+   444→  "sessionId": "sess_8f7e6d5c4b3a",
+   445→  "2fa": true,
+   446→  "ver": 1
+   447→}
+   448→```
+   449→
+   450→### 4.1.3 Signature
+   451→```
+   452→RS256: base64url(header) + "." + base64url(payload), assinado com RSA-PSS private key (2048-bit mínimo, recomendado 3072)
+   453→```
+   454→
+   455→## 4.2 Configuração
+   456→
+   457→| Parâmetro | Access Token | Refresh Token |
+   458→|---|---|---|
+   459→| Validade | 15 minutos | 7 dias |
+   460→| Algoritmo | RS256 | RS256 |
+   461→| Rotação | N/A | A cada uso (novo + revoga anterior) |
+   462→| Storage (web) | Memória + httpOnly cookie SameSite=Strict | httpOnly cookie Secure SameSite=Strict |
+   463→| Storage (mobile) | iOS Keychain / Android Keystore | Mesmo |
+   464→| Revogação | Blacklist Redis (jti) | Whitelist Redis |
+   465→
+   466→## 4.3 Rotação de Refresh Token
+   467→
+   468→Toda vez que um access token expira, o cliente envia o refresh token para `/auth/refresh`. O servidor:
+   469→1. Valida assinatura e expiração
+   470→2. Verifica se está na whitelist Redis (`refresh:{jti}` existe)
+   471→3. Verifica se NÃO está na blacklist (`revoked:{jti}` não existe)
+   472→4. Emite novo access token + novo refresh token
+   473→5. Revoga o refresh token antigo (adiciona à blacklist com TTL = expiração original)
+   474→6. Adiciona novo refresh token à whitelist
+   475→7. Detecta reuso: se `refresh:{jti}` foi revogado mas ainda aparece na blacklist, significa que um atacante está reusando → revoga TODA a família de tokens (todos os refresh tokens da mesma sessão)
+   476→
+   477→```typescript
+   478→// src/lib/auth/jwt.ts
+   479→import jwt from 'jsonwebtoken';
+   480→import { randomUUID } from 'crypto';
+   481→
+   482→const PRIVATE_KEY = await loadKeyFromKMS('jwt-signing-private');
+   483→const PUBLIC_KEY = await loadKeyFromKMS('jwt-signing-public');
+   484→
+   485→export async function issueTokens(user: AuthenticatedUser, session: Session) {
+   486→  const accessJti = randomUUID();
+   487→  const refreshJti = randomUUID();
+   488→  const now = Math.floor(Date.now() / 1000);
+   489→
+   490→  const accessToken = jwt.sign({
+   491→    iss: 'https://api.orion.com',
+   492→    sub: user.id,
+   493→    aud: 'orion-app',
+   494→    iat: now, exp: now + 900, nbf: now,
+   495→    jti: accessJti,
+   496→    email: user.email,
+   497→    companyId: user.companyId,
+   498→    branchId: user.branchId,
+   499→    role: user.role,
+   500→    permissions: user.permissions,
+   501→    sessionId: session.id,
+   502→    '2fa': session.twoFactorVerified,
+   503→    ver: 1,
+   504→  }, PRIVATE_KEY, { algorithm: 'RS256', keyid: 'orion-2025-01' });
+   505→
+   506→  const refreshToken = jwt.sign({
+   507→    iss: 'https://api.orion.com',
+   508→    sub: user.id,
+   509→    aud: 'orion-app',
+   510→    iat: now, exp: now + 7 * 86400,
+   511→    jti: refreshJti,
+   512→    sessionId: session.id,
+   513→    family: session.familyId, // para detectar reuso
+   514→    type: 'refresh',
+   515→  }, PRIVATE_KEY, { algorithm: 'RS256', keyid: 'orion-2025-01' });
+   516→
+   517→  // Whitelist do refresh
+   518→  await REDIS.set(`refresh:${refreshJti}`, JSON.stringify({ userId: user.id, sessionId: session.id }),
+   519→                  'EX', 7 * 86400);
+   520→
+   521→  return { accessToken, refreshToken, accessJti, refreshJti };
+   522→}
+   523→
+   524→export async function rotateRefreshToken(oldRefreshToken: string) {
+   525→  let payload: any;
+   526→  try {
+   527→    payload = jwt.verify(oldRefreshToken, PUBLIC_KEY, { algorithms: ['RS256'] });
+   528→  } catch (e) {
+   529→    throw new InvalidTokenError();
+   530→  }
+   531→  if (payload.type !== 'refresh') throw new InvalidTokenError();
+   532→
+   533→  const exists = await REDIS.get(`refresh:${payload.jti}`);
+   534→  if (!exists) {
+   535→    // Reuso detectado! Revoga família inteira
+   536→    await revokeFamily(payload.family);
+   537→    throw new TokenReuseError('Possible token theft detected. All sessions revoked.');
+   538→  }
+   539→
+   540→  // Move para blacklist
+   541→  const ttl = payload.exp - Math.floor(Date.now() / 1000);
+   542→  if (ttl > 0) {
+   543→    await REDIS.set(`revoked:${payload.jti}`, '1', 'EX', ttl);
+   544→    await REDIS.del(`refresh:${payload.jti}`);
+   545→  }
+   546→
+   547→  // Emite novo par
+   548→  const user = await getUserById(payload.sub);
+   549→  const session = await getSession(payload.sessionId);
+   550→  return issueTokens(user, session);
+   551→}
+   552→
+   553→async function revokeFamily(familyId: string) {
+   554→  // Procura todos os refresh tokens da família e revoga
+   555→  const members = await REDIS.smembers(`family:${familyId}`);
+   556→  for (const jti of members) {
+   557→    await REDIS.del(`refresh:${jti}`);
+   558→    await REDIS.set(`revoked:${jti}`, '1', 'EX', 7 * 86400);
+   559→  }
+   560→  await REDIS.del(`family:${familyId}`);
+   561→  await audit.log({ action: 'security.token_reuse_detected', familyId });
+   562→}
+   563→```
+   564→
+   565→## 4.4 Blacklisting de Access Tokens
+   566→
+   567→Access tokens são stateless por natureza. Para suportar logout/revogação imediata:
+   568→
+   569→- Logout: adiciona `jti` ao Redis com TTL = `exp - now`
+   570→- Middleware de auth verifica blacklist a cada request
+   571→- Admin pode revogar por `userId` (adiciona todos os `jti` da sessão à blacklist)
+   572→- Comprometimento: rotaciona chave de assinatura (força re-login de todos)
+   573→
+   574→```typescript
+   575→// src/middleware/auth.ts
+   576→export async function authenticate(req: Request): Promise<AuthenticatedUser> {
+   577→  const token = extractBearerToken(req);
+   578→  if (!token) throw new UnauthorizedError();
+   579→
+   580→  let payload: any;
+   581→  try {
+   582→    payload = jwt.verify(token, PUBLIC_KEY, { algorithms: ['RS256'] });
+   583→  } catch (e) {
+   584→    throw new UnauthorizedError('Invalid token');
+   585→  }
+   586→
+   587→  // Blacklist check
+   588→  const revoked = await REDIS.get(`revoked:${payload.jti}`);
+   589→  if (revoked) throw new UnauthorizedError('Token revoked');
+   590→
+   591→  // Session still active?
+   592→  const sessionActive = await REDIS.get(`session:${payload.sessionId}`);
+   593→  if (!sessionActive) throw new UnauthorizedError('Session ended');
+   594→
+   595→  return {
+   596→    id: payload.sub,
+   597→    email: payload.email,
+   598→    companyId: payload.companyId,
+   599→    branchId: payload.branchId,
+   600→    role: payload.role,
+   601→    permissions: payload.permissions,
+   602→    sessionId: payload.sessionId,
+   603→    twoFactorVerified: payload['2fa'] === true,
+   604→  };
+   605→}
+   606→
+   607→export async function revokeToken(jti: string, exp: number) {
+   608→  const ttl = exp - Math.floor(Date.now() / 1000);
+   609→  if (ttl <= 0) return;
+   610→  await REDIS.set(`revoked:${jti}`, '1', 'EX', ttl);
+   611→}
+   612→```
+   613→
+   614→## 4.5 Rotação de Chaves (Key Rotation)
+   615→
+   616→- Chaves RS256 armazenadas em KMS (AWS KMS / GCP KMS / HashiCorp Vault)
+   617→- Duas chaves ativas simultaneamente durante janela de rotação (grace period)
+   618→- `kid` no header identifica qual chave usar para verificar
+   619→- JWKS endpoint: `GET /.well-known/jwks.json` retorna chaves públicas
+   620→- Rotação a cada 90 dias (chave anterior fica válida por mais 7 dias para tokens em circulation)
+   621→
+   622→```typescript
+   623→// src/lib/auth/key-rotation.ts
+   624→export async function rotateSigningKey() {
+   625→  const { privateKey, publicKey, kid } = await KMS.generateKeyPair('RSA-3072');
+   626→  const newKid = `orion-${new Date().toISOString().slice(0,7)}`;
+   627→
+   628→  // Salva nova chave como PRIMARY, antiga como SECONDARY (grace)
+   629→  await REDIS.hset('jwt:keys', newKid, JSON.stringify({ private: privateKey, public: publicKey, status: 'primary' }));
+   630→  await REDIS.hset('jwt:keys', getCurrentKid(), JSON.stringify({ ..., status: 'secondary' }));
+   631→
+   632→  // Programa remoção da secundária após 7 dias
+   633→  await REDIS.set(`jwt:cleanup:${getCurrentKid()}`, '1', 'EX', 7 * 86400);
+   634→
+   635→  // Atualiza JWKS cache
+   636→  await REDIS.del('jwks:cache');
+   637→  await audit.log({ action: 'security.key_rotated', newKid });
+   638→}
+   639→```
+   640→
+   641→## 4.6 Endpoint JWKS
+   642→
+   643→```
+   644→GET /.well-known/jwks.json
+   645→
+   646→Response:
+   647→{
+   648→  "keys": [
+   649→    {
+   650→      "kty": "RSA",
+   651→      "use": "sig",
+   652→      "alg": "RS256",
+   653→      "kid": "orion-2025-01",
+   654→      "n": "...base64url...",
+   655→      "e": "AQAB"
+   656→    },
+   657→    {
+   658→      "kty": "RSA",
+   659→      "use": "sig",
+   660→      "alg": "RS256",
+   661→      "kid": "orion-2024-12",
+   662→      "n": "...base64url...",
+   663→      "e": "AQAB"
+   664→    }
+   665→  ]
+   666→}
+   667→```
+   668→
+   669→---
+   670→
+   671→# Capítulo 5 — 2FA — Implementação TOTP, Backup Codes, Recuperação
+   672→
+   673→## 5.1 Obrigatoriedade por Cargo
+   674→
+   675→| Cargo | 2FA |
+   676→|---|---|
+   677→| Administrador Master | Obrigatório |
+   678→| Administrador da Empresa | Obrigatório |
+   679→| Diretor | Obrigatório |
+   680→| Gerente | Recomendado (configurável por empresa) |
+   681→| Supervisor | Opcional |
+   682→| Vendedor | Opcional |
+   683→
+   684→## 5.2 Implementação TOTP (RFC 6238)
+   685→
+   686→### 5.2.1 Setup Flow
+   687→
+   688→1. Usuário habilita 2FA em "Meu Perfil > Segurança"
+   689→2. Backend gera `secret` aleatório (20 bytes, base32)
+   690→3. Backend monta `otpauth://` URL e retorna QR code
+   691→4. Usuário escaneia com Google Authenticator / Authy / Microsoft Authenticator / 1Password
+   692→5. Usuário insere código TOTP atual para confirmar setup
+   693→6. Backend valida, marca 2FA como habilitado e gera backup codes
+   694→
+   695→```typescript
+   696→// src/lib/auth/totp.ts
+   697→import { authenticator } from 'otplib';
+   698→import qrcode from 'qrcode';
+   699→import crypto from 'crypto';
+   700→
+   701→authenticator.options = {
+   702→  step: 30,           // 30 segundos
+   703→  window: 1,          // ±1 step (tolera 30s de drift)
+   704→  digits: 6,
+   705→};
+   706→
+   707→export async function start2FASetup(userId: number) {
+   708→  const user = await db.user.findUnique({ where: { id: userId } });
+   709→  if (user.twoFactorEnabled) throw new ConflictError('2FA already enabled');
+   710→
+   711→  // Secret aleatório de 20 bytes → base32
+   712→  const secret = authenticator.generateSecret();
+   713→  const ephemeralToken = randomUUID(); // confirma setup em 10 min
+   714→
+   715→  // Armazena secret temporário (não ativo até confirmação)
+   716→  await REDIS.set(`2fa:setup:${userId}`, JSON.stringify({ secret, ephemeralToken }), 'EX', 600);
+   717→
+   718→  const otpauthUrl = authenticator.keyuri(user.email, 'Orion', secret);
+   719→  const qrDataUrl = await qrcode.toDataURL(otpauthUrl, { width: 240 });
+   720→
+   721→  return { secret, qrDataUrl, otpauthUrl, ephemeralToken };
+   722→}
+   723→
+   724→export async function confirm2FASetup(userId: number, token: string, ephemeralToken: string) {
+   725→  const stored = await REDIS.get(`2fa:setup:${userId}`);
+   726→  if (!stored || JSON.parse(stored).ephemeralToken !== ephemeralToken) {
+   727→    throw new InvalidTokenError();
+   728→  }
+   729→  const { secret } = JSON.parse(stored);
+   730→
+   731→  if (!authenticator.verify({ token, secret })) {
+   732→    throw new InvalidTokenError('Invalid TOTP code');
+   733→  }
+   734→
+   735→  // Criptografa secret antes de salvar (AES-256-GCM)
+   736→  const encryptedSecret = await encryptWithKMS(secret, 'totp-secret');
+   737→
+   738→  const backupCodes = await generateBackupCodes(userId);
+   739→
+   740→  await db.user.update({
+   741→    where: { id: userId },
+   742→    data: {
+   743→      twoFactorEnabled: true,
+   744→      twoFactorSecret: encryptedSecret,
+   745→      twoFactorEnabledAt: new Date(),
+   746→    },
+   747→  });
+   748→
+   749→  await REDIS.del(`2fa:setup:${userId}`);
+   750→  await audit.log({ action: '2fa.enabled', userId });
+   751→  await sendEmail({ to: user.email, template: '2fa-enabled' });
+   752→
+   753→  return { backupCodes }; // mostrados uma única vez
+   754→}
+   755→
+   756→export async function verify2FA(userId: number, token: string): Promise<boolean> {
+   757→  const user = await db.user.findUnique({ where: { id: userId } });
+   758→  if (!user.twoFactorEnabled) return true;
+   759→
+   760→  // Rate limit: 5 tentativas por 5 min
+   761→  const key = `2fa:attempts:${userId}`;
+   762→  const attempts = await REDIS.incr(key);
+   763→  if (attempts === 1) await REDIS.expire(key, 300);
+   764→  if (attempts > 5) {
+   765→    await lockAccount(user.email, 15 * 60);
+   766→    throw new TooManyAttemptsError();
+   767→  }
+   768→
+   769→  const secret = await decryptWithKMS(user.twoFactorSecret, 'totp-secret');
+   770→
+   771→  // Tenta TOTP
+   772→  if (authenticator.verify({ token, secret })) {
+   773→    await REDIS.del(key);
+   774→    return true;
+   775→  }
+   776→
+   777→  // Tenta backup code
+   778→  if (await consumeBackupCode(userId, token)) {
+   779→    await REDIS.del(key);
+   780→    return true;
+   781→  }
+   782→
+   783→  return false;
+   784→}
+   785→```
+   786→
+   787→### 5.2.2 Backup Codes
+   788→
+   789→- 10 códigos de uso único
+   790→- 8 caracteres alfanuméricos (ex: `A4B7C2D9`) — fácil digitação
+   791→- Hashed com bcrypt cost 8 (mais rápido que senha)
+   792→- Mostrados uma única vez no setup
+   793→- Usuário pode regenerar (invalida anteriores)
+   794→- Quando usado, decrementa contador; alerta em <3 restantes
+   795→
+   796→```typescript
+   797→import { randomBytes } from 'crypto';
+   798→
+   799→export async function generateBackupCodes(userId: number): Promise<string[]> {
+   800→  const codes: string[] = [];
+   801→  const hashes: { codeHash: string; usedAt: Date | null }[] = [];
+   802→
+   803→  for (let i = 0; i < 10; i++) {
+   804→    const code = randomBytes(4).toString('hex').toUpperCase().slice(0, 8); // 8 chars
+   805→    codes.push(code);
+   806→    hashes.push({ codeHash: await bcrypt.hash(code, 8), usedAt: null });
+   807→  }
+   808→
+   809→  // Substitui anteriores
+   810→  await db.twoFactorBackupCode.deleteMany({ where: { userId } });
+   811→  await db.twoFactorBackupCode.createMany({
+   812→    data: hashes.map(h => ({ userId, codeHash: h.codeHash })),
+   813→  });
+   814→
+   815→  return codes;
+   816→}
+   817→
+   818→export async function consumeBackupCode(userId: number, code: string): Promise<boolean> {
+   819→  const candidates = await db.twoFactorBackupCode.findMany({
+   820→    where: { userId, usedAt: null },
+   821→  });
+   822→
+   823→  for (const c of candidates) {
+   824→    if (await bcrypt.compare(code, c.codeHash)) {
+   825→      await db.twoFactorBackupCode.update({
+   826→        where: { id: c.id },
+   827→        data: { usedAt: new Date() },
+   828→      });
+   829→      const remaining = candidates.length - 1;
+   830→      if (remaining < 3) {
+   831→        await notifyUser(userId, `Você tem ${remaining} backup codes restantes. Regenere em breve.`);
+   832→      }
+   833→      await audit.log({ action: '2fa.backup_code_used', userId });
+   834→      return true;
+   835→    }
+   836→  }
+   837→  return false;
+   838→}
+   839→```
+   840→
+   841→### 5.2.3 Recuperação de 2FA
+   842→
+   843→Se usuário perde o dispositivo e os backup codes:
+   844→
+   845→| Situação | Procedimento |
+   846→|---|---|
+   847→| Tem backup codes | Usa um código → desativa 2FA ou reconfigura |
+   848→| Perdeu tudo | Contato admin (master) → reset 2FA manual |
+   849→| Admin master perdeu | Contato DPO/CISO → reset via recovery key (shamir secret sharing) |
+   850→
+   851→Processo de reset admin:
+   852→
+   853→```typescript
+   854→// src/api/routes/admin/2fa-reset.ts
+   855→@RequirePermissions('users.reset_2fa')
+   856→@Post('/admin/users/:id/2fa-reset')
+   857→async reset2FA(@Param('id') userId: number, @Body() body: Reset2FADto) {
+   858→  const user = await db.user.findUnique({ where: { id: userId } });
+   859→  if (user.role === 'system.admin') {
+   860→    throw new ForbiddenError('Cannot reset 2FA for system admin via this endpoint');
+   861→  }
+   862→
+   863→  // Exige confirmação por email enviado ao usuário
+   864→  const confirmToken = randomUUID();
+   865→  await REDIS.set(`2fa:reset-pending:${userId}`, JSON.stringify({
+   866→    requestedBy: req.user.id,
+   867→    confirmToken,
+   868→    expiresAt: Date.now() + 86400000, // 24h
+   869→  }), 'EX', 86400);
+   870→
+   871→  await sendEmail({
+   872→    to: user.email,
+   873→    template: '2fa-reset-confirmation',
+   874→    context: { confirmUrl: `https://app.orion.com/confirm-2fa-reset?token=${confirmToken}` },
+   875→  });
+   876→
+   877→  return { message: 'Confirmation email sent to user. Reset completes after they click the link.' };
+   878→}
+   879→
+   880→@Get('/confirm-2fa-reset')
+   881→async confirmReset(@Query('token') token: string) {
+   882→  const pending = await findPendingByToken(token);
+   883→  if (!pending) throw new InvalidTokenError();
+   884→
+   885→  await db.user.update({
+   886→    where: { id: pending.userId },
+   887→    data: {
+   888→      twoFactorEnabled: false,
+   889→      twoFactorSecret: null,
+   890→    },
+   891→  });
+   892→  await db.twoFactorBackupCode.deleteMany({ where: { userId: pending.userId } });
+   893→  await db.session.deleteMany({ where: { userId: pending.userId } }); // força re-login
+   894→  await audit.log({ action: '2fa.reset_completed', userId: pending.userId, requestedBy: pending.requestedBy });
+   895→  await REDIS.del(`2fa:reset-pending:${pending.userId}`);
+   896→}
+   897→```
+   898→
+   899→### 5.2.4 Recovery via Shamir Secret Sharing (Master Admin)
+   900→
+   901→Para o caso extremo do admin master perder 2FA e backup codes:
+   902→
+   903→- Secret de recover (32 bytes) é dividido em 5 shares via Shamir (threshold 3)
+   904→- Cada share é dado a um membro do board (CEO, CTO, CISO, DPO, Auditor externo)
+   905→- Recuperação exige presença física de 3 dos 5
+   906→- Cada share é armazenado em hardware security module (YubiKey) do respectivo membro
+   907→- Procedimento documentado em `runbooks/security/master-recovery.md`
+   908→
+   909→### 5.2.5 FIDO2 / WebAuthn (Roadmap v2.0)
+   910→
+   911→Suporte a security keys (YubiKey, Titan) e platform authenticators (Touch ID, Windows Hello) via WebAuthn. Mais resistente a phishing que TOTP.
+   912→
+   913→---
+   914→
+   915→# Capítulo 6 — OAuth 2.0 / OIDC — Google e Microsoft
+   916→
+   917→## 6.1 Provedores Suportados (v1.0)
+   918→
+   919→- Google (consumer e Workspace)
+   920→- Microsoft (Azure AD / Entra ID, contas corporativas)
+   921→- Apple Sign-In (roadmap v2.0)
+   922→
+   923→## 6.2 Fluxo Authorization Code com PKCE
+   924→
+   925→### 6.2.1 Diagrama Google
+   926→
+   927→```
+   928→┌─────────┐                                         ┌──────────┐
+   929→│ Browser │                                         │  Orion   │
+   930→│  (App)  │                                         │   API    │
+   931→└────┬────┘                                         └────┬─────┘
+   932→     │                                                   │
+   933→     │ 1. Click "Entrar com Google"                      │
+   934→     ├──────────────────────────────────────────────────>│
+   935→     │ 2. Generate code_verifier + code_challenge (S256) │
+   936→     │ 3. Redirect to Google Auth URL                    │
+   937→     │<──────────────────────────────────────────────────┤
+   938→     │                                                   │
+   939→     │ 4. User authenticates + grants                    │
+   940→     ├───────────────────────────────────────────────────>│ Google
+   941→     │                                                   │  Auth
+   942→     │ 5. Redirect to /auth/google/callback              │  Server
+   943→     │    with ?code=xxx&state=yyy                       │
+   944→     │<──────────────────────────────────────────────────┤
+   945→     │                                                   │
+   946→     │ 6. Send code + state + code_verifier              │
+   947→     ├──────────────────────────────────────────────────>│
+   948→     │                                                   │ 7. Exchange code + code_verifier
+   949→     │                                                   │    for access_token + id_token
+   950→     │                                                   ├────────────────────────────>│ Google
+   951→     │                                                   │                              │ Token
+   952→     │                                                   │ 8. Receive tokens            │ Endpoint
+   953→     │                                                   │<────────────────────────────┤
+   954→     │                                                   │
+   955→     │                                                   │ 9. Verify id_token JWT signature
+   956→     │                                                   │    Fetch userinfo (email, name, picture)
+   957→     │                                                   │ 10. Find or create Orion user
+   958→     │                                                   │ 11. Issue Orion JWT (access + refresh)
+   959→     │ 12. Set cookies + redirect to dashboard           │
+   960→     │<──────────────────────────────────────────────────┤
+   961→```
+   962→
+   963→### 6.2.2 Implementação Google
+   964→
+   965→```typescript
+   966→// src/lib/auth/oauth/google.ts
+   967→import { generators } from 'openid-client';
+   968→import { googleClient } from './client';
+   969→
+   970→export async function initiateGoogleLogin(req: Request, res: Response) {
+   971→  const codeVerifier = generators.codeVerifier();
+   972→  const codeChallenge = generators.codeChallenge(codeVerifier);
+   973→  const state = generators.state();
+   974→  const nonce = generators.nonce();
+   975→
+   976→  // Persiste em cookie httpOnly para callback
+   977→  res.cookie('oauth_cv', codeVerifier, {
+   978→    httpOnly: true, secure: true, sameSite: 'strict',
+   979→    maxAge: 10 * 60 * 1000, // 10 min
+   980→  });
+   981→  res.cookie('oauth_state', state, { ...sameOpts });
+   982→  res.cookie('oauth_nonce', nonce, { ...sameOpts });
+   983→
+   984→  const url = googleClient.authorizationUrl({
+   985→    scope: 'openid email profile',
+   986→    code_challenge: codeChallenge,
+   987→    code_challenge_method: 'S256',
+   988→    state, nonce,
+   989→    prompt: 'select_account',
+   990→  });
+   991→
+   992→  res.redirect(url);
+   993→}
+   994→
+   995→export async function handleGoogleCallback(req: Request, res: Response) {
+   996→  const { code, state } = req.query;
+   997→  const cv = req.cookies.oauth_cv;
+   998→  const savedState = req.cookies.oauth_state;
+   999→  const nonce = req.cookies.oauth_nonce;
+  1000→
+  1001→  if (state !== savedState) throw new OAuthError('State mismatch (CSRF?)');
+  1002→
+  1003→  const tokenSet = await googleClient.callback(
+  1004→    'https://api.orion.com/auth/google/callback',
+  1005→    { code, state },
+  1006→    { code_verifier: cv, nonce }
+  1007→  );
+  1008→
+  1009→  const claims = tokenSet.claims(); // validates signature, exp, aud, nonce
+  1010→  const userinfo = await googleClient.userinfo(tokenSet.access_token!);
+  1011→
+  1012→  // Find or create user
+  1013→  const user = await findOrCreateOAuthUser({
+  1014→    provider: 'google',
+  1015→    providerUserId: claims.sub,
+  1016→    email: claims.email!,
+  1017→    emailVerified: claims.email_verified ?? false,
+  1018→    name: claims.name,
+  1019→    avatarUrl: claims.picture,
+  1020→  });
+  1021→
+  1022→  // If new user: needs companyId assignment (admin invites)
+  1023→  if (!user.companyId) {
+  1024→    const pendingInvitation = await db.invitation.findFirst({
+  1025→      where: { email: user.email, status: 'pending' },
+  1026→    });
+  1027→    if (!pendingInvitation) {
+  1028→      // Return to onboarding "ask your admin to invite you"
+  1029→      return res.redirect(`${APP_URL}/no-invitation`);
+  1030→    }
+  1031→    await acceptInvitation(user.id, pendingInvitation);
+  1032→  }
+  1033→
+  1034→  // Issue Orion tokens
+  1035→  const session = await createSession(user, { provider: 'google', ip: req.ip, userAgent: req.headers['user-agent'] });
+  1036→  const { accessToken, refreshToken } = await issueTokens(user, session);
+  1037→
+  1038→  res.cookie('access_token', accessToken, { httpOnly: true, secure: true, sameSite: 'strict', maxAge: 15 * 60 * 1000 });
+  1039→  res.cookie('refresh_token', refreshToken, { httpOnly: true, secure: true, sameSite: 'strict', maxAge: 7 * 86400 * 1000 });
+  1040→  res.clearCookie('oauth_cv'); res.clearCookie('oauth_state'); res.clearCookie('oauth_nonce');
+  1041→
+  1042→  await audit.log({ action: 'auth.login.oauth', userId: user.id, meta: { provider: 'google' } });
+  1043→  res.redirect(`${APP_URL}/dashboard`);
+  1044→}
+  1045→```
+  1046→
+  1047→### 6.2.3 Diagrama Microsoft (Azure AD / Entra ID)
+  1048→
+  1049→Mesmo fluxo Authorization Code + PKCE, mas com particularidades:
+  1050→
+  1051→- `tenant` configurável: `common` (qualquer Microsoft account), `organizations` (qualquer Work/School), `consumers` (Live/Hotmail), ou GUID específico do tenant do cliente
+  1052→- Para clientes Enterprise com Azure AD: recomendamos Azure AD application registration com `multi-tenant: yes`
+  1053→- Scopes: `openid profile email User.Read`
+  1054→- Endpoint de discovery: `https://login.microsoftonline.com/{tenant}/v2.0/.well-known/openid-configuration`
+  1055→
+  1056→```typescript
+  1057→// src/lib/auth/oauth/microsoft.ts
+  1058→import { Issuer, Client } from 'openid-client';
+  1059→
+  1060→export async function createMicrosoftClient(tenant = 'common'): Promise<Client> {
+  1061→  const issuer = await Issuer.discover(`https://login.microsoftonline.com/${tenant}/v2.0`);
+  1062→  return new issuer.Client({
+  1063→    client_id: process.env.MS_CLIENT_ID!,
+  1064→    client_secret: process.env.MS_CLIENT_SECRET!,
+  1065→    redirect_uris: ['https://api.orion.com/auth/microsoft/callback'],
+  1066→    response_types: ['code'],
+  1067→  });
+  1068→}
+  1069→
+  1070→export async function initiateMicrosoftLogin(req: Request, res: Response) {
+  1071→  // Para empresas Enterprise, tenant vem da query (?tenant=xxx)
+  1072→  const tenant = req.query.tenant as string || 'common';
+  1073→  const client = await createMicrosoftClient(tenant);
+  1074→
+  1075→  const codeVerifier = generators.codeVerifier();
+  1076→  const codeChallenge = generators.codeChallenge(codeVerifier);
+  1077→  const state = generators.state();
+  1078→  const nonce = generators.nonce();
+  1079→
+  1080→  res.cookie('oauth_cv', codeVerifier, cookieOpts(10));
+  1081→  res.cookie('oauth_state', state, cookieOpts(10));
+  1082→  res.cookie('oauth_nonce', nonce, cookieOpts(10));
+  1083→  res.cookie('oauth_tenant', tenant, cookieOpts(10));
+  1084→
+  1085→  const url = client.authorizationUrl({
+  1086→    scope: 'openid profile email User.Read',
+  1087→    code_challenge: codeChallenge,
+  1088→    code_challenge_method: 'S256',
+  1089→    state, nonce,
+  1090→    prompt: 'select_account',
+  1091→  });
+  1092→
+  1093→  res.redirect(url);
+  1094→}
+  1095→```
+  1096→
+  1097→### 6.2.4 Account Linking
+  1098→
+  1099→Cenário: usuário já existe com senha e quer adicionar login via Google.
+  1100→
+  1101→```typescript
+  1102→@RequireAuth
+  1103→@Post('/me/link-google')
+  1104→async linkGoogle(@Req() req: Request) {
+  1105→  // Same OAuth flow, but in callback check that req.cookies.link_user_id is set
+  1106→  // Then update existing user with provider=google, providerUserId=sub
+  1107→  // Don't create new user
+  1108→}
+  1109→```
+  1110→
+  1111→Regras:
+  1112→- Email já existe com mesmo email verificado → link automático
+  1113→- Email existe mas não verificado → exige login com senha primeiro
+  1114→- Email não existe → cria novo usuário (com companyId pendente convite)
+  1115→- Email existe mas pertence a outro provedor → oferece "link accounts"
+  1116→
+  1117→### 6.2.5 Detecção de Ataques OAuth
+  1118→
+  1119→- **State mismatch** → bloqueia (CSRF)
+  1120→- **Nonce mismatch** → bloqueia (token replay)
+  1121→- **Email não verificado no provedor** → não linka automaticamente
+  1122→- **Domain mismatch** → se empresa tem SSO restrito a `@empresa.com`, bloqueia outros
+  1123→- **Aud mismatch** → rejeita token emitido para outro client_id
+  1124→
+  1125→---
+  1126→
+  1127→# Capítulo 7 — Autorização (RBAC) — Matriz Completa
+  1128→
+  1129→## 7.1 Modelo
+  1130→
+  1131→Role-Based Access Control com permissões granulares por módulo e ação.
+  1132→
+  1133→```
+  1134→User → Role → Permissions
+  1135→              ├── module.action
+  1136→              ├── users.create
+  1137→              ├── users.read
+  1138→              └── ...
+  1139→```
+  1140→
+  1141→## 7.2 Permissões Granulares
+  1142→
+  1143→Cada módulo tem 7 ações padrão:
+  1144→- `create`, `read`, `update`, `delete`, `export`, `import`, `configure`
+  1145→
+  1146→Permissões especiais:
+  1147→- `audit.read` — acesso a logs de auditoria
+  1148→- `license.manage` — gestão de licenças
+  1149→- `system.admin` — acesso total ao sistema
+  1150→- `users.reset_2fa` — reset de 2FA de outro usuário
+  1151→- `security.impersonate` — impersonation (apenas system.admin)
+  1152→- `ai.query` — uso do chat IA
+  1153→- `ai.admin` — configuração de IA e visualização de custos
+  1154→- `integrations.manage` — configuração de integrações
+  1155→- `webhooks.manage` — gestão de webhooks
+  1156→
+  1157→## 7.3 Hierarquia de Roles
+  1158→
+  1159→```
+  1160→system.admin (Master)
+  1161→    ↓ herda
+  1162→admin.empresa
+  1163→    ↓ herda
+  1164→diretor
+  1165→    ↓ herda
+  1166→gerente
+  1167→    ↓ herda
+  1168→supervisor
+  1169→    ↓ herda
+  1170→vendedor
+  1171→```
+  1172→
+  1173→Roles herdam permissões de roles inferiores (somatório).
+  1174→
+  1175→## 7.4 Matriz Completa de Permissões por Cargo
+  1176→
+  1177→Legenda: ✓ = tem | ✗ = não tem | ✓* = opcional (configurável por empresa)
+  1178→
+  1179→| Módulo.Ação | Vendedor | Supervisor | Gerente | Diretor | Admin Empresa | Admin Master |
+  1180→|---|---|---|---|---|---|---|
+  1181→| **dashboard** | | | | | | |
+  1182→| dashboard.read | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+  1183→| dashboard.configure | ✗ | ✗ | ✓ | ✓ | ✓ | ✓ |
+  1184→| **users** | | | | | | |
+  1185→| users.read | ✓* (próprio) | ✓* (supervisionados) | ✓ (filial) | ✓ (empresa) | ✓ (empresa) | ✓ (global) |
+  1186→| users.create | ✗ | ✗ | ✓ (filial) | ✓ (empresa) | ✓ (empresa) | ✓ (global) |
+  1187→| users.update | ✗ | ✓* (supervisionados) | ✓ (filial) | ✓ (empresa) | ✓ (empresa) | ✓ (global) |
+  1188→| users.delete | ✗ | ✗ | ✗ | ✓ (empresa) | ✓ (empresa) | ✓ (global) |
+  1189→| users.export | ✗ | ✗ | ✓* | ✓ | ✓ | ✓ |
+  1190→| users.import | ✗ | ✗ | ✗ | ✓* | ✓ | ✓ |
+  1191→| users.configure | ✗ | ✗ | ✗ | ✗ | ✓ | ✓ |
+  1192→| users.reset_2fa | ✗ | ✗ | ✗ | ✗ | ✓ | ✓ |
+  1193→| **goals** | | | | | | |
+  1194→| goals.read | ✓ (próprias) | ✓ (equipe) | ✓ (filial) | ✓ (empresa) | ✓ (empresa) | ✓ |
+  1195→| goals.create | ✗ | ✓* (equipe) | ✓ (filial) | ✓ (empresa) | ✓ | ✓ |
+  1196→| goals.update | ✗ | ✓* (equipe) | ✓ (filial) | ✓ (empresa) | ✓ | ✓ |
+  1197→| goals.delete | ✗ | ✗ | ✓* | ✓ | ✓ | ✓ |
+  1198→| goals.export | ✗ | ✓* | ✓ | ✓ | ✓ | ✓ |
+  1199→| goals.import | ✗ | ✗ | ✓* | ✓ | ✓ | ✓ |
+  1200→| goals.configure | ✗ | ✗ | ✗ | ✓ | ✓ | ✓ |
+  1201→| **results** | | | | | | |
+  1202→| results.read | ✓ (próprios) | ✓ (equipe) | ✓ (filial) | ✓ (empresa) | ✓ | ✓ |
+  1203→| results.create | ✓ (próprios) | ✓ (supervisionados) | ✓ | ✓ | ✓ | ✓ |
+  1204→| results.update | ✗ | ✓* | ✓ | ✓ | ✓ | ✓ |
+  1205→| results.delete | ✗ | ✗ | ✓* | ✓ | ✓ | ✓ |
+  1206→| results.approve | ✗ | ✓ (equipe) | ✓ (filial) | ✓ (empresa) | ✓ | ✓ |
+  1207→| results.reject | ✗ | ✓ (equipe) | ✓ (filial) | ✓ (empresa) | ✓ | ✓ |
+  1208→| results.export | ✗ | ✓* | ✓ | ✓ | ✓ | ✓ |
+  1209→| results.import | ✗ | ✓* | ✓ | ✓ | ✓ | ✓ |
+  1210→| **campaigns** | | | | | | |
+  1211→| campaigns.read | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+  1212→| campaigns.create | ✗ | ✗ | ✓* | ✓ | ✓ | ✓ |
+  1213→| campaigns.update | ✗ | ✗ | ✓* | ✓ | ✓ | ✓ |
+  1214→| campaigns.delete | ✗ | ✗ | ✓* | ✓ | ✓ | ✓ |
+  1215→| campaigns.configure | ✗ | ✗ | ✗ | ✓ | ✓ | ✓ |
+  1216→| **indicators** | | | | | | |
+  1217→| indicators.read | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+  1218→| indicators.create | ✗ | ✗ | ✗ | ✓ | ✓ | ✓ |
+  1219→| indicators.update | ✗ | ✗ | ✗ | ✓ | ✓ | ✓ |
+  1220→| indicators.delete | ✗ | ✗ | ✗ | ✓ | ✓ | ✓ |
+  1221→| indicators.configure | ✗ | ✗ | ✗ | ✓ | ✓ | ✓ |
+  1222→| **branches** | | | | | | |
+  1223→| branches.read | ✓ (própria) | ✓ (própria) | ✓ (própria) | ✓ (todas) | ✓ | ✓ |
+  1224→| branches.create | ✗ | ✗ | ✗ | ✗ | ✓ | ✓ |
+  1225→| branches.update | ✗ | ✗ | ✗ | ✗ | ✓ | ✓ |
+  1226→| branches.delete | ✗ | ✗ | ✗ | ✗ | ✓* | ✓ |
+  1227→| **rankings** | | | | | | |
+  1228→| rankings.read | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+  1229→| rankings.export | ✗ | ✓* | ✓ | ✓ | ✓ | ✓ |
+  1230→| **reports** | | | | | | |
+  1231→| reports.read | ✓ (próprios) | ✓ (equipe) | ✓ (filial) | ✓ (empresa) | ✓ | ✓ |
+  1232→| reports.create | ✗ | ✓* | ✓ | ✓ | ✓ | ✓ |
+  1233→| reports.export | ✗ | ✓* | ✓ | ✓ | ✓ | ✓ |
+  1234→| **notifications** | | | | | | |
+  1235→| notifications.read | ✓ (próprias) | ✓ (próprias) | ✓ (próprias) | ✓ (próprias) | ✓ | ✓ |
+  1236→| notifications.send | ✗ | ✓* (equipe) | ✓ (filial) | ✓ (empresa) | ✓ | ✓ |
+  1237→| **audit** | | | | | | |
+  1238→| audit.read | ✗ | ✗ | ✗ | ✓* | ✓ | ✓ |
+  1239→| audit.export | ✗ | ✗ | ✗ | ✗ | ✓ | ✓ |
+  1240→| **ai** | | | | | | |
+  1241→| ai.query | ✓* | ✓* | ✓* | ✓* | ✓ | ✓ |
+  1242→| ai.admin | ✗ | ✗ | ✗ | ✗ | ✓ | ✓ |
+  1243→| **integrations** | | | | | | |
+  1244→| integrations.manage | ✗ | ✗ | ✗ | ✗ | ✓ | ✓ |
+  1245→| webhooks.manage | ✗ | ✗ | ✗ | ✗ | ✓ | ✓ |
+  1246→| **licenses** | | | | | | |
+  1247→| license.manage | ✗ | ✗ | ✗ | ✗ | ✗ | ✓ |
+  1248→| **system** | | | | | | |
+  1249→| system.admin | ✗ | ✗ | ✗ | ✗ | ✗ | ✓ |
+  1250→| security.impersonate | ✗ | ✗ | ✗ | ✗ | ✗ | ✓ |
+  1251→| billing.manage | ✗ | ✗ | ✗ | ✗ | ✓* | ✓ |
+  1252→
+  1253→## 7.5 Validação no Backend
+  1254→
+  1255→Toda rota protegida tem middleware que verifica em 3 camadas:
+  1256→
+  1257→1. **Autenticação** (token válido)
+  1258→2. **Autorização** (permissão presente)
+  1259→3. **Posse** (recurso pertence à empresa/filial do usuário)
+  1260→
+  1261→```typescript
+  1262→// src/middleware/require-permissions.ts
+  1263→import { CanActivate, ExecutionContext, Injectable, ForbiddenException } from '@nestjs/common';
+  1264→
+  1265→@Injectable()
+  1266→export class PermissionsGuard implements CanActivate {
+  1267→  constructor(private reflector: Reflector) {}
+  1268→
+  1269→  canActivate(ctx: ExecutionContext): boolean {
+  1270→    const required = this.reflector.get<string[]>('permissions', ctx.getHandler());
+  1271→    if (!required) return true;
+  1272→
+  1273→    const req = ctx.switchToHttp().getRequest<Request>();
+  1274→    const user = req.user as AuthenticatedUser;
+  1275→    if (!user) throw new ForbiddenException();
+  1276→
+  1277→    const hasAll = required.every(p => user.permissions.includes(p));
+  1278→    if (!hasAll) throw new ForbiddenException(`Missing: ${required.join(', ')}`);
+  1279→    return true;
+  1280→  }
+  1281→}
+  1282→
+  1283→// Uso:
+  1284→@RequirePermissions('goals.create')
+  1285→@Post('/goals')
+  1286→async createGoal(@Body() dto: CreateGoalDto, @Req() req: Request) {
+  1287→  // Posse: filial do objetivo deve ser do usuário
+  1288→  if (dto.branchId && !req.user.branchIds.includes(dto.branchId)) {
+  1289→    throw new ForbiddenException('Branch not in user scope');
+  1290→  }
+  1291→  return this.goalsService.create({ ...dto, companyId: req.user.companyId, createdBy: req.user.id });
+  1292→}
+  1293→```
+  1294→
+  1295→## 7.6 Posse e Scoped Access
+  1296→
+  1297→Validação de posse em cada query (defesa em profundidade com RLS):
+  1298→
+  1299→```typescript
+  1300→// Vendedor só pode ver próprios resultados
+  1301→async findResults(user: AuthenticatedUser, filters: ResultFilter) {
+  1302→  let scopedWhere: any = { companyId: user.companyId };
+  1303→
+  1304→  switch (user.role) {
+  1305→    case 'vendedor':
+  1306→      scopedWhere.userId = user.id;
+  1307→      break;
+  1308→    case 'supervisor':
+  1309→      scopedWhere.userId = { in: await getSubordinateIds(user.id) };
+  1310→      break;
+  1311→    case 'gerente':
+  1312→      scopedWhere.branchId = user.branchId;
+  1313→      break;
+  1314→    case 'diretor':
+  1315→    case 'admin.empresa':
+  1316→    case 'system.admin':
+  1317→      // sem filtro adicional (companyId já vem do user)
+  1318→      break;
+  1319→  }
+  1320→
+  1321→  return db.result.findMany({ where: { ...scopedWhere, ...filters } });
+  1322→}
+  1323→```
+  1324→
+  1325→## 7.7 Custom Roles (v2.0)
+  1326→
+  1327→Empresas poderão criar roles customizadas herdando de uma das 5 roles base. Persistido em `roles` com `parentRoleId` e `permissions` (override). Matriz acima é o default imutável.
+  1328→
+  1329→---
+  1330→
+  1331→# Capítulo 8 — Criptografia — AES-256, TLS 1.3, Key Rotation
+  1332→
+  1333→## 8.1 Dados em Trânsito
+  1334→
+  1335→### 8.1.1 TLS 1.3
+  1336→
+  1337→- **Obrigatório** TLS 1.3 (RFC 8446)
+  1338→- TLS 1.2 aceito apenas para clientes legacy (depreciação 2026)
+  1339→- TLS 1.0/1.1/SSL: desabilitados (fogo no CloudFront/ALB)
+  1340→- **Cipher suites aceitas (TLS 1.3):**
+  1341→  - `TLS_AES_256_GCM_SHA384`
+  1342→  - `TLS_AES_128_GCM_SHA256`
+  1343→  - `TLS_CHACHA20_POLY1305_SHA256`
+  1344→- **Cipher suites aceitas (TLS 1.2 legacy):**
+  1345→  - `TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384`
+  1346→  - `TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256`
+  1347→  - `TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256`
+  1348→- Renegociação desabilitada
+  1349→- Compression desabilitada (CRIME/BREACH)
+  1350→- 0-RTT habilitado só para idempotentes (GET)
+  1351→
+  1352→### 8.1.2 HSTS
+  1353→
+  1354→```
+  1355→Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
+  1356→```
+  1357→
+  1358→Domínio `orion.com` submetido à HSTS preload list do Chrome.
+  1359→
+  1360→### 8.1.3 Certificate Pinning
+  1361→
+  1362→Aplicativo Electron e mobile usam pinning para:
+  1363→- `api.orion.com` (certificado público + backup)
+  1364→- SPKI hash do certificado
+  1365→
+  1366→```typescript
+  1367→// Electron (ses.webRequest.onCertificateTrust)
+  1368→const PINS = [
+  1369→  'sha256/abcdef...', // primário
+  1370→  'sha256/123456...',  // backup (rotação)
+  1371→];
+  1372→session.defaultSession.webRequest.onCertificateTrust((event, url, certificate, callback) => {
+  1373→  const certPins = extractPins(certificate);
+  1374→  if (PINS.some(pin => certPins.includes(pin))) {
+  1375→    callback(true);
+  1376→  } else {
+  1377→    callback(false);
+  1378→  }
+  1379→});
+  1380→```
+  1381→
+  1382→### 8.1.4 mTLS Interno
+  1383→
+  1384→Serviços backend se comunicam via mTLS dentro da VPC (zero trust). Service mesh Istio ou Linkerd emite certificados via SPIFFE/SPIRE.
+  1385→
+  1386→## 8.2 Dados em Repouso
+  1387→
+  1388→### 8.2.1 Disk Encryption
+  1389→
+  1390→- **Banco PostgreSQL:** Transparent Disk Encryption (TDE) ou EBS encryption (AWS) / Persistent Disk encryption (GCP)
+  1391→- **Redis:** disk persistence encryptada (`requirepass` + `tls-port`)
+  1392→- **S3 / GCS:** SSE-KMS (chave gerenciada pelo KMS, rotação anual)
+  1393→- **Backups:** AES-256-GCM com chave derivada via KMS
+  1394→
+  1395→### 8.2.2 Column-Level Encryption (Aplicação)
+  1396→
+  1397→Colunas sensíveis criptografadas em aplicação com AES-256-GCM antes de salvar:
+  1398→
+  1399→| Tabela.Coluna | Conteúdo | Algoritmo |
+  1400→|---|---|---|
+  1401→| `users.cpf` | CPF | AES-256-GCM |
+  1402→| `users.rg` | RG | AES-256-GCM |
+  1403→| `companies.cnpj` | CNPJ | AES-256-GCM |
+  1404→| `licenses.license_key` | Chave licença | AES-256-GCM |
+  1405→| `users.phone` | Telefone | AES-256-GCM |
+  1406→| `users.picture_url` (PII?) | Foto | SSE-S3 (não ALE) |
+  1407→| `webhook_subscriptions.secret` | Secret webhook | AES-256-GCM |
+  1408→| `oauth_accounts.access_token` | Token OAuth | AES-256-GCM |
+  1409→| `email_queue.body` | Corpo email | AES-256-GCM |
+  1410→
+  1411→### 8.2.3 Implementação AES-256-GCM
+  1412→
+  1413→```typescript
+  1414→// src/lib/crypto/aes.ts
+  1415→import crypto from 'crypto';
+  1416→
+  1417→const ALGORITHM = 'aes-256-gcm';
+  1418→const IV_LENGTH = 12; // recomendado para GCM
+  1419→
+  1420→export interface EncryptedPayload {
+  1421→  v: 1;                       // versão do schema
+  1422→  k: string;                  // KMS key ID usado
+  1423→  iv: string;                 // base64 IV
+  1424→  ct: string;                 // base64 ciphertext
+  1425→  tag: string;                // base64 auth tag
+  1426→}
+  1427→
+  1428→export async function encrypt(plaintext: string, kmsKeyId = 'orion-app-data-key'): Promise<EncryptedPayload> {
+  1429→  // Envelope encryption: KMS gera data key, usamos localmente, descartamos
+  1430→  const { plaintextKey, ciphertextKey } = await KMS.generateDataKey({
+  1431→    keyId: kmsKeyId,
+  1432→    keySpec: 'AES_256',
+  1433→  });
+  1434→
+  1435→  const iv = crypto.randomBytes(IV_LENGTH);
+  1436→  const cipher = crypto.createCipheriv(ALGORITHM, plaintextKey, iv);
+  1437→  const ct = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
+  1438→  const tag = cipher.getAuthTag();
+  1439→
+  1440→  // Limpa plaintextKey da memória
+  1441→  plaintextKey.fill(0);
+  1442→
+  1443→  return {
+  1444→    v: 1,
+  1445→    k: ciphertextKey.toString('base64'),
+  1446→    iv: iv.toString('base64'),
+  1447→    ct: ct.toString('base64'),
+  1448→    tag: tag.toString('base64'),
+  1449→  };
+  1450→}
+  1451→
+  1452→export async function decrypt(payload: EncryptedPayload): Promise<string> {
+  1453→  // Decifra data key via KMS
+  1454→  const { plaintextKey } = await KMS.decrypt({
+  1455→    ciphertextBlob: Buffer.from(payload.k, 'base64'),
+  1456→  });
+  1457→
+  1458→  const decipher = crypto.createDecipheriv(ALGORITHM,
+  1459→    plaintextKey,
+  1460→    Buffer.from(payload.iv, 'base64'));
+  1461→  decipher.setAuthTag(Buffer.from(payload.tag, 'base64'));
+  1462→
+  1463→  try {
+  1464→    const plain = Buffer.concat([
+  1465→      decipher.update(Buffer.from(payload.ct, 'base64')),
+  1466→      decipher.final(),
+  1467→    ]).toString('utf8');
+  1468→    plaintextKey.fill(0);
+  1469→    return plain;
+  1470→  } catch (e) {
+  1471→    plaintextKey.fill(0);
+  1472→    throw new DecryptionError('Authentication failed - tampered ciphertext');
+  1473→  }
+  1474→}
+  1475→```
+  1476→
+  1477→### 8.2.4 Prisma Custom Type
+  1478→
+  1479→```typescript
+  1480→// prisma/schema.prisma
+  1481→generator client { provider = "prisma-client-js" }
+  1482→
+  1483→datasource db { provider = "postgresql"; url = env("DATABASE_URL") }
+  1484→
+  1485→type EncryptedString = String @db.Text;
+  1486→
+  1487→model User {
+  1488→  id             BigInt   @id @default(autoincrement())
+  1489→  companyId      BigInt
+  1490→  name           String
+  1491→  email          String   @unique
+  1492→  password       String
+  1493→  cpf            EncryptedString?  // armazena JSON {v,k,iv,ct,tag}
+  1494→  rg             EncryptedString?
+  1495→  phone          EncryptedString?
+  1496→  // ...
+  1497→}
+  1498→```
+  1499→
+  1500→```typescript
+  1501→// src/lib/db/middleware.ts — Prisma middleware para auto-encrypt
+  1502→prisma.$use(async (params, next) => {
+  1503→  if (params.model === 'User' && (params.action === 'create' || params.action === 'update')) {
+  1504→    for (const field of ['cpf', 'rg', 'phone']) {
+  1505→      if (params.args.data[field] && typeof params.args.data[field] === 'string') {
+  1506→        params.args.data[field] = await encrypt(params.args.data[field]);
+  1507→      }
+  1508→    }
+  1509→  }
+  1510→  const result = await next(params);
+  1511→  // Auto-decrypt on read
+  1512→  if (params.action === 'findUnique' || params.action === 'findMany') {
+  1513→    const decryptRow = async (row: any) => {
+  1514→      if (!row) return row;
+  1515→      for (const field of ['cpf', 'rg', 'phone']) {
+  1516→        if (row[field] && typeof row[field] === 'object') {
+  1517→          row[field] = await decrypt(row[field]);
+  1518→        }
+  1519→      }
+  1520→    };
+  1521→    if (Array.isArray(result)) await Promise.all(result.map(decryptRow));
+  1522→    else await decryptRow(result);
+  1523→  }
+  1524→  return result;
+  1525→});
+  1526→```
+  1527→
+  1528→## 8.3 Hashes
+  1529→
+  1530→| Tipo | Algoritmo | Salt |
+  1531→|---|---|---|
+  1532→| Senhas | bcrypt cost 12 | Embutido |
+  1533→| Token de reset | HMAC-SHA256 com pepper | N/A |
+  1534→| Backup codes 2FA | bcrypt cost 8 | Embutido |
+  1535→| Arquivos de backup | SHA-256 | N/A |
+  1536→| IDs públicos (PII) | HMAC-SHA256 (k-anon) | App secret |
+  1537→| E-mail (para HIBP) | SHA-1 (uppercase) | N/A |
+  1538→
+  1539→## 8.4 Key Rotation
+  1540→
+  1541→### 8.4.1 Estratégia
+  1542→
+  1543→| Chave | Local | Rotação | Estratégia |
+  1544→|---|---|---|---|
+  1545→| JWT signing (RS256) | KMS | 90 dias | 2 chaves ativas (grace 7d) |
+  1546→| AES-256 column encryption (DEK) | Derivada do KMS CMK | A cada uso (envelope) | Per-item |
+  1547→| AES-256 master (CMK) | KMS | 365 dias | Re-encrypt após rotação |
+  1548→| TLS certificate | ACM (AWS) / Let's Encrypt | 90 dias | Automático |
+  1549→| DB TDE master | RDS / Cloud SQL | 365 dias | Automático cloud |
+  1550→| Refresh token signing | Mesma JWT | 90 dias | Mesma estratégia |
+  1551→| OAuth client secrets | Google/MS console | 180 dias | Manual, com overlap |
+  1552→| Webhook signing secret | App config | 180 dias | Rotate + notifica consumers |
+  1553→
+  1554→### 8.4.2 Re-encrypt após Rotação de CMK
+  1555→
+  1556→```typescript
+  1557→// scripts/rotate-cmk.ts
+  1558→export async function reEncryptAllWithNewCMK(oldKeyId: string, newKeyId: string) {
+  1559→  const batchSize = 1000;
+  1560→  let offset = 0;
+  1561→  while (true) {
+  1562→    const users = await db.user.findMany({
+  1563→      where: { cpf: { not: null } },
+  1564→      select: { id: true, cpf: true },
+  1565→      skip: offset, take: batchSize,
+  1566→    });
+  1567→    if (users.length === 0) break;
+  1568→
+  1569→    for (const u of users) {
+  1570→      const plaintext = await decrypt(u.cpf as any);
+  1571→      const newPayload = await encrypt(plaintext, newKeyId);
+  1572→      await db.user.update({ where: { id: u.id }, data: { cpf: newPayload as any } });
+  1573→    }
+  1574→    offset += batchSize;
+  1575→    console.log(`Re-encrypted ${offset} records...`);
+  1576→  }
+  1577→}
+  1578→```
+  1579→
+  1580→## 8.5 Segredos
+  1581→
+  1582→- **HashiCorp Vault** (prod cloud) ou **AWS Secrets Manager** (alternativa)
+  1583→- **Doppler** ou **Sealed Secrets** (GitOps on-prem)
+  1584→- Rotação automática para DB credentials, API keys
+  1585→- Access log de todos os `read` de segredos
+  1586→- Segredos nunca em código, commits, variáveis de ambiente em texto plano
+  1587→- Pre-commit hook bloqueia patterns como `sk-`, `AKIA`, `ghp_`
+  1588→
+  1589→---
+  1590→
+  1591→# Capítulo 9 — Controles OWASP Top 10 (com Implementação)
+  1592→
+  1593→OWASP Top 10 (2021): A01 a A10. Cada controle abaixo descreve implementação concreta no Orion.
+  1594→
+  1595→## 9.1 A01 — Broken Access Control
+  1596→
+  1597→**Risco:** Usuário acessa dados de outro tenant, ou função não autorizada.
+  1598→
+  1599→**Implementações:**
+  1600→- RBAC granular (Capítulo 7) com middleware `@RequirePermissions`
+  1601→- RLS PostgreSQL (Capítulo 12) — defesa em profundidade
+  1602→- Validação de posse em cada query (`companyId: req.user.companyId`)
+  1603→- Defaults deny em todos os endpoints
+  1604→- Testes automatizados: para cada endpoint, testar cross-tenant access
+  1605→- `Centralized Access Control Library` (sem `if (user.role === 'admin')` espalhado)
+  1606→
+  1607→```typescript
+  1608→// Anti-pattern (PROIBIDO):
+  1609→if (user.role === 'admin') { allowAdminAction(); }
+  1610→
+  1611→// Pattern correto:
+  1612→@RequirePermissions('system.admin')
+  1613→@Post('/admin/dangerous-action')
+  1614→async dangerousAction() { ... }
+  1615→```
+  1616→
+  1617→## 9.2 A02 — Cryptographic Failures
+  1618→
+  1619→**Risco:** Dados sensíveis expostos (sem criptografia, com algoritmo fraco).
+  1620→
+  1621→**Implementações:**
+  1622→- TLS 1.3 obrigatório (Capítulo 8)
+  1623→- AES-256-GCM coluna a coluna para PII
+  1624→- bcrypt cost 12 para senhas
+  1625→- Sem dados sensíveis em logs (PII redaction pipeline)
+  1626→- Sem secrets em código (Vault)
+  1627→- SAST verifica hardcoded secrets (SonarQube, GitHub secret scanning)
+  1628→
+  1629→## 9.3 A03 — Injection (SQL, NoSQL, OS, LDAP)
+  1630→
+  1631→**Risco:** Atacante executa código malicioso via input não sanitizado.
+  1632→
+  1633→**Implementações:**
+  1634→- Prisma ORM: queries parametrizadas automaticamente
+  1635→- Zod schemas para validação de input em cada endpoint
+  1636→- Proibido concatenar strings SQL (lint rule `no-restricted-syntax`)
+  1637→- `JSON.parse` validado por schema (não `eval`, não `Function`)
+  1638→- Command spawn com array (não string): `exec('ls ' + userInput)` → `execFile('ls', [userInput])`
+  1639→
+  1640→```typescript
+  1641→// PROIBIDO:
+  1642→await prisma.$queryRaw(`SELECT * FROM users WHERE name = '${name}'`);
+  1643→
+  1644→// CORRETO:
+  1645→await prisma.$queryRaw`SELECT * FROM users WHERE name = ${name}`;
+  1646→
+  1647→// Melhor:
+  1648→await prisma.user.findMany({ where: { name } });
+  1649→```
+  1650→
+  1651→## 9.4 A04 — Insecure Design
+  1652→
+  1653→**Risco:** Falta de threat modeling, padrões inseguros.
+  1654→
+  1655→**Implementações:**
+  1656→- Threat model STRIDE para cada feature nova (template em `docs/threat-models/`)
+  1657→- Security design review obrigatória para RFCs que tocam auth, PII, pagamentos
+  1658→- Abuse case analysis: "Como um usuário malicioso abusaria disso?"
+  1659→- Rate limiting em endpoints sensíveis
+  1660→- Limites de recursos por tenant (max goals, max users, etc.)
+  1661→
+  1662→## 9.5 A05 — Security Misconfiguration
+  1663→
+  1664→**Risco:** Defaults inseguros, headers faltando, stack traces expostos.
+  1665→
+  1666→**Implementações:**
+  1667→- Headers de segurança (Capítulo 10) em todas as respostas
+  1668→- Stack traces desabilitados em produção (`NODE_ENV=production`)
+  1669→- Debug endpoints desabilitados (`/debug`, `/__coverage`)
+  1670→- `x-powered-by` removido
+  1671→- Directory listing desabilitado
+  1672→- S3 buckets privados por default (sem public read)
+  1673→- DB sem acesso público (security groups restritos)
+  1674→- Imagens Docker sem root user
+  1675→- Scan de configuração: **Lynis**, **kube-bench**, **Checkov**
+  1676→
+  1677→## 9.6 A06 — Vulnerable and Outdated Components
+  1678→
+  1679→**Risco:** Dependências com CVEs conhecidos.
+  1680→
+  1681→**Implementações:**
+  1682→- Dependabot habilitado (PRs automáticos para updates)
+  1683→- `npm audit` em CI (falha em high/critical)
+  1684→- Snyk para análise de licenças e vulns
+  1685→- Renovate Bot para updates de versões major
+  1686→- SBOM (Software Bill of Materials) gerado via `cyclonedx` a cada release
+  1687→- Container scan com **Trivy** antes do push (falha em critical)
+  1688→- Sigstore / Cosign para assinatura de imagens
+  1689→- Patch SLA: Critical 24h, High 7d, Medium 30d, Low 90d
+  1690→
+  1691→## 9.7 A07 — Identification and Authentication Failures
+  1692→
+  1693→**Risco:** Credenciais fracas, sessões não expiradas, credential stuffing.
+  1694→
+  1695→**Implementações:**
+  1696→- Política de senhas forte (Capítulo 3)
+  1697→- 2FA obrigatório para admins (Capítulo 5)
+  1698→- Rate limiting em `/auth/login` (5/min/IP, 10/h/email)
+  1699→- Lockout de conta (Capítulo 3.1.8)
+  1700→- Session timeout: 30 min inatividade (configurável), 8h máximo
+  1701→- Refresh token rotation com detecção de reuso (Capítulo 4.3)
+  1702→- Logout invalida tokens (blacklist)
+  1703→- Credential stuffing: HIBP check on signup + periodic
+  1704→- Cookie flags: `HttpOnly`, `Secure`, `SameSite=Strict`
+  1705→
+  1706→## 9.8 A08 — Software and Data Integrity Failures
+  1707→
+  1708→**Risco:** Builds comprometidos, updates não assinados, deserialização insegura.
+  1709→
+  1710→**Implementações:**
+  1711→- Pipelines CI/CD isolados (GitHub Actions OIDC, sem long-lived tokens)
+  1712→- Imagens Docker assinadas (Cosign)
+  1713→- Binários Electron assinados (Authenticode Windows, notarization macOS)
+  1714→- Releases via GitHub Releases com SHA256 checksums
+  1715→- Deserialização: apenas `JSON.parse` validado por Zod
+  1716→- Anti-tampering: hash chain em audit logs (Capítulo 15)
+  1717→- Subresource Integrity (SRI) em scripts externos
+  1718→
+  1719→## 9.9 A09 — Security Logging and Monitoring Failures
+  1720→
+  1721→**Risco:** Ataques não detectados, logs insuficientes ou apagados.
+  1722→
+  1723→**Implementações:**
+  1724→- Logs de auditoria imutáveis (Capítulo 15)
+  1725→- Logs estruturados JSON → ELK / Loki
+  1726→- Alertas em tempo real (Capítulo 9.4 do doc 13)
+  1727→- SIEM (Security Information Event Management) — correlation rules
+  1728→- UEBA (User Entity Behavior Analytics) para detectar anomalias
+  1729→- Retenção: 5 anos audit logs, 90 dias app logs, 1 ano error logs
+  1730→- Pagamento de bug bounty (HackerOne) para reports externos
+  1731→
+  1732→## 9.10 A10 — Server-Side Request Forgery (SSRF)
+  1733→
+  1734→**Risco:** Atacante faz servidor fazer requests para recursos internos.
+  1735→
+  1736→**Implementações:**
+  1737→- Whitelist de hosts permitidos para outbound requests
+  1738→- Bloquear ranges RFC 1918, link-local, loopback, cloud metadata (169.254.169.254)
+  1739→- DNS pinning: resolve hostname uma vez, valida IP antes de conectar
+  1740→- Timeout curto (5s) para requests de webhook/integrações
+  1741→- Sandboxed HTTP client (sem follow redirects para internal)
+  1742→- Webhook URL validation: não permite `localhost`, `0.0.0.0`, IPs privados, hex encoded
+  1743→
+  1744→```typescript
+  1745→// src/lib/http/safe-fetch.ts
+  1746→import { lookup } from 'dns/promises';
+  1747→import { isIP } from 'net';
+  1748→
+  1749→const BLOCKED_RANGES = [
+  1750→  /^10\./, /^172\.(1[6-9]|2[0-9]|3[01])\./, /^192\.168\./,
+  1751→  /^127\./, /^0\./, /^169\.254\./, /^::1$/, /^fc/, /^fd/,
+  1752→];
+  1753→
+  1754→export async function safeFetch(url: string, opts: RequestInit = {}): Promise<Response> {
+  1755→  const parsed = new URL(url);
+  1756→  if (!['http:', 'https:'].includes(parsed.protocol)) {
+  1757→    throw new Error('Protocol not allowed');
+  1758→  }
+  1759→
+  1760→  // Resolve DNS uma vez
+  1761→  const addresses = await lookup(parsed.hostname, { all: true });
+  1762→  for (const addr of addresses) {
+  1763→    const ip = isIP(addr.address) ? addr.address : null;
+  1764→    if (ip && BLOCKED_RANGES.some(r => r.test(ip) || ip === '169.254.169.254')) {
+  1765→      throw new Error(`Blocked internal IP: ${ip}`);
+  1766→    }
+  1767→  }
+  1768→
+  1769→  return fetch(url, { ...opts, redirect: 'manual', signal: AbortSignal.timeout(5000) });
+  1770→}
+  1771→```
+  1772→
+  1773→---
+  1774→
+  1775→# Capítulo 10 — Headers de Segurança, CSP, CORS
+  1776→
+  1777→## 10.1 Headers HTTP Padrão
+  1778→
+  1779→Todas as respostas (API e frontend) incluem:
+  1780→
+  1781→```
+  1782→Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
+  1783→Content-Security-Policy: default-src 'self'; script-src 'self' 'nonce-{nonce}' 'strict-dynamic'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://api.orion.com wss://api.orion.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests
+  1784→X-Content-Type-Options: nosniff
+  1785→X-Frame-Options: DENY
+  1786→Referrer-Policy: strict-origin-when-cross-origin
+  1787→Permissions-Policy: geolocation=(), microphone=(), camera=(), payment=(), usb=()
+  1788→Cross-Origin-Opener-Policy: same-origin
+  1789→Cross-Origin-Embedder-Policy: require-corp
+  1790→Cross-Origin-Resource-Policy: same-origin
+  1791→Cache-Control: no-store, no-cache, must-revalidate (para respostas com dados)
+  1792→X-Permitted-Cross-Domain-Policies: none
+  1793→```
+  1794→
+  1795→## 10.2 CSP com Nonces
+  1796→
+  1797→Cada request HTML recebe um nonce único (base64 22 chars) injetado em `<script>` tags:
+  1798→
+  1799→```typescript
+  1800→// src/middleware/csp.ts
+  1801→import crypto from 'crypto';
+  1802→
+  1803→export function cspMiddleware(req: Request, res: Response, next: NextFunction) {
+  1804→  const nonce = crypto.randomBytes(16).toString('base64');
+  1805→  res.locals.cspNonce = nonce;
+  1806→
+  1807→  const csp = [
+  1808→    "default-src 'self'",
+  1809→    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`,
+  1810→    "style-src 'self' 'unsafe-inline'",
+  1811→    "img-src 'self' data: https:",
+  1812→    "font-src 'self' https://fonts.gstatic.com",
+  1813→    "connect-src 'self' https://api.orion.com wss://api.orion.com https://*.sentry.io",
+  1814→    "frame-ancestors 'none'",
+  1815→    "base-uri 'self'",
+  1816→    "form-action 'self'",
+  1817→    "object-src 'none'",
+  1818→    "upgrade-insecure-requests",
+  1819→  ].join('; ');
+  1820→
+  1821→  res.setHeader('Content-Security-Policy', csp);
+  1822→  res.setHeader('X-Content-Type-Options', 'nosniff');
+  1823→  res.setHeader('X-Frame-Options', 'DENY');
+  1824→  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  1825→  res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=(), payment=(), usb=()');
+  1826→  next();
+  1827→}
+  1828→```
+  1829→
+  1830→## 10.3 CORS
+  1831→
+  1832→```typescript
+  1833→// src/middleware/cors.ts
+  1834→import cors from 'cors';
+  1835→
+  1836→const ALLOWED_ORIGINS = new Set([
+  1837→  'https://app.orion.com',
+  1838→  'https://admin.orion.com',
+  1839→  'https://staging.orion.com',
+  1840→  'http://localhost:3000', // dev
+  1841→]);
+  1842→
+  1843→export const corsOptions: cors.CorsOptions = {
+  1844→  origin: (origin, callback) => {
+  1845→    if (!origin) return callback(null, true); // same-origin / curl
+  1846→    if (ALLOWED_ORIGINS.has(origin)) return callback(null, true);
+  1847→    callback(new Error(`CORS blocked: ${origin}`));
+  1848→  },
+  1849→  credentials: true,
+  1850→  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+  1851→  allowedHeaders: ['Authorization', 'Content-Type', 'X-CSRF-Token', 'X-Request-Id'],
+  1852→  exposedHeaders: ['X-Request-Id', 'X-RateLimit-Remaining'],
+  1853→  maxAge: 600,
+  1854→};
+  1855→```
+  1856→
+  1857→CORS para tenant custom domain (v2.0): cada empresa pode ter `app.empresa.com.br` apontando para Orion. Origin validado dinamicamente via DB lookup `tenant_domains`.
+  1858→
+  1859→## 10.4 CSRF Protection
+  1860→
+  1861→Para endpoints que usam cookie de sessão (não Bearer token):
+  1862→
+  1863→```typescript
+  1864→// Double-submit cookie pattern
+  1865→export function csrfMiddleware(req: Request, res: Response, next: NextFunction) {
+  1866→  if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next();
+  1867→
+  1868→  const cookieToken = req.cookies['csrf-token'];
+  1869→  const headerToken = req.headers['x-csrf-token'];
+  1870→
+  1871→  if (!cookieToken || !headerToken || cookieToken !== headerToken) {
+  1872→    throw new ForbiddenError('CSRF token mismatch');
+  1873→  }
+  1874→  next();
+  1875→}
+  1876→
+  1877→// Generate on session start
+  1878→app.get('/csrf-token', (req, res) => {
+  1879→  const token = crypto.randomBytes(32).toString('base64url');
+  1880→  res.cookie('csrf-token', token, {
+  1881→    httpOnly: false, // accessible by JS to send in header
+  1882→    secure: true,
+  1883→    sameSite: 'strict',
+  1884→  });
+  1885→  res.json({ token });
+  1886→});
+  1887→```
+  1888→
+  1889→---
+  1890→
+  1891→# Capítulo 11 — Rate Limiting e Proteção contra Abuso
+  1892→
+  1893→## 11.1 Limites por Endpoint
+  1894→
+  1895→| Endpoint | Limite | Janela | Escopo | Penalidade |
+  1896→|---|---|---|---|---|
+  1897→| `/auth/login` | 5 | 1 min | IP | 15 min lockout |
+  1898→| `/auth/login` | 10 | 24h | email | 24h lockout |
+  1899→| `/auth/forgot-password` | 3 | 1h | IP | 1h block |
+  1900→| `/auth/reset-password` | 5 | 1h | IP | 1h block |
+  1901→| `/auth/refresh` | 30 | 1 min | user | 5 min block |
+  1902→| `/api/*` geral | 100-1000 | 1 min | user | throttle |
+  1903→| `/api/export/*` | 10 | 1h | user | 24h block |
+  1904→| `/api/ai/chat` | 20 | 1 min | user | throttle |
+  1905→| `/api/ai/insights/daily` | 1 | 1h | tenant | 429 |
+  1906→| `/api/upload` | 10 | 1 min | user | 429 |
+  1907→| File upload size | 25 MB | per file | — | 413 |
+  1908→| Webhook delivery | 100/s | — | per webhook | exponential backoff |
+  1909→
+  1910→## 11.2 Implementação (Redis sliding window)
+  1911→
+  1912→```typescript
+  1913→// src/lib/rate-limit.ts
+  1914→export async function rateLimit(opts: {
+  1915→  key: string; limit: number; windowSec: number; scope: string;
+  1916→}): Promise<{ allowed: boolean; remaining: number; resetAt: number }> {
+  1917→  const now = Date.now();
+  1918→  const windowStart = now - opts.windowSec * 1000;
+  1919→  const redisKey = `ratelimit:${opts.scope}:${opts.key}`;
+  1920→
+  1921→  const pipeline = REDIS.multi();
+  1922→  pipeline.zremrangebyscore(redisKey, 0, windowStart); // remove antigos
+  1923→  pipeline.zadd(redisKey, now, `${now}-${Math.random()}`); // adiciona atual
+  1924→  pipeline.zcount(redisKey, windowStart, now);
+  1925→  pipeline.expire(redisKey, opts.windowSec);
+  1926→  const results = await pipeline.exec() as any;
+  1927→  const count = results[2][1];
+  1928→
+  1929→  if (count > opts.limit) {
+  1930→    return { allowed: false, remaining: 0, resetAt: now + opts.windowSec * 1000 };
+  1931→  }
+  1932→  return { allowed: true, remaining: opts.limit - count, resetAt: now + opts.windowSec * 1000 };
+  1933→}
+  1934→
+  1935→// Middleware
+  1936→export function rateLimitMiddleware(opts: { limit: number; windowSec: number; scope: string }) {
+  1937→  return async (req: Request, res: Response, next: NextFunction) => {
+  1938→    const identifier = req.user?.id ?? req.ip;
+  1939→    const result = await rateLimit({
+  1940→      key: identifier,
+  1941→      limit: opts.limit,
+  1942→      windowSec: opts.windowSec,
+  1943→      scope: opts.scope,
+  1944→    });
+  1945→    res.setHeader('X-RateLimit-Limit', opts.limit);
+  1946→    res.setHeader('X-RateLimit-Remaining', result.remaining);
+  1947→    res.setHeader('X-RateLimit-Reset', Math.floor(result.resetAt / 1000));
+  1948→    if (!result.allowed) {
+  1949→      return res.status(429).json({
+  1950→        error: 'RATE_LIMITED',
+  1951→        message: 'Too many requests. Please try again later.',
+  1952→        retryAfter: Math.ceil((result.resetAt - Date.now()) / 1000),
+  1953→      });
+  1954→    }
+  1955→    next();
+  1956→  };
+  1957→}
+  1958→```
+  1959→
+  1960→## 11.3 CAPTCHA
+  1961→
+  1962→- hCaptcha (privacy-friendly) ou Cloudflare Turnstile
+  1963→- Mostrado após 3 tentativas falhas de login
+  1964→- Obrigatório em signup público
+  1965→- Obrigatório em forgot-password
+  1966→
+  1967→## 11.4 Proteção Brute Force Adicional
+  1968→
+  1969→- IP ban automático após 100 tentativas falhas em 1h (Cloudflare WAF rule)
+  1970→- Geoblocking opcional por empresa (bloqueia países não autorizados)
+  1971→- Device fingerprinting (FingerprintJS) para detectar bots
+  1972→- Bot management (Cloudflare): challenge page para tráfego suspeito
+  1973→
+  1974→---
+  1975→
+  1976→# Capítulo 12 — Segurança Multi-tenant (RLS)
+  1977→
+  1978→## 12.1 Estratégia
+  1979→
+  1980→Shared database com discriminador (`company_id` em todas as tabelas de domínio). Isolamento garantido por:
+  1981→
+  1982→1. **Aplicação:** toda query inclui `companyId: req.user.companyId`
+  1983→2. **RLS PostgreSQL:** mesmo se aplicação esquecer, banco bloqueia
+  1984→3. **Audit log:** detecção de tentativas de cross-tenant
+  1985→
+  1986→## 12.2 Row-Level Security
+  1987→
+  1988→```sql
+  1989→-- Habilita RLS em todas as tabelas com company_id
+  1990→ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+  1991→ALTER TABLE goals ENABLE ROW LEVEL SECURITY;
+  1992→ALTER TABLE results ENABLE ROW LEVEL SECURITY;
+  1993→ALTER TABLE campaigns ENABLE ROW LEVEL SECURITY;
+  1994→-- (repetir para todas as 30+ tabelas de domínio)
+  1995→
+  1996→-- Política padrão: só vê linhas da empresa da sessão
+  1997→CREATE POLICY tenant_isolation ON users
+  1998→  USING (company_id = current_setting('app.current_company_id', true)::bigint);
+  1999→
+  2000→CREATE POLICY tenant_isolation ON goals
+
+[showing lines 1-2000 of 3270; use offset=2001 with limit to continue reading]

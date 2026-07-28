@@ -1,0 +1,2002 @@
+     1→// ================================================================
+     2→// ORION - PRISMA SCHEMA
+     3→// Stack: PostgreSQL 15+ (Supabase) / Prisma ORM 5+
+     4→// Documento de Referência: 06_Logical_Database_Model.md
+     5→// ================================================================
+     6→
+     7→generator client {
+     8→  provider = "prisma-client-js"
+     9→}
+    10→
+    11→datasource db {
+    12→  provider  = "postgresql"
+    13→  url       = env("DIRECT_URL")
+    14→  
+    15→}
+    16→
+    17→// ================================================================
+    18→// ENUMS CENTRAIS
+    19→// ================================================================
+    20→
+    21→enum UserStatus {
+    22→  pending
+    23→  active
+    24→  suspended
+    25→  invited
+    26→  inactive
+    27→
+    28→  @@map("user_status")
+    29→}
+    30→
+    31→enum BranchStatus {
+    32→  active
+    33→  inactive
+    34→  maintenance
+    35→  closed
+    36→
+    37→  @@map("branch_status")
+    38→}
+    39→
+    40→enum GoalType {
+    41→  daily
+    42→  weekly
+    43→  monthly
+    44→  quarterly
+    45→  yearly
+    46→  custom
+    47→
+    48→  @@map("goal_type")
+    49→}
+    50→
+    51→enum ResultStatus {
+    52→  draft
+    53→  pending
+    54→  approved
+    55→  rejected
+    56→  revised
+    57→
+    58→  @@map("result_status")
+    59→}
+    60→
+    61→enum CampaignStatus {
+    62→  draft
+    63→  scheduled
+    64→  active
+    65→  paused
+    66→  finished
+    67→  canceled
+    68→
+    69→  @@map("campaign_status")
+    70→}
+    71→
+    72→enum AwardType {
+    73→  points
+    74→  money
+    75→  product
+    76→  badge
+    77→  experience
+    78→  custom
+    79→
+    80→  @@map("award_type")
+    81→}
+    82→
+    83→enum NotificationPriority {
+    84→  low
+    85→  normal
+    86→  high
+    87→  urgent
+    88→
+    89→  @@map("notification_priority")
+    90→}
+    91→
+    92→enum NotificationChannel {
+    93→  in_app
+    94→  email
+    95→  sms
+    96→  push
+    97→  webhook
+    98→
+    99→  @@map("notification_channel")
+   100→}
+   101→
+   102→enum AuditAction {
+   103→  create
+   104→  update
+   105→  delete
+   106→  restore
+   107→  login
+   108→  logout
+   109→  export
+   110→  import
+   111→  config
+   112→
+   113→  @@map("audit_action")
+   114→}
+   115→
+   116→enum LicensePlan {
+   117→  free
+   118→  starter
+   119→  pro
+   120→  enterprise
+   121→  custom
+   122→
+   123→  @@map("license_plan")
+   124→}
+   125→
+   126→enum LicenseStatus {
+   127→  trial
+   128→  active
+   129→  suspended
+   130→  expired
+   131→  canceled
+   132→
+   133→  @@map("license_status")
+   134→}
+   135→
+   136→enum BackupType {
+   137→  full
+   138→  incremental
+   139→  differential
+   140→  snapshot
+   141→
+   142→  @@map("backup_type")
+   143→}
+   144→
+   145→enum BackupStatus {
+   146→  queued
+   147→  running
+   148→  completed
+   149→  failed
+   150→  expired
+   151→
+   152→  @@map("backup_status")
+   153→}
+   154→
+   155→enum EmailStatus {
+   156→  queued
+   157→  sending
+   158→  sent
+   159→  failed
+   160→  bounced
+   161→  suppressed
+   162→
+   163→  @@map("email_status")
+   164→}
+   165→
+   166→enum WebhookStatus {
+   167→  queued
+   168→  delivering
+   169→  delivered
+   170→  failed
+   171→  retry
+   172→
+   173→  @@map("webhook_status")
+   174→}
+   175→
+   176→enum FilePurpose {
+   177→  avatar
+   178→  attachment
+   179→  import
+   180→  export
+   181→  logo
+   182→  document
+   183→  temp
+   184→
+   185→  @@map("file_purpose")
+   186→}
+   187→
+   188→enum PluginStatus {
+   189→  installed
+   190→  enabled
+   191→  disabled
+   192→  error
+   193→  pending_update
+   194→
+   195→  @@map("plugin_status")
+   196→}
+   197→
+   198→enum ApiKeyScope {
+   199→  read
+   200→  write
+   201→  admin
+   202→  full
+   203→
+   204→  @@map("api_key_scope")
+   205→}
+   206→
+   207→// ================================================================
+   208→// DOMÍNIO CORE
+   209→// ================================================================
+   210→
+   211→// Tabela: licenses
+   212→// Ref: Doc06 - Capítulo de Licenciamento
+   213→model License {
+   214→  id             BigInt        @id @default(autoincrement())
+   215→  uuid           String        @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+   216→  plan           LicensePlan   @default(free)
+   217→  status         LicenseStatus @default(trial)
+   218→  maxUsers       Int           @default(5) @map("max_users")
+   219→  maxBranches    Int           @default(1) @map("max_branches")
+   220→  maxIndicators  Int           @default(10) @map("max_indicators")
+   221→  startDate      DateTime      @map("start_date") @db.Timestamptz
+   222→  expirationDate DateTime      @map("expiration_date") @db.Timestamptz
+   223→  trialEndsAt    DateTime?     @map("trial_ends_at") @db.Timestamptz
+   224→  price          Decimal?      @db.Decimal(18, 4)
+   225→  currency       String        @default("BRL") @db.Char(3)
+   226→  notes          String?       @db.Text
+   227→  createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz
+   228→  updatedAt      DateTime      @updatedAt @map("updated_at") @db.Timestamptz
+   229→  deletedAt      DateTime?     @map("deleted_at") @db.Timestamptz
+   230→  active         Boolean       @default(true)
+   231→  version        Int           @default(1)
+   232→  metadata       Json          @default("{}")
+   233→
+   234→  companies Company[]
+   235→
+   236→  @@map("licenses")
+   237→}
+   238→
+   239→// Tabela: companies
+   240→// Ref: Doc06 - Capítulo 8
+   241→model Company {
+   242→  id                  BigInt      @id @default(autoincrement())
+   243→  uuid                String      @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+   244→  legalName           String      @map("legal_name") @db.VarChar(255)
+   245→  tradeName           String      @map("trade_name") @db.VarChar(255)
+   246→  cnpj                String?     @db.VarChar(18)
+   247→  stateRegistration   String?     @map("state_registration") @db.VarChar(50)
+   248→  taxIdCountry        String?     @map("tax_id_country") @db.VarChar(50)
+   249→  phone               String?     @db.VarChar(30)
+   250→  mobile              String?     @db.VarChar(30)
+   251→  email               String?     @db.VarChar(255)
+   252→  website             String?     @db.VarChar(255)
+   253→  zipCode             String?     @map("zip_code") @db.VarChar(20)
+   254→  address             String?     @db.VarChar(255)
+   255→  addressNumber       String?     @map("address_number") @db.VarChar(20)
+   256→  complement          String?     @db.VarChar(100)
+   257→  district            String?     @db.VarChar(100)
+   258→  city                String?     @db.VarChar(100)
+   259→  state               String?     @db.VarChar(100)
+   260→  country             String      @default("BR") @db.VarChar(100)
+   261→  latitude            Decimal?    @db.Decimal(10, 8)
+   262→  longitude           Decimal?    @db.Decimal(11, 8)
+   263→  logoUrl             String?     @map("logo_url")
+   264→  theme               String      @default("orion-light") @db.VarChar(50)
+   265→  language            String      @default("pt") @db.Char(2)
+   266→  currency            String      @default("BRL") @db.Char(3)
+   267→  timezone            String      @default("America/Sao_Paulo") @db.VarChar(50)
+   268→  fiscalCalendar      String      @default("january") @map("fiscal_calendar") @db.VarChar(20)
+   269→  licenseId           BigInt?     @map("license_id")
+   270→  licenseExpiresAt    DateTime?   @map("license_expires_at") @db.Timestamptz
+   271→  onboardingCompleted Boolean     @default(false) @map("onboarding_completed")
+   272→  onboardingStep      String?     @map("onboarding_step") @db.VarChar(50)
+   273→  plan                LicensePlan @default(free)
+   274→  trialEndsAt         DateTime?   @map("trial_ends_at") @db.Timestamptz
+   275→  createdAt           DateTime    @default(now()) @map("created_at") @db.Timestamptz
+   276→  updatedAt           DateTime    @updatedAt @map("updated_at") @db.Timestamptz
+   277→  deletedAt           DateTime?   @map("deleted_at") @db.Timestamptz
+   278→  createdBy           BigInt?     @map("created_by")
+   279→  updatedBy           BigInt?     @map("updated_by")
+   280→  deletedBy           BigInt?     @map("deleted_by")
+   281→  active              Boolean     @default(true)
+   282→  version             Int         @default(1)
+   283→  externalId          String?     @map("external_id") @db.VarChar(100)
+   284→  metadata            Json        @default("{}")
+   285→
+   286→  // SaaS Multi-Tenant fields (White-Label)
+   287→  subdomain           String?     @unique @map("subdomain") @db.VarChar(50)
+   288→  customDomain        String?     @unique @map("custom_domain") @db.VarChar(255)
+   289→  primaryColor        String      @default("#8b5cf6") @map("primary_color") @db.Char(7)
+   290→  secondaryColor      String      @default("#6366f1") @map("secondary_color") @db.Char(7)
+   291→  backgroundColor     String      @default("#0f111a") @map("background_color") @db.Char(7)
+   292→  appName             String      @default("Orion") @map("app_name") @db.VarChar(100)
+   293→
+   294→  // Stripe customer ID — armazena o ID do customer no Stripe para billing portal
+   295→  stripeCustomerId    String?     @unique @map("stripe_customer_id") @db.VarChar(100)
+   296→
+   297→  license             License?             @relation(fields: [licenseId], references: [id])
+   298→  enabledModules      EnabledModule[]
+   299→  erpIntegrations     ErpIntegration[]
+   300→  trainings           Training[]
+   301→  userDocuments       UserDocument[]
+   302→  branches            Branch[]
+   303→  users               User[]
+   304→  roles               Role[]
+   305→  indicators          Indicator[]
+   306→  indicatorCategories IndicatorCategory[]
+   307→  goals               Goal[]
+   308→  results             Result[]
+   309→  campaigns           Campaign[]
+   310→  rankings            Ranking[]
+   311→  dashboards          Dashboard[]
+   312→  notifications       Notification[]
+   313→  auditLogs           AuditLog[]
+   314→  backups             Backup[]
+   315→  systemSettings      SystemSetting[]
+   316→  fileUploads         FileUpload[]
+   317→  pluginInstallations PluginInstallation[]
+   318→  apiKeys             ApiKey[]
+   319→  emailQueue          EmailQueue[]
+   320→  webhookDeliveries   WebhookDelivery[]
+   321→  userAchievements    UserAchievement[]
+   322→  pointTransactions   PointTransaction[]
+   323→  pointRedemptions    PointRedemption[]
+   324→  calendarEvents      CalendarEvent[]
+   325→  checklistTemplates  ChecklistTemplate[]
+   326→  checklistTasks      ChecklistTask[]
+   327→  feedbacks           Feedback[]
+   328→  feedbackResponses   FeedbackResponse[]
+   329→  softwareProjects    SoftwareProject[]
+   330→  projectBriefings    ProjectBriefing[]
+   331→  projectTemplates    ProjectTemplate[]
+   332→  softwareLicenses    SoftwareLicense[]
+   333→
+   334→  @@unique([cnpj], map: "udx_companies_cnpj")
+   335→  @@unique([email], map: "udx_companies_email")
+   336→  @@unique([externalId], map: "udx_companies_external")
+   337→  @@index([tradeName], map: "idx_companies_trade_name")
+   338→  @@index([plan, licenseExpiresAt], map: "idx_companies_plan")
+   339→  @@map("companies")
+   340→}
+   341→
+   342→// Tabela: branches
+   343→// Ref: Doc06 - Capítulo 9
+   344→model Branch {
+   345→  id             BigInt       @id @default(autoincrement())
+   346→  uuid           String       @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+   347→  companyId      BigInt       @map("company_id")
+   348→  code           String       @db.VarChar(50)
+   349→  name           String       @db.VarChar(255)
+   350→  phone          String?      @db.VarChar(30)
+   351→  mobile         String?      @db.VarChar(30)
+   352→  managerId      BigInt?      @map("manager_id")
+   353→  zipCode        String?      @map("zip_code") @db.VarChar(20)
+   354→  address        String?      @db.VarChar(255)
+   355→  addressNumber  String?      @map("address_number") @db.VarChar(20)
+   356→  complement     String?      @db.VarChar(100)
+   357→  district       String?      @db.VarChar(100)
+   358→  city           String?      @db.VarChar(100)
+   359→  state          String?      @db.VarChar(100)
+   360→  country        String       @default("BR") @db.VarChar(100)
+   361→  latitude       Decimal?     @db.Decimal(10, 8)
+   362→  longitude      Decimal?     @db.Decimal(11, 8)
+   363→  operatingHours Json?        @map("operating_hours")
+   364→  status         BranchStatus @default(active)
+   365→  isHeadquarters Boolean      @default(false) @map("is_headquarters")
+   366→  openedAt       DateTime?    @map("opened_at") @db.Date
+   367→  closedAt       DateTime?    @map("closed_at") @db.Date
+   368→  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz
+   369→  updatedAt      DateTime     @updatedAt @map("updated_at") @db.Timestamptz
+   370→  deletedAt      DateTime?    @map("deleted_at") @db.Timestamptz
+   371→  createdBy      BigInt?      @map("created_by")
+   372→  updatedBy      BigInt?      @map("updated_by")
+   373→  deletedBy      BigInt?      @map("deleted_by")
+   374→  active         Boolean      @default(true)
+   375→  version        Int          @default(1)
+   376→  externalId     String?      @map("external_id") @db.VarChar(100)
+   377→  metadata       Json         @default("{}")
+   378→
+   379→  company Company  @relation(fields: [companyId], references: [id])
+   380→  manager User?    @relation("BranchManager", fields: [managerId], references: [id])
+   381→  users   User[]   @relation("UserBranch")
+   382→  goals   Goal[]
+   383→  calendarEvents CalendarEvent[]
+   384→
+   385→  @@unique([companyId, code], map: "udx_branches_company_code")
+   386→  @@index([companyId], map: "idx_branches_company")
+   387→  @@index([companyId, status], map: "idx_branches_company_status")
+   388→  @@map("branches")
+   389→}
+   390→
+   391→// Tabela: roles
+   392→// Ref: Doc06 - RBAC
+   393→model Role {
+   394→  id          BigInt    @id @default(autoincrement())
+   395→  uuid        String    @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+   396→  companyId   BigInt    @map("company_id")
+   397→  name        String    @db.VarChar(100)
+   398→  slug        String    @db.VarChar(100)
+   399→  description String?   @db.Text
+   400→  isSystem    Boolean   @default(false) @map("is_system")
+   401→  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+   402→  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+   403→  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz
+   404→  active      Boolean   @default(true)
+   405→  version     Int       @default(1)
+   406→  metadata    Json      @default("{}")
+   407→
+   408→  company         Company          @relation(fields: [companyId], references: [id])
+   409→  users           User[]
+   410→  rolePermissions RolePermission[]
+   411→
+   412→  @@unique([companyId, slug], map: "udx_roles_company_slug")
+   413→  @@index([companyId], map: "idx_roles_company")
+   414→  @@map("roles")
+   415→}
+   416→
+   417→// Tabela: permissions
+   418→// Ref: Doc06 - RBAC
+   419→model Permission {
+   420→  id          BigInt    @id @default(autoincrement())
+   421→  uuid        String    @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+   422→  module      String    @db.VarChar(100)
+   423→  action      String    @db.VarChar(100)
+   424→  slug        String    @unique @db.VarChar(200)
+   425→  description String?   @db.Text
+   426→  isSystem    Boolean   @default(true) @map("is_system")
+   427→  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+   428→  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+   429→  active      Boolean   @default(true)
+   430→
+   431→  rolePermissions RolePermission[]
+   432→
+   433→  @@index([module], map: "idx_permissions_module")
+   434→  @@map("permissions")
+   435→}
+   436→
+   437→// Tabela: role_permissions (junção N:N)
+   438→model RolePermission {
+   439→  id           BigInt   @id @default(autoincrement())
+   440→  roleId       BigInt   @map("role_id")
+   441→  permissionId BigInt   @map("permission_id")
+   442→  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+   443→
+   444→  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+   445→  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+   446→
+   447→  @@unique([roleId, permissionId], map: "udx_role_permissions")
+   448→  @@map("role_permissions")
+   449→}
+   450→
+   451→// Tabela: users
+   452→// Ref: Doc06 - Capítulo 10
+   453→model User {
+   454→  id               BigInt     @id @default(autoincrement())
+   455→  uuid             String     @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+   456→  companyId        BigInt     @map("company_id")
+   457→  branchId         BigInt?    @map("branch_id")
+   458→  roleId           BigInt?    @map("role_id")
+   459→  supabaseId       String?    @unique @map("supabase_id") @db.VarChar(255)
+   460→  name             String     @db.VarChar(255)
+   461→  email            String     @db.VarChar(255)
+   462→  emailVerifiedAt  DateTime?  @map("email_verified_at") @db.Timestamptz
+   463→  phone            String?    @db.VarChar(30)
+   464→  mobile           String?    @db.VarChar(30)
+   465→  cpf              String?    @db.VarChar(14)
+   466→  avatarUrl        String?    @map("avatar_url")
+   467→  jobTitle         String?    @map("job_title") @db.VarChar(100)
+   468→  department       String?    @db.VarChar(100)
+   469→  status           UserStatus @default(pending)
+   470→  passwordHash     String?    @map("password_hash") @db.Text
+   471→  lastLoginAt      DateTime?  @map("last_login_at") @db.Timestamptz
+   472→  lastLoginIp      String?    @map("last_login_ip") @db.VarChar(45)
+   473→  twoFactorEnabled Boolean    @default(false) @map("two_factor_enabled")
+   474→  isSuperAdmin     Boolean    @default(false) @map("is_super_admin")
+   475→  twoFactorSecret  String?    @map("two_factor_secret") @db.Text
+   476→  preferences      Json       @default("{}")
+   477→  createdAt        DateTime   @default(now()) @map("created_at") @db.Timestamptz
+   478→  updatedAt        DateTime   @updatedAt @map("updated_at") @db.Timestamptz
+   479→  deletedAt        DateTime?  @map("deleted_at") @db.Timestamptz
+   480→  createdBy        BigInt?    @map("created_by")
+   481→  updatedBy        BigInt?    @map("updated_by")
+   482→  deletedBy        BigInt?    @map("deleted_by")
+   483→  active           Boolean    @default(true)
+   484→  version          Int        @default(1)
+   485→  externalId       String?    @map("external_id") @db.VarChar(100)
+   486→  metadata         Json       @default("{}")
+   487→
+   488→  company              Company          @relation(fields: [companyId], references: [id])
+   489→  branch               Branch?          @relation("UserBranch", fields: [branchId], references: [id])
+   490→  role                 Role?            @relation(fields: [roleId], references: [id])
+   491→  managedBranches      Branch[]         @relation("BranchManager")
+   492→  sessions             Session[]
+   493→  refreshTokens        RefreshToken[]
+   494→  apiKeys              ApiKey[]
+   495→  fileUploads          FileUpload[]
+   496→  goals                Goal[]           @relation("GoalOwner")
+   497→  results              Result[]
+   498→  notifications        Notification[]
+   499→  auditLogs            AuditLog[]
+   500→  campaignParticipants CampaignParticipant[]
+   501→  achievements         UserAchievement[]
+   502→  pointTransactions    PointTransaction[]
+   503→  redemptions          PointRedemption[]
+   504→  calendarEvents       CalendarEvent[]
+   505→  checklistTasks       ChecklistTask[]
+   506→  feedbackResponses    FeedbackResponse[]
+   507→  trainingProgress     TrainingProgress[]
+   508→  documents            UserDocument[]
+   509→
+   510→  @@unique([companyId, email], map: "udx_users_company_email")
+   511→  @@index([companyId], map: "idx_users_company")
+   512→  @@index([companyId, status], map: "idx_users_company_status")
+   513→  @@index([email], map: "idx_users_email")
+   514→  @@map("users")
+   515→}
+   516→
+   517→// Tabela: sessions
+   518→// Ref: Doc06 - Auth
+   519→model Session {
+   520→  id           BigInt    @id @default(autoincrement())
+   521→  uuid         String    @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+   522→  userId       BigInt    @map("user_id")
+   523→  companyId    BigInt    @map("company_id")
+   524→  token        String    @unique @db.Text
+   525→  ipAddress    String?   @map("ip_address") @db.VarChar(45)
+   526→  userAgent    String?   @map("user_agent") @db.Text
+   527→  deviceInfo   Json?     @map("device_info")
+   528→  expiresAt    DateTime  @map("expires_at") @db.Timestamptz
+   529→  lastActiveAt DateTime  @default(now()) @map("last_active_at") @db.Timestamptz
+   530→  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+   531→  revokedAt    DateTime? @map("revoked_at") @db.Timestamptz
+   532→
+   533→  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+   534→
+   535→  @@index([userId], map: "idx_sessions_user")
+   536→  @@index([token], map: "idx_sessions_token")
+   537→  @@index([expiresAt], map: "idx_sessions_expires")
+   538→  @@map("sessions")
+   539→}
+   540→
+   541→// Tabela: refresh_tokens
+   542→model RefreshToken {
+   543→  id        BigInt    @id @default(autoincrement())
+   544→  userId    BigInt    @map("user_id")
+   545→  companyId BigInt    @map("company_id")
+   546→  token     String    @unique @db.Text
+   547→  expiresAt DateTime  @map("expires_at") @db.Timestamptz
+   548→  usedAt    DateTime? @map("used_at") @db.Timestamptz
+   549→  revokedAt DateTime? @map("revoked_at") @db.Timestamptz
+   550→  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+   551→
+   552→  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+   553→
+   554→  @@index([userId], map: "idx_refresh_tokens_user")
+   555→  @@index([token], map: "idx_refresh_tokens_token")
+   556→  @@map("refresh_tokens")
+   557→}
+   558→
+   559→// Tabela: api_keys
+   560→model ApiKey {
+   561→  id          BigInt      @id @default(autoincrement())
+   562→  uuid        String      @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+   563→  companyId   BigInt      @map("company_id")
+   564→  userId      BigInt      @map("user_id")
+   565→  name        String      @db.VarChar(100)
+   566→  keyHash     String      @unique @map("key_hash") @db.Text
+   567→  keyPrefix   String      @map("key_prefix") @db.VarChar(20)
+   568→  scope       ApiKeyScope @default(read)
+   569→  expiresAt   DateTime?   @map("expires_at") @db.Timestamptz
+   570→  lastUsedAt  DateTime?   @map("last_used_at") @db.Timestamptz
+   571→  lastUsedIp  String?     @map("last_used_ip") @db.VarChar(45)
+   572→  requestCount BigInt     @default(0) @map("request_count")
+   573→  createdAt   DateTime    @default(now()) @map("created_at") @db.Timestamptz
+   574→  updatedAt   DateTime    @updatedAt @map("updated_at") @db.Timestamptz
+   575→  revokedAt   DateTime?   @map("revoked_at") @db.Timestamptz
+   576→  active      Boolean     @default(true)
+   577→  metadata    Json        @default("{}")
+   578→
+   579→  company Company @relation(fields: [companyId], references: [id])
+   580→  user    User    @relation(fields: [userId], references: [id])
+   581→
+   582→  @@index([companyId], map: "idx_api_keys_company")
+   583→  @@map("api_keys")
+   584→}
+   585→
+   586→// Tabela: file_uploads
+   587→model FileUpload {
+   588→  id          BigInt      @id @default(autoincrement())
+   589→  uuid        String      @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+   590→  companyId   BigInt      @map("company_id")
+   591→  userId      BigInt      @map("user_id")
+   592→  purpose     FilePurpose @default(attachment)
+   593→  fileName    String      @map("file_name") @db.VarChar(500)
+   594→  fileSize    BigInt      @map("file_size")
+   595→  mimeType    String      @map("mime_type") @db.VarChar(100)
+   596→  storageKey  String      @map("storage_key") @db.Text
+   597→  publicUrl   String?     @map("public_url") @db.Text
+   598→  bucketName  String      @default("orion-uploads") @map("bucket_name") @db.VarChar(100)
+   599→  createdAt   DateTime    @default(now()) @map("created_at") @db.Timestamptz
+   600→  deletedAt   DateTime?   @map("deleted_at") @db.Timestamptz
+   601→  active      Boolean     @default(true)
+   602→  metadata    Json        @default("{}")
+   603→
+   604→  company Company @relation(fields: [companyId], references: [id])
+   605→  user    User    @relation(fields: [userId], references: [id])
+   606→
+   607→  @@index([companyId], map: "idx_file_uploads_company")
+   608→  @@index([userId], map: "idx_file_uploads_user")
+   609→  @@map("file_uploads")
+   610→}
+   611→
+   612→// ================================================================
+   613→// DOMÍNIO PERFORMANCE
+   614→// ================================================================
+   615→
+   616→// Tabela: indicator_categories
+   617→model IndicatorCategory {
+   618→  id          BigInt    @id @default(autoincrement())
+   619→  uuid        String    @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+   620→  companyId   BigInt    @map("company_id")
+   621→  name        String    @db.VarChar(255)
+   622→  description String?   @db.Text
+   623→  color       String?   @db.VarChar(7)
+   624→  icon        String?   @db.VarChar(100)
+   625→  sortOrder   Int       @default(0) @map("sort_order")
+   626→  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+   627→  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+   628→  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz
+   629→  active      Boolean   @default(true)
+   630→  version     Int       @default(1)
+   631→  metadata    Json      @default("{}")
+   632→
+   633→  company    Company     @relation(fields: [companyId], references: [id])
+   634→  indicators Indicator[]
+   635→
+   636→  @@index([companyId], map: "idx_indicator_categories_company")
+   637→  @@map("indicator_categories")
+   638→}
+   639→
+   640→// Tabela: indicators (KPIs)
+   641→model Indicator {
+   642→  id           BigInt    @id @default(autoincrement())
+   643→  uuid         String    @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+   644→  companyId    BigInt    @map("company_id")
+   645→  categoryId   BigInt?   @map("category_id")
+   646→  name         String    @db.VarChar(255)
+   647→  slug         String    @db.VarChar(255)
+   648→  description  String?   @db.Text
+   649→  unit         String?   @db.VarChar(50)
+   650→  formula      String?   @db.Text
+   651→  direction    String    @default("higher_is_better") @db.VarChar(50)
+   652→  color        String?   @db.VarChar(7)
+   653→  icon         String?   @db.VarChar(100)
+   654→  isSystem     Boolean   @default(false) @map("is_system")
+   655→  allowManual  Boolean   @default(true) @map("allow_manual")
+   656→  sortOrder    Int       @default(0) @map("sort_order")
+   657→  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+   658→  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+   659→  deletedAt    DateTime? @map("deleted_at") @db.Timestamptz
+   660→  createdBy    BigInt?   @map("created_by")
+   661→  updatedBy    BigInt?   @map("updated_by")
+   662→  active       Boolean   @default(true)
+   663→  version      Int       @default(1)
+   664→  externalId   String?   @map("external_id") @db.VarChar(100)
+   665→  metadata     Json      @default("{}")
+   666→
+   667→  company  Company            @relation(fields: [companyId], references: [id])
+   668→  category IndicatorCategory? @relation(fields: [categoryId], references: [id])
+   669→  goals    Goal[]
+   670→  rankings Ranking[]
+   671→
+   672→  @@unique([companyId, slug], map: "udx_indicators_company_slug")
+   673→  @@index([companyId], map: "idx_indicators_company")
+   674→  @@map("indicators")
+   675→}
+   676→
+   677→// Tabela: goals (Metas)
+   678→model Goal {
+   679→  id             BigInt    @id @default(autoincrement())
+   680→  uuid           String    @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+   681→  companyId      BigInt    @map("company_id")
+   682→  branchId       BigInt?   @map("branch_id")
+   683→  userId         BigInt?   @map("user_id")
+   684→  indicatorId    BigInt    @map("indicator_id")
+   685→  name           String    @db.VarChar(255)
+   686→  description    String?   @db.Text
+   687→  type           GoalType  @default(monthly)
+   688→  targetValue    Decimal   @map("target_value") @db.Decimal(18, 4)
+   689→  minValue       Decimal?  @map("min_value") @db.Decimal(18, 4)
+   690→  maxValue       Decimal?  @map("max_value") @db.Decimal(18, 4)
+   691→  startDate      DateTime  @map("start_date") @db.Date
+   692→  endDate        DateTime  @map("end_date") @db.Date
+   693→  weight         Decimal   @default(1) @db.Decimal(5, 2)
+   694→  campaignId     BigInt?   @map("campaign_id")
+   695→  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz
+   696→  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+   697→  deletedAt      DateTime? @map("deleted_at") @db.Timestamptz
+   698→  createdBy      BigInt?   @map("created_by")
+   699→  updatedBy      BigInt?   @map("updated_by")
+   700→  active         Boolean   @default(true)
+   701→  version        Int       @default(1)
+   702→  externalId     String?   @map("external_id") @db.VarChar(100)
+   703→  metadata       Json      @default("{}")
+   704→
+   705→  company   Company    @relation(fields: [companyId], references: [id])
+   706→  branch    Branch?    @relation(fields: [branchId], references: [id])
+   707→  owner     User?      @relation("GoalOwner", fields: [userId], references: [id])
+   708→  indicator Indicator  @relation(fields: [indicatorId], references: [id])
+   709→  campaign  Campaign?  @relation(fields: [campaignId], references: [id])
+   710→  results   Result[]
+   711→
+   712→  @@index([companyId], map: "idx_goals_company")
+   713→  @@index([companyId, branchId], map: "idx_goals_company_branch")
+   714→  @@index([companyId, userId], map: "idx_goals_company_user")
+   715→  @@index([startDate, endDate], map: "idx_goals_dates")
+   716→  @@map("goals")
+   717→}
+   718→
+   719→// Tabela: results (Resultados)
+   720→model Result {
+   721→  id            BigInt       @id @default(autoincrement())
+   722→  uuid          String       @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+   723→  companyId     BigInt       @map("company_id")
+   724→  goalId        BigInt       @map("goal_id")
+   725→  userId        BigInt       @map("user_id")
+   726→  value         Decimal      @db.Decimal(18, 4)
+   727→  referenceDate DateTime     @map("reference_date") @db.Date
+   728→  status        ResultStatus @default(pending)
+   729→  notes         String?      @db.Text
+   730→  approvedBy    BigInt?      @map("approved_by")
+   731→  approvedAt    DateTime?    @map("approved_at") @db.Timestamptz
+   732→  sourceSystem  String?      @map("source_system") @db.VarChar(100)
+   733→  importBatchId String?      @map("import_batch_id") @db.VarChar(100)
+   734→  createdAt     DateTime     @default(now()) @map("created_at") @db.Timestamptz
+   735→  updatedAt     DateTime     @updatedAt @map("updated_at") @db.Timestamptz
+   736→  deletedAt     DateTime?    @map("deleted_at") @db.Timestamptz
+   737→  createdBy     BigInt?      @map("created_by")
+   738→  updatedBy     BigInt?      @map("updated_by")
+   739→  active        Boolean      @default(true)
+   740→  version       Int          @default(1)
+   741→  metadata      Json         @default("{}")
+   742→
+   743→  company Company @relation(fields: [companyId], references: [id])
+   744→  goal    Goal    @relation(fields: [goalId], references: [id])
+   745→  user    User    @relation(fields: [userId], references: [id])
+   746→
+   747→  @@index([companyId], map: "idx_results_company")
+   748→  @@index([goalId], map: "idx_results_goal")
+   749→  @@index([userId, referenceDate], map: "idx_results_user_date")
+   750→  @@map("results")
+   751→}
+   752→
+   753→// Tabela: campaigns
+   754→model Campaign {
+   755→  id          BigInt         @id @default(autoincrement())
+   756→  uuid        String         @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+   757→  companyId   BigInt         @map("company_id")
+   758→  name        String         @db.VarChar(255)
+   759→  description String?        @db.Text
+   760→  status      CampaignStatus @default(draft)
+   761→  startDate   DateTime       @map("start_date") @db.Date
+   762→  endDate     DateTime       @map("end_date") @db.Date
+   763→  imageUrl    String?        @map("image_url")
+   764→  rules       Json           @default("{}")
+   765→  createdAt   DateTime       @default(now()) @map("created_at") @db.Timestamptz
+   766→  updatedAt   DateTime       @updatedAt @map("updated_at") @db.Timestamptz
+   767→  deletedAt   DateTime?      @map("deleted_at") @db.Timestamptz
+   768→  createdBy   BigInt?        @map("created_by")
+   769→  updatedBy   BigInt?        @map("updated_by")
+   770→  active      Boolean        @default(true)
+   771→  version     Int            @default(1)
+   772→  metadata    Json           @default("{}")
+   773→
+   774→  company      Company               @relation(fields: [companyId], references: [id])
+   775→  goals        Goal[]
+   776→  participants CampaignParticipant[]
+   777→  awards       Award[]
+   778→
+   779→  @@index([companyId], map: "idx_campaigns_company")
+   780→  @@index([companyId, status], map: "idx_campaigns_company_status")
+   781→  @@map("campaigns")
+   782→}
+   783→
+   784→// Tabela: campaign_participants
+   785→model CampaignParticipant {
+   786→  id          BigInt    @id @default(autoincrement())
+   787→  campaignId  BigInt    @map("campaign_id")
+   788→  userId      BigInt    @map("user_id")
+   789→  totalPoints Decimal   @default(0) @map("total_points") @db.Decimal(18, 4)
+   790→  rank        Int?
+   791→  joinedAt    DateTime  @default(now()) @map("joined_at") @db.Timestamptz
+   792→  finishedAt  DateTime? @map("finished_at") @db.Timestamptz
+   793→  metadata    Json      @default("{}")
+   794→
+   795→  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+   796→  user     User     @relation(fields: [userId], references: [id])
+   797→
+   798→  @@unique([campaignId, userId], map: "udx_campaign_participants")
+   799→  @@map("campaign_participants")
+   800→}
+   801→
+   802→// Tabela: awards
+   803→model Award {
+   804→  id          BigInt    @id @default(autoincrement())
+   805→  uuid        String    @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+   806→  companyId   BigInt    @map("company_id")
+   807→  campaignId  BigInt?   @map("campaign_id")
+   808→  name        String    @db.VarChar(255)
+   809→  description String?   @db.Text
+   810→  type        AwardType @default(points)
+   811→  value       Decimal?  @db.Decimal(18, 4)
+   812→  imageUrl    String?   @map("image_url")
+   813→  position    Int?
+   814→  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+   815→  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+   816→  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz
+   817→  active      Boolean   @default(true)
+   818→  metadata    Json      @default("{}")
+   819→
+   820→  campaign Campaign? @relation(fields: [campaignId], references: [id])
+   821→
+   822→  @@index([companyId], map: "idx_awards_company")
+   823→  @@map("awards")
+   824→}
+   825→
+   826→// Tabela: rankings
+   827→model Ranking {
+   828→  id           BigInt    @id @default(autoincrement())
+   829→  uuid         String    @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+   830→  companyId    BigInt    @map("company_id")
+   831→  indicatorId  BigInt?   @map("indicator_id")
+   832→  name         String    @db.VarChar(255)
+   833→  description  String?   @db.Text
+   834→  period       String    @db.VarChar(50)
+   835→  referenceDate DateTime @map("reference_date") @db.Date
+   836→  snapshot     Json      @default("[]")
+   837→  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+   838→  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+   839→  active       Boolean   @default(true)
+   840→  metadata     Json      @default("{}")
+   841→
+   842→  company   Company    @relation(fields: [companyId], references: [id])
+   843→  indicator Indicator? @relation(fields: [indicatorId], references: [id])
+   844→
+   845→  @@index([companyId], map: "idx_rankings_company")
+   846→  @@map("rankings")
+   847→}
+   848→
+   849→// ================================================================
+   850→// DOMÍNIO EXPERIÊNCIA
+   851→// ================================================================
+   852→
+   853→// Tabela: dashboards
+   854→model Dashboard {
+   855→  id        BigInt    @id @default(autoincrement())
+   856→  uuid      String    @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+   857→  companyId BigInt    @map("company_id")
+   858→  name      String    @db.VarChar(255)
+   859→  isDefault Boolean   @default(false) @map("is_default")
+   860→  isPublic  Boolean   @default(false) @map("is_public")
+   861→  layout    Json      @default("[]")
+   862→  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+   863→  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+   864→  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
+   865→  createdBy BigInt?   @map("created_by")
+   866→  active    Boolean   @default(true)
+   867→  version   Int       @default(1)
+   868→  metadata  Json      @default("{}")
+   869→
+   870→  company Company  @relation(fields: [companyId], references: [id])
+   871→  widgets Widget[]
+   872→
+   873→  @@index([companyId], map: "idx_dashboards_company")
+   874→  @@map("dashboards")
+   875→}
+   876→
+   877→// Tabela: widgets
+   878→model Widget {
+   879→  id          BigInt    @id @default(autoincrement())
+   880→  uuid        String    @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+   881→  dashboardId BigInt    @map("dashboard_id")
+   882→  type        String    @db.VarChar(100)
+   883→  title       String    @db.VarChar(255)
+   884→  config      Json      @default("{}")
+   885→  position    Json      @default("{}")
+   886→  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+   887→  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+   888→  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz
+   889→  active      Boolean   @default(true)
+   890→  metadata    Json      @default("{}")
+   891→
+   892→  dashboard Dashboard @relation(fields: [dashboardId], references: [id], onDelete: Cascade)
+   893→
+   894→  @@index([dashboardId], map: "idx_widgets_dashboard")
+   895→  @@map("widgets")
+   896→}
+   897→
+   898→// Tabela: notifications
+   899→model Notification {
+   900→  id         BigInt               @id @default(autoincrement())
+   901→  uuid       String               @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+   902→  companyId  BigInt               @map("company_id")
+   903→  userId     BigInt               @map("user_id")
+   904→  title      String               @db.VarChar(255)
+   905→  body       String               @db.Text
+   906→  channel    NotificationChannel  @default(in_app)
+   907→  priority   NotificationPriority @default(normal)
+   908→  readAt     DateTime?            @map("read_at") @db.Timestamptz
+   909→  sentAt     DateTime?            @map("sent_at") @db.Timestamptz
+   910→  data       Json                 @default("{}")
+   911→  createdAt  DateTime             @default(now()) @map("created_at") @db.Timestamptz
+   912→  deletedAt  DateTime?            @map("deleted_at") @db.Timestamptz
+   913→
+   914→  company Company @relation(fields: [companyId], references: [id])
+   915→  user    User    @relation(fields: [userId], references: [id])
+   916→
+   917→  @@index([companyId, userId], map: "idx_notifications_company_user")
+   918→  @@index([userId, readAt], map: "idx_notifications_user_read")
+   919→  @@map("notifications")
+   920→}
+   921→
+   922→// Tabela: email_queue
+   923→model EmailQueue {
+   924→  id          BigInt      @id @default(autoincrement())
+   925→  uuid        String      @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+   926→  companyId   BigInt      @map("company_id")
+   927→  toEmail     String      @map("to_email") @db.VarChar(255)
+   928→  toName      String?     @map("to_name") @db.VarChar(255)
+   929→  subject     String      @db.VarChar(500)
+   930→  bodyHtml    String?     @map("body_html") @db.Text
+   931→  bodyText    String?     @map("body_text") @db.Text
+   932→  status      EmailStatus @default(queued)
+   933→  attempts    Int         @default(0)
+   934→  lastAttempt DateTime?   @map("last_attempt") @db.Timestamptz
+   935→  sentAt      DateTime?   @map("sent_at") @db.Timestamptz
+   936→  errorMsg    String?     @map("error_msg") @db.Text
+   937→  createdAt   DateTime    @default(now()) @map("created_at") @db.Timestamptz
+   938→  metadata    Json        @default("{}")
+   939→
+   940→  company Company @relation(fields: [companyId], references: [id])
+   941→
+   942→  @@index([status, attempts], map: "idx_email_queue_status")
+   943→  @@index([companyId], map: "idx_email_queue_company")
+   944→  @@map("email_queue")
+   945→}
+   946→
+   947→// Tabela: webhook_deliveries
+   948→model WebhookDelivery {
+   949→  id          BigInt        @id @default(autoincrement())
+   950→  uuid        String        @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+   951→  companyId   BigInt        @map("company_id")
+   952→  url         String        @db.Text
+   953→  event       String        @db.VarChar(200)
+   954→  payload     Json          @default("{}")
+   955→  status      WebhookStatus @default(queued)
+   956→  attempts    Int           @default(0)
+   957→  lastAttempt DateTime?     @map("last_attempt") @db.Timestamptz
+   958→  deliveredAt DateTime?     @map("delivered_at") @db.Timestamptz
+   959→  responseCode Int?         @map("response_code")
+   960→  responseBody String?      @map("response_body") @db.Text
+   961→  createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamptz
+   962→  metadata    Json          @default("{}")
+   963→
+   964→  company Company @relation(fields: [companyId], references: [id])
+   965→
+   966→  @@index([companyId, status], map: "idx_webhooks_company_status")
+   967→  @@map("webhook_deliveries")
+   968→}
+   969→
+   970→// ================================================================
+   971→// DOMÍNIO TRANSVERSAL / PLATAFORMA
+   972→// ================================================================
+   973→
+   974→// Tabela: audit_logs
+   975→model AuditLog {
+   976→  id          BigInt      @id @default(autoincrement())
+   977→  uuid        String      @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+   978→  companyId   BigInt      @map("company_id")
+   979→  userId      BigInt?     @map("user_id")
+   980→  action      AuditAction
+   981→  tableName   String      @map("table_name") @db.VarChar(100)
+   982→  recordId    BigInt?     @map("record_id")
+   983→  recordUuid  String?     @map("record_uuid") @db.Uuid
+   984→  oldValue    Json?       @map("old_value")
+   985→  newValue    Json?       @map("new_value")
+   986→  ipAddress   String?     @map("ip_address") @db.VarChar(45)
+   987→  userAgent   String?     @map("user_agent") @db.Text
+   988→  requestId   String?     @map("request_id") @db.VarChar(100)
+   989→  createdAt   DateTime    @default(now()) @map("created_at") @db.Timestamptz
+   990→
+   991→  company Company  @relation(fields: [companyId], references: [id])
+   992→  user    User?    @relation(fields: [userId], references: [id])
+   993→  details AuditLogDetail[]
+   994→
+   995→  @@index([companyId, tableName], map: "idx_audit_logs_company_table")
+   996→  @@index([companyId, userId], map: "idx_audit_logs_company_user")
+   997→  @@index([createdAt], map: "idx_audit_logs_created")
+   998→  @@map("audit_logs")
+   999→}
+  1000→
+  1001→// Tabela: audit_log_details
+  1002→model AuditLogDetail {
+  1003→  id         BigInt  @id @default(autoincrement())
+  1004→  auditLogId BigInt  @map("audit_log_id")
+  1005→  fieldName  String  @map("field_name") @db.VarChar(100)
+  1006→  changeType String  @map("change_type") @db.VarChar(20)
+  1007→  oldValue   Json?   @map("old_value")
+  1008→  newValue   Json?   @map("new_value")
+  1009→
+  1010→  auditLog AuditLog @relation(fields: [auditLogId], references: [id], onDelete: Cascade)
+  1011→
+  1012→  @@index([auditLogId], map: "idx_audit_log_details_log")
+  1013→  @@map("audit_log_details")
+  1014→}
+  1015→
+  1016→// Tabela: backups
+  1017→model Backup {
+  1018→  id          BigInt       @id @default(autoincrement())
+  1019→  uuid        String       @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  1020→  companyId   BigInt       @map("company_id")
+  1021→  type        BackupType   @default(full)
+  1022→  status      BackupStatus @default(queued)
+  1023→  storagePath String?      @map("storage_path") @db.Text
+  1024→  sizeBytes   BigInt?      @map("size_bytes")
+  1025→  startedAt   DateTime?    @map("started_at") @db.Timestamptz
+  1026→  finishedAt  DateTime?    @map("finished_at") @db.Timestamptz
+  1027→  expiresAt   DateTime?    @map("expires_at") @db.Timestamptz
+  1028→  errorMsg    String?      @map("error_msg") @db.Text
+  1029→  createdAt   DateTime     @default(now()) @map("created_at") @db.Timestamptz
+  1030→  metadata    Json         @default("{}")
+  1031→
+  1032→  company Company @relation(fields: [companyId], references: [id])
+  1033→
+  1034→  @@index([companyId, status], map: "idx_backups_company_status")
+  1035→  @@map("backups")
+  1036→}
+  1037→
+  1038→// Tabela: system_settings
+  1039→model SystemSetting {
+  1040→  id        BigInt    @id @default(autoincrement())
+  1041→  companyId BigInt?   @map("company_id")
+  1042→  key       String    @db.VarChar(255)
+  1043→  value     Json      @default("{}")
+  1044→  isPublic  Boolean   @default(false) @map("is_public")
+  1045→  isSystem  Boolean   @default(false) @map("is_system")
+  1046→  group     String?   @db.VarChar(100)
+  1047→  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  1048→  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  1049→
+  1050→  company Company? @relation(fields: [companyId], references: [id])
+  1051→
+  1052→  @@unique([companyId, key], map: "udx_system_settings_key")
+  1053→  @@index([companyId], map: "idx_system_settings_company")
+  1054→  @@map("system_settings")
+  1055→}
+  1056→
+  1057→// Tabela: plugin_installations
+  1058→model PluginInstallation {
+  1059→  id            BigInt       @id @default(autoincrement())
+  1060→  uuid          String       @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  1061→  companyId     BigInt       @map("company_id")
+  1062→  pluginSlug    String       @map("plugin_slug") @db.VarChar(100)
+  1063→  pluginVersion String       @map("plugin_version") @db.VarChar(50)
+  1064→  status        PluginStatus @default(installed)
+  1065→  config        Json         @default("{}")
+  1066→  installedAt   DateTime     @default(now()) @map("installed_at") @db.Timestamptz
+  1067→  updatedAt     DateTime     @updatedAt @map("updated_at") @db.Timestamptz
+  1068→  lastErrorAt   DateTime?    @map("last_error_at") @db.Timestamptz
+  1069→  lastErrorMsg  String?      @map("last_error_msg") @db.Text
+  1070→
+  1071→  company Company @relation(fields: [companyId], references: [id])
+  1072→
+  1073→  @@unique([companyId, pluginSlug], map: "udx_plugin_installations")
+  1074→  @@index([companyId], map: "idx_plugin_installations_company")
+  1075→  @@map("plugin_installations")
+  1076→}
+  1077→
+  1078→// ================================================================
+  1079→// MODELS ORION-SAAS (Plataforma SaaS)
+  1080→// ================================================================
+  1081→
+  1082→enum ProjectStatus {
+  1083→  planning
+  1084→  in_development
+  1085→  in_testing
+  1086→  homologation
+  1087→  waiting_client
+  1088→  completed
+  1089→  canceled
+  1090→  @@map("project_status_saas")
+  1091→}
+  1092→
+  1093→enum ApplicationType {
+  1094→  web
+  1095→  mobile
+  1096→  pwa
+  1097→  desktop
+  1098→  @@map("application_type_saas")
+  1099→}
+  1100→
+  1101→enum ApplicationStatus {
+  1102→  draft
+  1103→  published
+  1104→  deprecated
+  1105→  archived
+  1106→  @@map("application_status_saas")
+  1107→}
+  1108→
+  1109→enum PaymentStatus {
+  1110→  pending
+  1111→  approved
+  1112→  rejected
+  1113→  refunded
+  1114→  charged_back
+  1115→  @@map("payment_status_saas")
+  1116→}
+  1117→
+  1118→enum AlertSeverity {
+  1119→  info
+  1120→  warning
+  1121→  critical
+  1122→  @@map("alert_severity_saas")
+  1123→}
+  1124→
+  1125→enum ActivityType {
+  1126→  project_created
+  1127→  payment_approved
+  1128→  application_published
+  1129→  license_renewed
+  1130→  deploy_performed
+  1131→  user_invited
+  1132→  ticket_opened
+  1133→  @@map("activity_type_saas")
+  1134→}
+  1135→
+  1136→enum DeploymentStatus {
+  1137→  pending
+  1138→  building
+  1139→  deployed
+  1140→  failed
+  1141→  @@map("deployment_status_saas")
+  1142→}
+  1143→
+  1144→enum ProductCategory {
+  1145→  gestao_comercial
+  1146→  saude
+  1147→  financas
+  1148→  educacao
+  1149→  fitness
+  1150→  logistica
+  1151→  varejo
+  1152→  ia_dados
+  1153→  @@map("product_category_saas")
+  1154→}
+  1155→
+  1156→model Product {
+  1157→  id          String           @id @default(cuid())
+  1158→  name        String
+  1159→  slug        String           @unique
+  1160→  description String?
+  1161→  repoUrl     String?          @map("repo_url")
+  1162→  demoUrl     String?          @map("demo_url")
+  1163→  category    ProductCategory  @default(gestao_comercial)
+  1164→  priceCents  Int              @default(0) @map("price_cents")
+  1165→  status      String           @default("active")
+  1166→  features    Json             @default("[]")
+  1167→  iconColor   String           @default("#8b5cf6") @map("icon_color")
+  1168→  createdAt   DateTime         @default(now()) @map("created_at")
+  1169→  updatedAt   DateTime         @updatedAt @map("updated_at")
+  1170→  deployments SaasDeployment[]
+  1171→  @@map("products")
+  1172→}
+  1173→
+  1174→model SaasDeployment {
+  1175→  id              String           @id @default(cuid())
+  1176→  url             String?
+  1177→  status          DeploymentStatus @default(pending)
+  1178→  productId       String           @map("product_id")
+  1179→  product         Product          @relation(fields: [productId], references: [id], onDelete: Cascade)
+  1180→  clientId        String?          @map("client_id")
+  1181→  vercelProjectId String?          @map("vercel_project_id")
+  1182→  deployedAt      DateTime?        @map("deployed_at")
+  1183→  createdAt       DateTime         @default(now()) @map("created_at")
+  1184→  updatedAt       DateTime         @updatedAt      @map("updated_at")
+  1185→  @@map("saas_deployments")
+  1186→}
+  1187→
+  1188→model SaasClient {
+  1189→  id        String        @id @default(cuid())
+  1190→  name      String
+  1191→  email     String        @unique
+  1192→  company   String?
+  1193→  phone     String?
+  1194→  avatarUrl String?       @map("avatar_url")
+  1195→  status    String        @default("active")
+  1196→  createdAt DateTime      @default(now()) @map("created_at")
+  1197→  updatedAt DateTime      @updatedAt @map("updated_at")
+  1198→  payments  SaasPayment[]
+  1199→  @@map("saas_clients")
+  1200→}
+  1201→
+  1202→model SaasPayment {
+  1203→  id          String        @id @default(cuid())
+  1204→  amountCents Int           @map("amount_cents")
+  1205→  currency    String        @default("BRL")
+  1206→  status      PaymentStatus @default(pending)
+  1207→  method      String        @default("credit_card")
+  1208→  description String?
+  1209→  clientId    String        @map("client_id")
+  1210→  client      SaasClient    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  1211→  createdAt   DateTime      @default(now()) @map("created_at")
+  1212→  updatedAt   DateTime      @updatedAt @map("updated_at")
+  1213→  @@map("saas_payments")
+  1214→}
+  1215→
+  1216→model SaasActivity {
+  1217→  id          String       @id @default(cuid())
+  1218→  type        ActivityType
+  1219→  title       String
+  1220→  description String
+  1221→  userId      String?      @map("user_id")
+  1222→  createdAt   DateTime     @default(now()) @map("created_at")
+  1223→  @@map("saas_activities")
+  1224→}
+  1225→
+  1226→model SaasAlert {
+  1227→  id          String        @id @default(cuid())
+  1228→  severity    AlertSeverity @default(info)
+  1229→  title       String
+  1230→  description String
+  1231→  readAt      DateTime?     @map("read_at")
+  1232→  createdAt   DateTime      @default(now()) @map("created_at")
+  1233→  @@map("saas_alerts")
+  1234→}
+  1235→
+  1236→model SaasService {
+  1237→  id           String     @id @default(cuid())
+  1238→  name         String     @unique
+  1239→  status       String     @default("operational")
+  1240→  uptime       Int        @default(100)
+  1241→  lastIncident DateTime?  @map("last_incident")
+  1242→  updatedAt    DateTime   @updatedAt @map("updated_at")
+  1243→  @@map("saas_services")
+  1244→}
+  1245→
+  1246→model SaasUser {
+  1247→  id           String    @id @default(cuid())
+  1248→  email        String    @unique
+  1249→  name         String
+  1250→  avatarUrl    String?   @map("avatar_url")
+  1251→  role         String    @default("viewer")
+  1252→  supabaseId   String?   @unique @map("supabase_id")
+  1253→  lastLoginAt  DateTime? @map("last_login_at")
+  1254→  createdAt    DateTime  @default(now()) @map("created_at")
+  1255→  updatedAt    DateTime  @updatedAt @map("updated_at")
+  1256→  @@map("saas_users")
+  1257→}
+  1258→
+  1259→model SaasProject {
+  1260→  id          String        @id @default(cuid())
+  1261→  name        String
+  1262→  description String?
+  1263→  status      ProjectStatus @default(planning)
+  1264→  progress    Int           @default(0)
+  1265→  iconColor   String        @default("#6366f1") @map("icon_color")
+  1266→  clientId    String?       @map("client_id")
+  1267→  createdAt   DateTime      @default(now()) @map("created_at")
+  1268→  updatedAt   DateTime      @updatedAt @map("updated_at")
+  1269→  applications SaasApplication[]
+  1270→  @@map("saas_projects")
+  1271→}
+  1272→
+  1273→model SaasApplication {
+  1274→  id          String             @id @default(cuid())
+  1275→  name        String
+  1276→  version     String             @default("1.0.0")
+  1277→  type        ApplicationType    @default(web)
+  1278→  status      ApplicationStatus  @default(draft)
+  1279→  url         String?
+  1280→  description String?
+  1281→  projectId   String             @map("project_id")
+  1282→  project     SaasProject        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  1283→  createdAt   DateTime           @default(now()) @map("created_at")
+  1284→  updatedAt   DateTime           @updatedAt      @map("updated_at")
+  1285→  @@map("saas_applications")
+  1286→}
+  1287→
+  1288→model SaasLicense {
+  1289→  id              String         @id @default(cuid())
+  1290→  key             String         @unique
+  1291→  plan            LicensePlan    @default(starter)
+  1292→  status          LicenseStatus  @default(active)
+  1293→  maxUsers        Int            @default(10) @map("max_users")
+  1294→  maxApplications Int            @default(5)  @map("max_applications")
+  1295→  priceCents      Int            @default(0)  @map("price_cents")
+  1296→  startDate       DateTime       @default(now()) @map("start_date")
+  1297→  expirationDate  DateTime       @map("expiration_date")
+  1298→  clientId        String?        @map("client_id")
+  1299→  createdAt       DateTime       @default(now()) @map("created_at")
+  1300→  updatedAt       DateTime       @updatedAt      @map("updated_at")
+  1301→  @@map("saas_licenses")
+  1302→}
+  1303→
+  1304→// ================================================================
+  1305→// P8 — GAMIFICAÇÃO AVANÇADA
+  1306→// ================================================================
+  1307→
+  1308→enum AchievementCategory {
+  1309→  streak
+  1310→  goal
+  1311→  campaign
+  1312→  result
+  1313→  client
+  1314→  special
+  1315→
+  1316→  @@map("achievement_category")
+  1317→}
+  1318→
+  1319→enum PointTxType {
+  1320→  earned
+  1321→  spent
+  1322→  bonus
+  1323→  penalty
+  1324→
+  1325→  @@map("point_tx_type")
+  1326→}
+  1327→
+  1328→enum RedemptionStatus {
+  1329→  pending
+  1330→  approved
+  1331→  rejected
+  1332→  fulfilled
+  1333→
+  1334→  @@map("redemption_status")
+  1335→}
+  1336→
+  1337→model UserAchievement {
+  1338→  id            BigInt              @id @default(autoincrement())
+  1339→  uuid          String              @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  1340→  companyId     BigInt              @map("company_id")
+  1341→  userId        BigInt              @map("user_id")
+  1342→  achievementKey String             @map("achievement_key") @db.VarChar(100)
+  1343→  category      AchievementCategory @default(special)
+  1344→  unlockedAt    DateTime            @default(now()) @map("unlocked_at") @db.Timestamptz
+  1345→  metadata      Json                @default("{}")
+  1346→
+  1347→  company Company @relation(fields: [companyId], references: [id])
+  1348→  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  1349→
+  1350→  @@unique([userId, achievementKey], map: "udx_user_achievements")
+  1351→  @@index([companyId, userId], map: "idx_user_achievements_company_user")
+  1352→  @@index([companyId, category], map: "idx_user_achievements_category")
+  1353→  @@map("user_achievements")
+  1354→}
+  1355→
+  1356→model PointTransaction {
+  1357→  id          BigInt      @id @default(autoincrement())
+  1358→  uuid        String      @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  1359→  companyId   BigInt      @map("company_id")
+  1360→  userId      BigInt      @map("user_id")
+  1361→  type        PointTxType @default(earned)
+  1362→  points      Int         @default(0)
+  1363→  reason      String      @db.VarChar(255)
+  1364→  reasonKey   String?     @map("reason_key") @db.VarChar(100)
+  1365→  referenceId String?     @map("reference_id") @db.VarChar(100)
+  1366→  metadata    Json        @default("{}")
+  1367→  createdAt   DateTime    @default(now()) @map("created_at") @db.Timestamptz
+  1368→
+  1369→  company Company @relation(fields: [companyId], references: [id])
+  1370→  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  1371→
+  1372→  @@index([companyId, userId], map: "idx_point_tx_company_user")
+  1373→  @@index([userId, createdAt], map: "idx_point_tx_user_date")
+  1374→  @@index([reasonKey], map: "idx_point_tx_reason")
+  1375→  @@map("point_transactions")
+  1376→}
+  1377→
+  1378→model PointRedemption {
+  1379→  id          BigInt           @id @default(autoincrement())
+  1380→  uuid        String           @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  1381→  companyId   BigInt           @map("company_id")
+  1382→  userId      BigInt           @map("user_id")
+  1383→  rewardKey   String           @map("reward_key") @db.VarChar(100)
+  1384→  rewardName  String           @map("reward_name") @db.VarChar(255)
+  1385→  pointsCost  Int              @map("points_cost")
+  1386→  status      RedemptionStatus @default(pending)
+  1387→  notes       String?          @db.Text
+  1388→  reviewedBy  BigInt?          @map("reviewed_by")
+  1389→  reviewedAt  DateTime?        @map("reviewed_at") @db.Timestamptz
+  1390→  fulfilledAt DateTime?        @map("fulfilled_at") @db.Timestamptz
+  1391→  createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  1392→  metadata    Json             @default("{}")
+  1393→
+  1394→  company Company @relation(fields: [companyId], references: [id])
+  1395→  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  1396→
+  1397→  @@index([companyId, status], map: "idx_redemptions_company_status")
+  1398→  @@index([userId], map: "idx_redemptions_user")
+  1399→  @@map("point_redemptions")
+  1400→}
+  1401→
+  1402→// ================================================================
+  1403→// P9 — CALENDÁRIO COMERCIAL
+  1404→// ================================================================
+  1405→
+  1406→enum CalendarEventType {
+  1407→  holiday
+  1408→  commemorative
+  1409→  campaign_deadline
+  1410→  company_event
+  1411→  meeting
+  1412→  training
+  1413→  other
+  1414→
+  1415→  @@map("calendar_event_type")
+  1416→}
+  1417→
+  1418→enum CalendarEventScope {
+  1419→  company
+  1420→  branch
+  1421→  team
+  1422→  personal
+  1423→
+  1424→  @@map("calendar_event_scope")
+  1425→}
+  1426→
+  1427→model CalendarEvent {
+  1428→  id          BigInt             @id @default(autoincrement())
+  1429→  uuid        String             @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  1430→  companyId   BigInt             @map("company_id")
+  1431→  branchId    BigInt?            @map("branch_id")
+  1432→  userId      BigInt?            @map("user_id")
+  1433→  title       String             @db.VarChar(255)
+  1434→  description String?            @db.Text
+  1435→  type        CalendarEventType  @default(other)
+  1436→  scope       CalendarEventScope @default(company)
+  1437→  startDate   DateTime           @map("start_date") @db.Timestamptz
+  1438→  endDate     DateTime?          @map("end_date") @db.Timestamptz
+  1439→  allDay      Boolean            @default(true) @map("all_day")
+  1440→  location    String?            @db.VarChar(255)
+  1441→  color       String             @default("#8b5cf6")
+  1442→  isOfficial  Boolean            @default(false) @map("is_official")
+  1443→  isRecurring Boolean            @default(false) @map("is_recurring")
+  1444→  recurrence  String?            @db.VarChar(50)
+  1445→  metadata    Json               @default("{}")
+  1446→  createdAt   DateTime           @default(now()) @map("created_at") @db.Timestamptz
+  1447→  updatedAt   DateTime           @updatedAt @map("updated_at") @db.Timestamptz
+  1448→  deletedAt   DateTime?          @map("deleted_at") @db.Timestamptz
+  1449→  createdBy   BigInt?            @map("created_by")
+  1450→  updatedBy   BigInt?            @map("updated_by")
+  1451→
+  1452→  company Company @relation(fields: [companyId], references: [id])
+  1453→  branch  Branch? @relation(fields: [branchId], references: [id])
+  1454→  user    User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  1455→
+  1456→  @@index([companyId, startDate], map: "idx_calendar_company_start")
+  1457→  @@index([companyId, type], map: "idx_calendar_company_type")
+  1458→  @@index([companyId, scope], map: "idx_calendar_company_scope")
+  1459→  @@index([userId], map: "idx_calendar_user")
+  1460→  @@map("calendar_events")
+  1461→}
+  1462→
+  1463→// ================================================================
+  1464→// P10 — MARKETPLACE DE PLUGINS v1
+  1465→// ================================================================
+  1466→
+  1467→enum PluginCategory {
+  1468→  integration
+  1469→  communication
+  1470→  crm
+  1471→  inventory
+  1472→  commissions
+  1473→  analytics
+  1474→  automation
+  1475→  other
+  1476→
+  1477→  @@map("plugin_category")
+  1478→}
+  1479→
+  1480→model Plugin {
+  1481→  id              BigInt          @id @default(autoincrement())
+  1482→  uuid            String          @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  1483→  slug            String          @unique @db.VarChar(100)
+  1484→  name            String          @db.VarChar(255)
+  1485→  displayName     String          @map("display_name") @db.VarChar(255)
+  1486→  description     String          @db.Text
+  1487→  category        PluginCategory  @default(other)
+  1488→  version         String          @db.VarChar(50) @default("1.0.0")
+  1489→  author          String          @db.VarChar(255) @default("Orion Official")
+  1490→  isOfficial      Boolean         @default(false) @map("is_official")
+  1491→  iconUrl         String?         @map("icon_url")
+  1492→  iconColor       String          @default("#8b5cf6") @map("icon_color")
+  1493→  iconEmoji       String          @default("📦") @map("icon_emoji")
+  1494→  homepageUrl     String?         @map("homepage_url") @db.Text
+  1495→  docsUrl         String?         @map("docs_url") @db.Text
+  1496→  configSchema    Json            @default("{}") @map("config_schema")
+  1497→  defaultConfig   Json            @default("{}") @map("default_config")
+  1498→  eventsSupported String[]        @default([]) @map("events_supported")
+  1499→  installCount    Int             @default(0) @map("install_count")
+  1500→  rating          Decimal?        @db.Decimal(2, 1)
+  1501→  ratingCount     Int             @default(0) @map("rating_count")
+  1502→  isFree          Boolean         @default(true) @map("is_free")
+  1503→  priceCents      Int             @default(0) @map("price_cents")
+  1504→  isActive        Boolean         @default(true) @map("is_active")
+  1505→  createdAt       DateTime        @default(now()) @map("created_at") @db.Timestamptz
+  1506→  updatedAt       DateTime        @updatedAt @map("updated_at") @db.Timestamptz
+  1507→
+  1508→  @@index([category], map: "idx_plugins_category")
+  1509→  @@index([isOfficial], map: "idx_plugins_official")
+  1510→  @@index([isActive], map: "idx_plugins_active")
+  1511→  @@map("plugins")
+  1512→}
+  1513→
+  1514→// ================================================================
+  1515→// P12 — CHECKLIST DIÁRIO
+  1516→// ================================================================
+  1517→
+  1518→enum ChecklistTemplateScope {
+  1519→  personal
+  1520→  role
+  1521→  team
+  1522→  company
+  1523→
+  1524→  @@map("checklist_template_scope")
+  1525→}
+  1526→
+  1527→enum ChecklistTaskStatus {
+  1528→  pending
+  1529→  done
+  1530→  skipped
+  1531→  overdue
+  1532→
+  1533→  @@map("checklist_task_status")
+  1534→}
+  1535→
+  1536→// Template: define which tasks should appear each day
+  1537→model ChecklistTemplate {
+  1538→  id          BigInt                  @id @default(autoincrement())
+  1539→  uuid        String                  @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  1540→  companyId   BigInt                  @map("company_id")
+  1541→  name        String                  @db.VarChar(255)
+  1542→  description String?                 @db.Text
+  1543→  scope       ChecklistTemplateScope  @default(personal)
+  1544→  roleId      BigInt?                 @map("role_id")
+  1545→  branchId    BigInt?                 @map("branch_id")
+  1546→  isActive    Boolean                 @default(true) @map("is_active")
+  1547→  startsAt    String                  @default("09:00") @map("starts_at") @db.VarChar(5)
+  1548→  endsAt      String                  @default("18:00") @map("ends_at") @db.VarChar(5)
+  1549→  weekdays    String                  @default("1,2,3,4,5") @db.VarChar(20) // ISO: 1=Mon ... 7=Sun
+  1550→  metadata    Json                    @default("{}")
+  1551→  createdAt   DateTime                @default(now()) @map("created_at") @db.Timestamptz
+  1552→  updatedAt   DateTime                @updatedAt @map("updated_at") @db.Timestamptz
+  1553→  deletedAt   DateTime?               @map("deleted_at") @db.Timestamptz
+  1554→  createdBy   BigInt?                 @map("created_by")
+  1555→
+  1556→  company Company           @relation(fields: [companyId], references: [id])
+  1557→  items   ChecklistItem[]
+  1558→  tasks   ChecklistTask[]
+  1559→
+  1560→  @@index([companyId, isActive], map: "idx_checklist_templates_active")
+  1561→  @@index([companyId, scope], map: "idx_checklist_templates_scope")
+  1562→  @@map("checklist_templates")
+  1563→}
+  1564→
+  1565→// Item: a task definition that belongs to a template
+  1566→model ChecklistItem {
+  1567→  id           BigInt   @id @default(autoincrement())
+  1568→  templateId   BigInt   @map("template_id")
+  1569→  title        String   @db.VarChar(255)
+  1570→  description  String?  @db.Text
+  1571→  sortOrder    Int      @default(0) @map("sort_order")
+  1572→  points       Int      @default(10) // points awarded when completed
+  1573→  isRequired   Boolean  @default(true) @map("is_required")
+  1574→  estimatedMin Int?     @map("estimated_min") // estimated duration in minutes
+  1575→  metadata     Json     @default("{}")
+  1576→  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+  1577→  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  1578→  deletedAt    DateTime? @map("deleted_at") @db.Timestamptz
+  1579→
+  1580→  template ChecklistTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  1581→  tasks    ChecklistTask[]
+  1582→
+  1583→  @@index([templateId], map: "idx_checklist_items_template")
+  1584→  @@index([sortOrder], map: "idx_checklist_items_sort")
+  1585→  @@map("checklist_items")
+  1586→}
+  1587→
+  1588→// Task: an instance of an item for a specific user on a specific date
+  1589→model ChecklistTask {
+  1590→  id          BigInt             @id @default(autoincrement())
+  1591→  uuid        String             @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  1592→  companyId   BigInt             @map("company_id")
+  1593→  templateId  BigInt             @map("template_id")
+  1594→  itemId      BigInt             @map("item_id")
+  1595→  userId      BigInt             @map("user_id")
+  1596→  date        DateTime           @db.Date // the day this task belongs to
+  1597→  status      ChecklistTaskStatus @default(pending)
+  1598→  completedAt DateTime?          @map("completed_at") @db.Timestamptz
+  1599→  notes       String?            @db.Text
+  1600→  metadata    Json               @default("{}")
+  1601→  createdAt   DateTime           @default(now()) @map("created_at") @db.Timestamptz
+  1602→  updatedAt   DateTime           @updatedAt @map("updated_at") @db.Timestamptz
+  1603→
+  1604→  company  Company           @relation(fields: [companyId], references: [id])
+  1605→  template ChecklistTemplate @relation(fields: [templateId], references: [id])
+  1606→  item     ChecklistItem     @relation(fields: [itemId], references: [id])
+  1607→  user     User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  1608→
+  1609→  @@unique([userId, itemId, date], map: "udx_checklist_tasks_user_item_date")
+  1610→  @@index([companyId, date], map: "idx_checklist_tasks_company_date")
+  1611→  @@index([userId, date], map: "idx_checklist_tasks_user_date")
+  1612→  @@index([userId, status], map: "idx_checklist_tasks_user_status")
+  1613→  @@map("checklist_tasks")
+  1614→}
+  1615→
+  1616→// ================================================================
+  1617→// P13 — SISTEMA DE FEEDBACK
+  1618→// ================================================================
+  1619→
+  1620→enum FeedbackType {
+  1621→  nps
+  1622→  csat
+  1623→  ces
+  1624→  rating
+  1625→  open
+  1626→  multiple_choice
+  1627→
+  1628→  @@map("feedback_type")
+  1629→}
+  1630→
+  1631→enum FeedbackStatus {
+  1632→  draft
+  1633→  active
+  1634→  paused
+  1635→  closed
+  1636→
+  1637→  @@map("feedback_status")
+  1638→}
+  1639→
+  1640→// Survey/template definition
+  1641→model Feedback {
+  1642→  id            BigInt         @id @default(autoincrement())
+  1643→  uuid          String         @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  1644→  companyId     BigInt         @map("company_id")
+  1645→  title         String         @db.VarChar(255)
+  1646→  description   String?        @db.Text
+  1647→  type          FeedbackType   @default(rating)
+  1648→  status        FeedbackStatus @default(draft)
+  1649→  question      String         @db.Text
+  1650→  helpText      String?        @map("help_text") @db.Text
+  1651→  // For multiple_choice: array of options as JSON ["ótimo", "bom", "regular", "ruim"]
+  1652→  options       Json           @default("[]")
+  1653→  isAnonymous   Boolean        @default(true) @map("is_anonymous")
+  1654→  pointsReward  Int            @default(5) @map("points_reward")
+  1655→  // Schedule: when to show the survey
+  1656→  startsAt      DateTime?      @map("starts_at") @db.Timestamptz
+  1657→  endsAt        DateTime?      @map("ends_at") @db.Timestamptz
+  1658→  isRecurring   Boolean        @default(false) @map("is_recurring")
+  1659→  recurrenceDays Int           @default(30) @map("recurrence_days") // show again after N days
+  1660→  // Targeting
+  1661→  targetAll     Boolean        @default(true) @map("target_all")
+  1662→  targetRoleIds Json           @default("[]") @map("target_role_ids") // array of role IDs as strings
+  1663→  metadata      Json           @default("{}")
+  1664→  createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz
+  1665→  updatedAt     DateTime       @updatedAt @map("updated_at") @db.Timestamptz
+  1666→  deletedAt     DateTime?      @map("deleted_at") @db.Timestamptz
+  1667→  createdBy     BigInt?        @map("created_by")
+  1668→
+  1669→  company   Company           @relation(fields: [companyId], references: [id])
+  1670→  responses FeedbackResponse[]
+  1671→
+  1672→  @@index([companyId, status], map: "idx_feedback_company_status")
+  1673→  @@index([companyId, type], map: "idx_feedback_company_type")
+  1674→  @@map("feedbacks")
+  1675→}
+  1676→
+  1677→// Individual response from a user
+  1678→model FeedbackResponse {
+  1679→  id          BigInt   @id @default(autoincrement())
+  1680→  uuid        String   @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  1681→  companyId   BigInt   @map("company_id")
+  1682→  feedbackId  BigInt   @map("feedback_id")
+  1683→  userId      BigInt?  @map("user_id") // null if anonymous
+  1684→  // For rating/nps/csat/ces: numeric value (0-10 for NPS, 1-5 for rating, etc.)
+  1685→  numericValue Int?    @map("numeric_value")
+  1686→  // For multiple_choice: index of selected option
+  1687→  selectedOption Int?  @map("selected_option")
+  1688→  // For open: text response
+  1689→  textValue   String?  @map("text_value") @db.Text
+  1690→  // For all: optional comment
+  1691→  comment     String?  @db.Text
+  1692→  metadata    Json     @default("{}")
+  1693→  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  1694→
+  1695→  company  Company @relation(fields: [companyId], references: [id])
+  1696→  feedback Feedback @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
+  1697→  user     User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  1698→
+  1699→  @@unique([feedbackId, userId], map: "udx_feedback_response_user") // one response per user per survey
+  1700→  @@index([companyId, createdAt], map: "idx_feedback_responses_company_date")
+  1701→  @@index([feedbackId], map: "idx_feedback_responses_feedback")
+  1702→  @@map("feedback_responses")
+  1703→}
+  1704→
+  1705→// ================================================================
+  1706→// P14 — FÁBRICA DE SOFTWARE (PIVOT)
+  1707→// ================================================================
+  1708→
+  1709→enum SoftwareProjectStatus {
+  1710→  briefing
+  1711→  architecting
+  1712→  developing
+  1713→  testing
+  1714→  deploying
+  1715→  delivered
+  1716→  maintenance
+  1717→  cancelled
+  1718→
+  1719→  @@map("software_project_status")
+  1720→}
+  1721→
+  1722→enum BriefingStatus {
+  1723→  draft
+  1724→  ai_processing
+  1725→  reviewed
+  1726→  approved
+  1727→  rejected
+  1728→
+  1729→  @@map("briefing_status")
+  1730→}
+  1731→
+  1732→// Entidade central: Projeto de Software
+  1733→model SoftwareProject {
+  1734→  id               BigInt                @id @default(autoincrement())
+  1735→  uuid             String                @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  1736→  companyId        BigInt                @map("company_id")
+  1737→  clientId         String?               @map("client_id")
+  1738→  templateId       BigInt?               @map("template_id")
+  1739→  name             String                @db.VarChar(255)
+  1740→  description      String?               @db.Text
+  1741→  status           SoftwareProjectStatus @default(briefing)
+  1742→  // Stack chosen: ["nextjs", "prisma", "supabase", "tailwind", ...]
+  1743→  stack            Json                  @default("[]")
+  1744→  // Timeline: milestones with dates
+  1745→  timeline         Json                  @default("[]")
+  1746→  // Team: assigned user IDs with roles
+  1747→  team             Json                  @default("[]")
+  1748→  // Key features extracted from briefing
+  1749→  keyFeatures      Json                  @default("[]")
+  1750→  // Success criteria
+  1751→  successCriteria  String?               @map("success_criteria") @db.Text
+  1752→  budgetCents      Int?                  @map("budget_cents")
+  1753→  startDate        DateTime?             @map("start_date") @db.Timestamptz
+  1754→  estimatedEndDate DateTime?             @map("estimated_end_date") @db.Timestamptz
+  1755→  deliveredAt      DateTime?             @map("delivered_at") @db.Timestamptz
+  1756→  licenseId        String?               @map("license_id")
+  1757→  progress         Int                   @default(0) // 0-100
+  1758→  repositoryUrl    String?               @map("repository_url") @db.Text
+  1759→  demoUrl          String?               @map("demo_url") @db.Text
+  1760→  productionUrl    String?               @map("production_url") @db.Text
+  1761→  metadata         Json                  @default("{}")
+  1762→  createdAt        DateTime              @default(now()) @map("created_at") @db.Timestamptz
+  1763→  updatedAt        DateTime              @updatedAt @map("updated_at") @db.Timestamptz
+  1764→  deletedAt        DateTime?             @map("deleted_at") @db.Timestamptz
+  1765→  createdBy        BigInt?               @map("created_by")
+  1766→
+  1767→  company  Company           @relation(fields: [companyId], references: [id])
+  1768→  template ProjectTemplate? @relation(fields: [templateId], references: [id])
+  1769→  briefing ProjectBriefing?
+  1770→  stages   ProjectStage[]
+  1771→  license  SoftwareLicense?
+  1772→
+  1773→  @@index([companyId, status], map: "idx_sw_projects_company_status")
+  1774→  @@index([companyId, clientId], map: "idx_sw_projects_client")
+  1775→  @@map("software_projects")
+  1776→}
+  1777→
+  1778→// Briefing estruturado do cliente
+  1779→model ProjectBriefing {
+  1780→  id                  BigInt          @id @default(autoincrement())
+  1781→  uuid                String          @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  1782→  companyId           BigInt          @map("company_id")
+  1783→  projectId           BigInt?         @unique @map("project_id")
+  1784→  // Client info
+  1785→  clientName          String          @map("client_name") @db.VarChar(255)
+  1786→  clientCompany       String?         @map("client_company") @db.VarChar(255)
+  1787→  clientEmail         String          @map("client_email") @db.VarChar(255)
+  1788→  clientPhone         String?         @map("client_phone") @db.VarChar(30)
+  1789→  // Briefing content
+  1790→  projectType         String?         @map("project_type") @db.VarChar(100) // e-commerce, crm, blog, dashboard, etc.
+  1791→  problemStatement    String          @map("problem_statement") @db.Text
+  1792→  targetAudience      String?         @map("target_audience") @db.Text
+  1793→  keyFeatures         Json            @default("[]") // ["login", "checkout", "dashboard", ...]
+  1794→  successCriteria     String?         @map("success_criteria") @db.Text
+  1795→  budgetCents         Int?            @map("budget_cents")
+  1796→  timelineWeeks       Int?            @map("timeline_weeks")
+  1797→  // AI-generated content
+  1798→  aiGeneratedDoc      String?         @map("ai_generated_doc") @db.Text // PRD generated by IA
+  1799→  aiArchitectureSuggestion String?    @map("ai_architecture_suggestion") @db.Text
+  1800→  aiStackSuggestion   Json            @map("ai_stack_suggestion") @default("[]")
+  1801→  aiEstimatedHours    Int?            @map("ai_estimated_hours")
+  1802→  aiEstimatedCostCents Int?           @map("ai_estimated_cost_cents")
+  1803→  // Status
+  1804→  status              BriefingStatus  @default(draft)
+  1805→  reviewedBy          BigInt?         @map("reviewed_by")
+  1806→  reviewedAt          DateTime?       @map("reviewed_at") @db.Timestamptz
+  1807→  reviewNotes         String?         @map("review_notes") @db.Text
+  1808→  metadata            Json            @default("{}")
+  1809→  createdAt           DateTime        @default(now()) @map("created_at") @db.Timestamptz
+  1810→  updatedAt           DateTime        @updatedAt @map("updated_at") @db.Timestamptz
+  1811→
+  1812→  company Company          @relation(fields: [companyId], references: [id])
+  1813→  project SoftwareProject? @relation(fields: [projectId], references: [id])
+  1814→
+  1815→  @@index([companyId, status], map: "idx_briefings_company_status")
+  1816→  @@map("project_briefings")
+  1817→}
+  1818→
+  1819→// Template reutilizável (catálogo)
+  1820→model ProjectTemplate {
+  1821→  id               BigInt    @id @default(autoincrement())
+  1822→  uuid             String    @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  1823→  companyId        BigInt?   @map("company_id") // null = global template
+  1824→  name             String    @db.VarChar(255)
+  1825→  displayName      String    @map("display_name") @db.VarChar(255)
+  1826→  description      String    @db.Text
+  1827→  category         String    @db.VarChar(100) // e-commerce, crm, blog, dashboard, saas, mobile, etc.
+  1828→  iconEmoji        String    @default("📦") @map("icon_emoji")
+  1829→  iconColor        String    @default("#8b5cf6") @map("icon_color")
+  1830→  // Default stack
+  1831→  stackDefault     Json      @default("[]") @map("stack_default")
+  1832→  // Default features
+  1833→  featuresDefault  Json      @default("[]") @map("features_default")
+  1834→  // Estimations
+  1835→  estimatedHours   Int       @default(0) @map("estimated_hours")
+  1836→  estimatedPriceCents Int   @default(0) @map("estimated_price_cents")
+  1837→  // Template content
+  1838→  defaultArchitecture String? @map("default_architecture") @db.Text
+  1839→  defaultTimeline  Json      @default("[]") @map("default_timeline")
+  1840→  // Visibility
+  1841→  isActive         Boolean   @default(true) @map("is_active")
+  1842→  isOfficial       Boolean   @default(false) @map("is_official")
+  1843→  usageCount       Int       @default(0) @map("usage_count")
+  1844→  metadata         Json      @default("{}")
+  1845→  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  1846→  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  1847→
+  1848→  company  Company?          @relation(fields: [companyId], references: [id])
+  1849→  projects SoftwareProject[]
+  1850→
+  1851→  @@index([category], map: "idx_templates_category")
+  1852→  @@index([isActive], map: "idx_templates_active")
+  1853→  @@map("project_templates")
+  1854→}
+  1855→
+  1856→// Stage do pipeline de desenvolvimento
+  1857→model ProjectStage {
+  1858→  id          BigInt   @id @default(autoincrement())
+  1859→  uuid        String   @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  1860→  projectId   BigInt   @map("project_id")
+  1861→  name        String   @db.VarChar(100) // Briefing, Arquitetura, Desenvolvimento, Testes, Deploy, etc.
+  1862→  description String?  @db.Text
+  1863→  status      String   @default("pending") @db.VarChar(20) // pending, active, completed, blocked
+  1864→  sortOrder   Int      @default(0) @map("sort_order")
+  1865→  assignedTo  Json     @default("[]") @map("assigned_to") // array of user IDs
+  1866→  deliverables Json    @default("[]") // array of {name, url, completedAt}
+  1867→  startDate   DateTime? @map("start_date") @db.Timestamptz
+  1868→  endDate     DateTime? @map("end_date") @db.Timestamptz
+  1869→  completedAt DateTime? @map("completed_at") @db.Timestamptz
+  1870→  notes       String?  @db.Text
+  1871→  metadata    Json     @default("{}")
+  1872→  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  1873→  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  1874→
+  1875→  project SoftwareProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  1876→
+  1877→  @@index([projectId], map: "idx_stages_project")
+  1878→  @@index([status], map: "idx_stages_status")
+  1879→  @@map("project_stages")
+  1880→}
+  1881→
+  1882→// ================================================================
+  1883→// P17 — LICENCIAMENTO DE SOFTWARE + WORKSPACE DO CLIENTE
+  1884→// ================================================================
+  1885→
+  1886→enum SoftwareLicenseStatus {
+  1887→  active
+  1888→  suspended
+  1889→  expired
+  1890→  revoked
+  1891→  pending_activation
+  1892→
+  1893→  @@map("software_license_status")
+  1894→}
+  1895→
+  1896→// Licença de software entregue ao cliente
+  1897→model SoftwareLicense {
+  1898→  id              BigInt                @id @default(autoincrement())
+  1899→  uuid            String                @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  1900→  companyId       BigInt                @map("company_id")
+  1901→  projectId       BigInt?               @unique @map("project_id")
+  1902→  clientEmail     String                @map("client_email") @db.VarChar(255)
+  1903→  clientName      String                @map("client_name") @db.VarChar(255)
+  1904→  // The actual license key (e.g., ORION-XXXX-XXXX-XXXX-XXXX)
+  1905→  licenseKey      String                @unique @map("license_key") @db.VarChar(100)
+  1906→  // For workspace access: a separate token that doesn't expose the license key
+  1907→  workspaceToken  String                @unique @map("workspace_token") @db.VarChar(100)
+  1908→  status          SoftwareLicenseStatus @default(pending_activation)
+  1909→  plan            String                @default("standard") @db.VarChar(50)
+  1910→  maxUsers        Int                   @default(10) @map("max_users")
+  1911→  // Dates
+  1912→  activatedAt     DateTime?             @map("activated_at") @db.Timestamptz
+  1913→  expiresAt       DateTime?             @map("expires_at") @db.Timestamptz
+  1914→  lastValidatedAt DateTime?             @map("last_validated_at") @db.Timestamptz
+  1915→  revokedAt       DateTime?             @map("revoked_at") @db.Timestamptz
+  1916→  revokeReason    String?               @map("revoke_reason") @db.Text
+  1917→  // Metadata
+  1918→  productionUrl   String?               @map("production_url") @db.Text
+  1919→  metadata        Json                  @default("{}")
+  1920→  createdAt       DateTime              @default(now()) @map("created_at") @db.Timestamptz
+  1921→  updatedAt       DateTime              @updatedAt @map("updated_at") @db.Timestamptz
+  1922→
+  1923→  company   Company           @relation(fields: [companyId], references: [id])
+  1924→  project   SoftwareProject?  @relation(fields: [projectId], references: [id])
+  1925→  validations LicenseValidation[]
+  1926→
+  1927→  @@index([companyId], map: "idx_sw_licenses_company")
+  1928→  @@index([licenseKey], map: "idx_sw_licenses_key")
+  1929→  @@index([status], map: "idx_sw_licenses_status")
+  1930→  @@map("software_licenses")
+  1931→}
+  1932→
+  1933→// Log of license validations (for audit + analytics)
+  1934→model LicenseValidation {
+  1935→  id            BigInt   @id @default(autoincrement())
+  1936→  licenseId     BigInt   @map("license_id")
+  1937→  ipAddress     String?  @map("ip_address") @db.VarChar(45)
+  1938→  userAgent     String?  @map("user_agent") @db.Text
+  1939→  isValid       Boolean
+  1940→  reason        String?  @db.VarChar(255)
+  1941→  validatedAt   DateTime @default(now()) @map("validated_at") @db.Timestamptz
+  1942→
+  1943→  license SoftwareLicense @relation(fields: [licenseId], references: [id], onDelete: Cascade)
+  1944→
+  1945→  @@index([licenseId], map: "idx_license_validations_license")
+  1946→  @@index([validatedAt], map: "idx_license_validations_date")
+  1947→  @@map("license_validations")
+  1948→}
+  1949→
+  1950→// ================================================================
+  1951→// ENABLED MODULES — N:N Company ↔ Modules
+  1952→// Controla quais módulos cada empresa (tenant) pode acessar.
+  1953→// Exemplos: paguemenos, vendas, fabrica, ia, deploy, calendario
+  1954→// ================================================================
+  1955→model EnabledModule {
+  1956→  id          BigInt   @id @default(autoincrement())
+  1957→  companyId   BigInt   @map("company_id")
+  1958→  moduleKey   String   @map("module_key") @db.VarChar(50)
+  1959→  enabled     Boolean  @default(true)
+  1960→  grantedAt   DateTime @default(now()) @map("granted_at") @db.Timestamptz
+  1961→  grantedBy   BigInt?  @map("granted_by")
+  1962→  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  1963→  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  1964→
+  1965→  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  1966→
+  1967→  @@unique([companyId, moduleKey], map: "udx_enabled_modules_company_key")
+  1968→  @@index([companyId], map: "idx_enabled_modules_company")
+  1969→  @@index([moduleKey], map: "idx_enabled_modules_key")
+  1970→  @@map("enabled_modules")
+  1971→}
+  1972→
+  1973→// ================================================================
+  1974→// ERP INTEGRATIONS — Integrações externas (N:N com Company)
+  1975→// Ex: Sankhya, Totvs, SAP, Bling, etc.
+  1976→// ================================================================
+  1977→model ErpIntegration {
+  1978→  id          BigInt   @id @default(autoincrement())
+  1979→  companyId   BigInt   @map("company_id")
+  1980→  erpType     String   @map("erp_type") @db.VarChar(50)
+  1981→  name        String   @db.VarChar(255)
+  1982→  apiUrl      String?  @map("api_url") @db.VarChar(500)
+  1983→  apiKey      String?  @map("api_key") @db.Text
+  1984→  status      String   @default("active") @db.VarChar(20)
+  1985→  lastSyncAt  DateTime? @map("last_sync_at") @db.Timestamptz
+  1986→  metadata    Json     @default("{}")
+  1987→  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  1988→  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  1989→
+  1990→  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  1991→
+  1992→  @@index([companyId], map: "idx_erp_integrations_company")
+  1993→  @@index([erpType], map: "idx_erp_integrations_type")
+  1994→  @@map("erp_integrations")
+  1995→}
+  1996→
+  1997→// ================================================================
+  1998→// TRAININGS — Biblioteca de treinamentos por empresa
+  1999→// ================================================================
+  2000→model Training {
+
+[showing lines 1-2000 of 2074; use offset=2001 with limit to continue reading]
