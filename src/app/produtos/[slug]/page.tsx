@@ -127,8 +127,11 @@ export default async function ProdutoDetalhePage({ params }: { params: Promise<{
                 </Link>
               ) : (
                 // Não logado → vai para signup com produto selecionado
+                // O produto é habilitado automaticamente no signup (register API
+                // cria EnabledModule baseado no productSlug)
+                // Após signup → onboarding → dashboard (com produto já ativo)
                 <Link
-                  href={`/signup?produto=${product.slug}&next=/produtos/${product.slug}/comprar`}
+                  href={`/signup?produto=${product.slug}`}
                   className="w-full h-12 rounded-lg brand-gradient text-sm font-semibold text-white shadow-lg shadow-violet-500/20 hover:opacity-95 inline-flex items-center justify-center gap-2"
                 >
                   {ctaIcon} {ctaText}
