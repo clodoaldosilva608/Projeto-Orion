@@ -1490,3 +1490,75 @@ Stage Summary:
 - ✅ Commit a0eacf7 feito localmente (precisa push manual para GitHub)
 - ✅ Deploy Vercel feito com sucesso via API direta
 - ⚠️ Push do commit a0eacf7 para GitHub pendente (sem token)
+
+---
+Task ID: final-validation
+Agent: main (Super Z)
+Task: Executar 3 passos sugeridos: webhook Stripe + testar login + testar compra
+
+Work Log:
+
+=== PASSO 1: Webhook Stripe ===
+- Criado webhook endpoint via Stripe API:
+  • ID: we_1TyDUeB3pOQIe587y0gsiUwf
+  • URL: https://orion-saas-platform.vercel.app/api/stripe/webhook
+  • 5 eventos: checkout.session.completed, customer.subscription.updated,
+    customer.subscription.deleted, invoice.payment_succeeded,
+    invoice.payment_failed
+  • Secret: whsec_4GykUlef5uKpap8GUFsM4PFYhMSNvHRx
+- Deletado webhook antigo duplicado (we_1Ty13KB3pOQIe587dPG1FeGg)
+- Atualizado STRIPE_WEBHOOK_SECRET na Vercel (deletado + recriado)
+- Redeploy Vercel para aplicar nova env var
+- Testado: POST com assinatura inválida → 400 "Webhook Error" (esperado)
+- Testado: POST com assinatura válida → 200 {"received":true} (processou!)
+
+=== PASSO 2: Testar Login ===
+- POST /api/auth/login com email+senha → 200 (cookies setados)
+  • sb-iwadvrvdlpdjiclwvsgw-auth-token (Supabase auth)
+  • orion-2fa-verified=1
+- GET /dashboard com cookies → 200 OK
+- Card "Meus Produtos" presente (1 ocorrência no HTML)
+- 6 módulos visíveis: PagueMenos, Fábrica, Módulo de Vendas, IA, Dev & Deploy, Calendário
+- Plano "enterprise" exibido
+- Super Admin panel acessível com link "Gerenciar Módulos"
+
+BUG ENCONTRADO E CORRIGIDO:
+- Sidebar mostrava "ORION" em vez de "PagueMenos"
+- Causa 1: tenant.ts lia de cookies() mas proxy seta headers()
+  → commit 0ca3c59 fix(tenant): ler subdomain de headers()
+- Causa 2: TenantProvider foi removido do layout.tsx
+  → commit abb4652 fix(layout): re-adicionar TenantProvider no body
+- Após 2 deploys: sidebar mostra "PAGUEMENOS" ✅
+- Cores #DC2626 aplicadas via CSS ✅
+
+=== PASSO 3: Testar Fluxo de Compra ===
+- GET /produtos → 200 OK (catálogo renderiza)
+- Lista produtos: "PagueMenos - Gestão Comercial", "Adquirir agora"
+- GET /produtos/projeto-paguemenos/comprar → 200 OK
+- Formulário presente: "Nome da empresa", "E-mail do responsável", "Pagar e ativar"
+- Preço exibido: R$ 299,00
+- POST /api/stripe/create-checkout-session (logado) → 200 OK
+  • Retorna URL do Stripe Checkout: https://checkout.stripe.com/c/pay/cs_live_...
+  • Checkout session criada no Stripe:
+    - ID: cs_live_a11yyy6CObaaqTk5CARHHNYX3RMgxu6lvuEiom4OaWzYZbaMT7kFTbO5Ru
+    - Status: open
+    - Amount: R$ 299,00 BRL
+    - Customer email: clodoaldosilva608@gmail.com
+    - Metadata: {companyId: '1', plan: 'pro', planId: 'pro'} ✅
+- GET /produtos/projeto-paguemenos/sucesso → 200 OK (página de confirmação)
+
+Stage Summary:
+- ✅ Webhook Stripe configurado e validado (assinatura verificada)
+- ✅ Login funcional (cookies + 2FA + redirect /dashboard)
+- ✅ Sidebar mostra "PAGUEMENOS" (appName dinâmico funcionando)
+- ✅ Card "Meus Produtos" com 6 módulos visíveis
+- ✅ Catálogo /produtos renderiza corretamente
+- ✅ Página /comprar funcional com formulário
+- ✅ API cria checkout session no Stripe com metadata correta
+- ✅ Página de sucesso renderiza
+- ✅ 3 commits feitos + pushados para GitHub
+- ✅ 3 deploys Vercel feitos
+
+URLs de produção:
+- https://orion-saas-platform.vercel.app (produção)
+- https://github.com/clodoaldosilva608/Projeto-Orion (código fonte)
