@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { getCurrentTenant, DEFAULT_TENANT } from "@/lib/tenant";
+import { getTenantBySubdomain, DEFAULT_TENANT } from "@/lib/tenant-db";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const tenant = await getCurrentTenant() ?? DEFAULT_TENANT;
+  const tenant = await getTenantBySubdomain(null) ?? DEFAULT_TENANT;
   return NextResponse.json(tenant);
 }
