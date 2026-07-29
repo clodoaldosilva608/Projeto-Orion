@@ -65,6 +65,8 @@ export function MinimalDashboard({
     // que o Orion Gestão Comercial valida em /api/sso para login automático
     if (product.moduleKey === "paguemenos") {
       // SSO cross-app: gera JWT e redireciona
+      // Se o usuário não existir na instância de destino, ele verá a tela
+      // de login com a mensagem de provisionamento
       try {
         const res = await fetch("/api/sso/paguemenos-token");
         const data = await res.json();
@@ -72,11 +74,14 @@ export function MinimalDashboard({
           window.open(data.url, "_blank", "noopener,noreferrer");
           return;
         }
+        if (data.error) {
+          alert("Sua instância está sendo provisionada. Você receberá um email quando estiver pronta.");
+          return;
+        }
       } catch (e) {
         console.error("SSO error:", e);
+        alert("Não foi possível conectar à sua instância. Tente novamente em alguns instantes.");
       }
-      // Fallback: abre sem SSO (usuário faz login manual)
-      window.open(product.deployUrl, "_blank", "noopener,noreferrer");
       return;
     }
     // Outros produtos externos

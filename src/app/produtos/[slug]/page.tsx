@@ -127,9 +127,6 @@ export default async function ProdutoDetalhePage({ params }: { params: Promise<{
                 </Link>
               ) : (
                 // Não logado → vai para signup com produto selecionado
-                // O produto é habilitado automaticamente no signup (register API
-                // cria EnabledModule baseado no productSlug)
-                // Após signup → onboarding → dashboard (com produto já ativo)
                 <Link
                   href={`/signup?produto=${product.slug}`}
                   className="w-full h-12 rounded-lg brand-gradient text-sm font-semibold text-white shadow-lg shadow-violet-500/20 hover:opacity-95 inline-flex items-center justify-center gap-2"
@@ -138,16 +135,51 @@ export default async function ProdutoDetalhePage({ params }: { params: Promise<{
                 </Link>
               )}
 
-              {product.demoUrl && (
-                <a
-                  href={product.demoUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-3 w-full h-10 rounded-lg border border-white/10 bg-white/5 text-sm font-medium text-[#c4c8d8] hover:text-white inline-flex items-center justify-center gap-2"
-                >
-                  <ExternalLink className="h-4 w-4" /> Ver demonstração
-                </a>
-              )}
+              {/* Link para ver todos os planos */}
+              <Link
+                href="/planos"
+                className="mt-3 w-full h-10 rounded-lg border border-white/10 bg-white/5 text-sm font-medium text-[#c4c8d8] hover:text-white inline-flex items-center justify-center gap-2"
+              >
+                Ver todos os planos e preços
+              </Link>
+            </div>
+
+            {/* Planos disponíveis */}
+            <div className="glass-card p-5 mt-4">
+              <h3 className="text-sm font-semibold text-white mb-3">Escolha seu plano</h3>
+              <div className="space-y-2">
+                {[
+                  { name: "Free", price: "R$ 0", period: "/mês", desc: "14 dias grátis, sem cartão", highlight: false },
+                  { name: "Starter", price: "R$ 99", period: "/mês", desc: "15 usuários, 3 filiais", highlight: false },
+                  { name: "Pro", price: "R$ 299", period: "/mês", desc: "50 usuários, 10 filiais, IA", highlight: true },
+                  { name: "Enterprise", price: "R$ 499", period: "/mês", desc: "500 usuários, SSO/SAML", highlight: false },
+                ].map((plan) => (
+                  <div
+                    key={plan.name}
+                    className={`flex items-center justify-between p-3 rounded-lg border ${
+                      plan.highlight
+                        ? "border-violet-500/40 bg-violet-500/10"
+                        : "border-white/[0.06] bg-white/[0.02]"
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold text-white">{plan.name}</span>
+                        {plan.highlight && (
+                          <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-300">
+                            Popular
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[10px] text-[#8b8fa3] mt-0.5">{plan.desc}</p>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-sm font-bold text-white">{plan.price}</div>
+                      <div className="text-[10px] text-[#6b7280]">{plan.period}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 
