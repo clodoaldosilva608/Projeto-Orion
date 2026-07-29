@@ -137,15 +137,34 @@ export async function removeProjectDomain(domain: string): Promise<{
 
 /**
  * Gera a URL do subdomínio do tenant.
- * Se o tenant tem subdomain 'clienteA', retorna:
- *   https://clienteA.projeto-paguemenos.vercel.app
  *
- * Para que isso funcione, o projeto PagueMenos na Vercel deve ter
- * o wildcard domain *.projeto-paguemenos.vercel.app configurado.
+ * Estratégia:
+ * - Se PAGUEMENOS_BASE_URL estiver configurada (ex: https://app.orion.com.br),
+ *   usa subdomínio: https://{subdomain}.app.orion.com.br
+ * - Se não, usa a URL base do deploy atual do PagueMenos
+ *   (sem subdomínio — o tenant é identificado pelo JWT no SSO)
+ *
+ * NOTA: Para subdomínios reais (*.vercel.app), é necessário:
+ *   1. Plano Vercel Pro (wildcard domains), OU
+ *   2. Domínio customizado com wildcard DNS
  */
 export function getTenantUrl(subdomain: string | null): string {
-  if (!subdomain) {
-    return "https://projeto-paguemenos.vercel.app";
+  // Se tem domínio customizado configurado, usa subdomínio
+  const baseUrl = process.env.PAGUEMENOS_BASE_URL;
+  if (baseUrl) {
+    if (!subdomain || subdomain === "paguemenos") {
+      return baseUrl;
+    }
+    // Extrai o domínio base (ex: https://app.orion.com.br → app.orion.com.br)
+    try {
+      const host = new URL(baseUrl).hostname;
+      return `https://${subdomain}.${host}`;
+    } catch {
+      return baseUrl;
+    }
   }
-  return `https://${subdomain}.projeto-paguemenos.vercel.app`;
+
+  // Sem domínio customizado: usa URL base do deploy do PagueMenos
+  // O tenant é identificado pelo JWT no SSO, não pelo subdomínio
+  return process.env.PAGUEMENOS_DEPLOY_URL || "https://paguemenos-nine.vercel.app";
 }
