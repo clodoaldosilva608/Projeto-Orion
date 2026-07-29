@@ -102,7 +102,7 @@ export default function PlanosPage() {
             <li>• Aceita cartões de crédito internacionais e nacionais.</li>
             <li>• Após o pagamento, sua licença é <strong className="text-white">ativada automaticamente</strong> em segundos.</li>
             <li>• Cancele quando quiser pelo botão <strong className="text-white">Gerenciar Assinatura</strong> no painel.</li>
-            <li>• Módulos pagos (PagueMenos, IA, etc.) são liberados conforme o plano contratado.</li>
+            <li>• Módulos pagos (Orion Gestão Comercial, IA, etc.) são liberados conforme o plano contratado.</li>
           </ul>
         </div>
       </div>

@@ -2,7 +2,7 @@
  * Orion SaaS Platform — Seed Script
  *
  * Garante que o banco tenha:
- *   1. A empresa PagueMenos como tenant principal (id=1) com subdomain,
+ *   1. A empresa Orion como tenant principal (id=1) com subdomain,
  *      cores da marca, appName e licença "Paid Forever" (10 anos).
  *   2. O usuário clodoaldosilva608@gmail.com como Super Admin.
  *   3. Módulos habilitados (paguemenos, fabrica, ia, vendas, deploy, calendario).
@@ -25,7 +25,7 @@ const PAGUEMENOS_SUBDOMAIN = "paguemenos";
 // "Paid Forever" = 10 anos a partir de hoje (praticamente forever para testes)
 const PAID_FOREVER_YEARS = 10;
 
-// Módulos a serem habilitados para o PagueMenos (plano Enterprise)
+// Módulos a serem habilitados para o Orion (plano Enterprise)
 const ENTERPRISE_MODULES = [
   "paguemenos",
   "fabrica",
@@ -54,7 +54,7 @@ async function main() {
       where: {
         OR: [
           { subdomain: PAGUEMENOS_SUBDOMAIN },
-          { tradeName: { contains: "PagueMenos", mode: "insensitive" } },
+          { tradeName: { contains: "Orion", mode: "insensitive" } },
         ],
       },
     });
@@ -64,17 +64,17 @@ async function main() {
     company = await prisma.company.update({
       where: { id: company.id },
       data: {
-        tradeName: company.tradeName || "PagueMenos",
-        legalName: company.legalName || "PagueMenos Farmácias S.A.",
+        tradeName: company.tradeName || "Orion",
+        legalName: company.legalName || "Orion Platform LTDA",
         subdomain: PAGUEMENOS_SUBDOMAIN,
         primaryColor: "#DC2626",
         secondaryColor: "#EF4444",
         backgroundColor: "#0f111a",
-        appName: "PagueMenos",
+        appName: "Orion",
         plan: "enterprise",
         active: true,
         country: "BR",
-        email: company.email || "contato@paguemenos.com.br",
+        email: company.email || "contato@orion.com",
         onboardingCompleted: true,
         theme: "orion-dark",
         language: "pt",
@@ -86,17 +86,17 @@ async function main() {
   } else {
     company = await prisma.company.create({
       data: {
-        tradeName: "PagueMenos",
-        legalName: "PagueMenos Farmácias S.A.",
+        tradeName: "Orion",
+        legalName: "Orion Platform LTDA",
         subdomain: PAGUEMENOS_SUBDOMAIN,
         primaryColor: "#DC2626",
         secondaryColor: "#EF4444",
         backgroundColor: "#0f111a",
-        appName: "PagueMenos",
+        appName: "Orion",
         plan: "enterprise",
         active: true,
         country: "BR",
-        email: "contato@paguemenos.com.br",
+        email: "contato@orion.com",
         onboardingCompleted: true,
         theme: "orion-dark",
         language: "pt",
@@ -285,12 +285,12 @@ async function main() {
   });
   console.log(`✓ SaasUser OK`);
 
-  // Product (PagueMenos como produto vendável)
+  // Product (Orion Gestão Comercial como produto vendável)
   let product = await prisma.product.findUnique({ where: { slug: "projeto-paguemenos" } });
   if (!product) {
     product = await prisma.product.create({
       data: {
-        name: "PagueMenos - Gestão Comercial",
+        name: "Orion - Gestão Comercial",
         slug: "projeto-paguemenos",
         description: "Plataforma de gestão comercial com IA — vendas, metas, ranking, campanhas, workflow de aprovação.",
         repoUrl: "https://github.com/clodoaldosilva608/Projeto-Orion",
@@ -311,9 +311,9 @@ async function main() {
         iconColor: "#DC2626",
       },
     });
-    console.log(`✓ Produto PagueMenos criado`);
+    console.log(`✓ Produto Orion Gestão Comercial criado`);
   } else {
-    console.log(`✓ Produto PagueMenos já existe`);
+    console.log(`✓ Produto Orion Gestão Comercial já existe`);
   }
 
   // ================================================================

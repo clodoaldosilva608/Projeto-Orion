@@ -324,7 +324,7 @@ export default function LandingPage() {
                 {/* App list */}
                 <div className="space-y-1.5">
                   {[
-                    { n: "PagueMenos", s: "Publicado", t: "bg-emerald-500/15 text-emerald-300" },
+                    { n: "Orion Gestão", s: "Publicado", t: "bg-emerald-500/15 text-emerald-300" },
                     { n: "BioSaúde", s: "Em Testes", t: "bg-amber-500/15 text-amber-300" },
                     { n: "FIManager", s: "Homologação", t: "bg-sky-500/15 text-sky-300" },
                   ].map((a) => (

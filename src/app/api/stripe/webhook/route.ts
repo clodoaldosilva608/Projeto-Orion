@@ -222,7 +222,7 @@ export async function POST(request: NextRequest) {
 
         // === PROVISIONAR SUBDOMÍNIO NA VERCEL ===
         // Se o tenant tem subdomínio e a Vercel API está configurada,
-        // adiciona o subdomínio ao projeto PagueMenos.
+        // adiciona o subdomínio ao projeto Orion Gestão Comercial.
         // NOTA: Se o wildcard *.projeto-paguemenos.vercel.app já estiver
         // configurado, os subdomínios resolvem automaticamente e esta
         // chamada é opcional (apenas para custom domains).

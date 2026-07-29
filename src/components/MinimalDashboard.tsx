@@ -60,9 +60,9 @@ export function MinimalDashboard({
       if (route) router.push(route);
       return;
     }
-    // External product (ex: PagueMenos) — gera token SSO e abre
+    // External product (ex: Orion Gestão Comercial) — gera token SSO e abre
     // O endpoint /api/sso/paguemenos-token retorna URL com JWT
-    // que o PagueMenos valida em /api/sso para login automático
+    // que o Orion Gestão Comercial valida em /api/sso para login automático
     if (product.moduleKey === "paguemenos") {
       // SSO cross-app: gera JWT e redireciona
       try {

@@ -57,7 +57,7 @@ export function MyProductsCard({
       return;
     }
     // Abre deploy externo passando companyId como query param (cookie é setado
-    // no deploy do PagueMenos em uma rota /api/auth/sso separada)
+    // no deploy do Orion Gestão Comercial em uma rota /api/auth/sso separada)
     const url = new URL(product.deployUrl);
     url.searchParams.set("companyId", companyId);
     url.searchParams.set("from", "orion");

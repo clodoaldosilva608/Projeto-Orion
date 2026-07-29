@@ -1,7 +1,7 @@
 /**
  * Vercel API Client — Orion Platform
  *
- * Gerencia subdomínios no projeto PagueMenos na Vercel.
+ * Gerencia subdomínios no projeto Orion Gestão Comercial na Vercel.
  * Para wildcard domains (*.projeto-paguemenos.vercel.app), a Vercel
  * resolve automaticamente — não precisa de API call por tenant.
  * Este módulo é usado apenas para:
@@ -17,7 +17,7 @@ const PAGUEMENOS_PROJECT_ID = process.env.PAGUEMENOS_VERCEL_PROJECT_ID;
 export const vercelConfigured = Boolean(VERCEL_TOKEN && PAGUEMENOS_PROJECT_ID);
 
 /**
- * Adiciona um domínio ao projeto PagueMenos na Vercel.
+ * Adiciona um domínio ao projeto Orion Gestão Comercial na Vercel.
  * Para subdomínios (*.projeto-paguemenos.vercel.app), se o wildcard
  * já estiver configurado, NÃO é necessário chamar esta função.
  * Use apenas para custom domains (ex: cliente.com.br).
@@ -141,7 +141,7 @@ export async function removeProjectDomain(domain: string): Promise<{
  * Estratégia:
  * - Se PAGUEMENOS_BASE_URL estiver configurada (ex: https://app.orion.com.br),
  *   usa subdomínio: https://{subdomain}.app.orion.com.br
- * - Se não, usa a URL base do deploy atual do PagueMenos
+ * - Se não, usa a URL base do deploy atual do Orion Gestão Comercial
  *   (sem subdomínio — o tenant é identificado pelo JWT no SSO)
  *
  * NOTA: Para subdomínios reais (*.vercel.app), é necessário:
@@ -164,7 +164,7 @@ export function getTenantUrl(subdomain: string | null): string {
     }
   }
 
-  // Sem domínio customizado: usa URL base do deploy do PagueMenos
+  // Sem domínio customizado: usa URL base do deploy do Orion Gestão Comercial
   // O tenant é identificado pelo JWT no SSO, não pelo subdomínio
   return process.env.PAGUEMENOS_DEPLOY_URL || "https://paguemenos-nine.vercel.app";
 }

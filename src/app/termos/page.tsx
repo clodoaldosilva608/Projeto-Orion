@@ -29,7 +29,7 @@ export default function TermosPage() {
             <h2 className="text-lg font-semibold text-white mb-2">2. Descrição do Serviço</h2>
             <p>A Orion é uma plataforma SaaS multi-tenant que oferece software de gestão comercial e ferramentas de desenvolvimento. O serviço inclui:</p>
             <ul className="list-disc pl-6 mt-2 space-y-1">
-              <li>Acesso a módulos de software (ex: PagueMenos)</li>
+              <li>Acesso a módulos de software (ex: Orion Gestão Comercial)</li>
               <li>Período de teste gratuito de 14 dias</li>
               <li>Planos pagos com cobrança mensal via Stripe</li>
               <li>Isolamento de dados entre tenants</li>

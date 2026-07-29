@@ -8,13 +8,13 @@ export const dynamic = "force-dynamic";
 /**
  * GET /api/sso/paguemenos-token
  *
- * Gera um JWT de SSO cross-app para o usuário logado acessar o PagueMenos.
+ * Gera um JWT de SSO cross-app para o usuário logado acessar o Orion Gestão Comercial.
  * O JWT contém { companyId (slug), userId, email, role, exp } assinado
- * com ORION_SSO_SECRET (compartilhado com o PagueMenos).
+ * com ORION_SSO_SECRET (compartilhado com o Orion Gestão Comercial).
  *
  * Retorna: { url: "https://{subdomain}.projeto-paguemenos.vercel.app/api/sso?token=xxx" }
  *
- * O PagueMenos valida o JWT em /api/sso e faz login automático.
+ * O Orion Gestão Comercial valida o JWT em /api/sso e faz login automático.
  */
 export async function GET(request: NextRequest) {
   const supabase = await createSupabaseServerClient();
@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
 
   const token = `${headerEncoded}.${payloadEncoded}.${signature}`;
 
-  // URL do PagueMenos com token SSO
+  // URL do Orion Gestão Comercial com token SSO
   const tenantUrl = getTenantUrl(dbUser.company.subdomain);
   const ssoUrl = `${tenantUrl}/api/sso?token=${token}`;
 

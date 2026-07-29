@@ -9,7 +9,7 @@
 export const AVAILABLE_MODULES = [
   {
     key: "paguemenos",
-    name: "PagueMenos",
+    name: "Orion Gestão Comercial",
     description: "Plataforma de gestão comercial com IA — vendas, metas, ranking, campanhas",
     icon: "🛒",
     color: "#DC2626",

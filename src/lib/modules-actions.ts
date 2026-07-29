@@ -2,7 +2,7 @@
  * Module Management Actions — SaaS Multi-Tenant
  *
  * Permite ao Super Admin ativar/desativar módulos para cada empresa.
- * Módulos disponíveis: paguemenos, vendas, fabrica, ia, deploy, calendario
+ * Módulos disponíveis: gestao-comercial, vendas, fabrica, ia, deploy, calendario
  *
  * Também expõe helpers para verificar se uma empresa tem licença ativa
  * e se um módulo específico está habilitado.

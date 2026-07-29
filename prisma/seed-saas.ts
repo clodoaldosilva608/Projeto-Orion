@@ -2,9 +2,9 @@
  * P18 — SaaS Multi-Tenant Seed
  *
  * Ensures:
- * 1. PagueMenos is the default tenant (id=1) with subdomain, colors, logo
+ * 1. Orion is the default tenant (id=1) with subdomain, colors, logo
  * 2. Admin user has isSuperAdmin=true
- * 3. PagueMenos has an Enterprise license
+ * 3. Orion has an Enterprise license
  *
  * Run: bunx tsx prisma/seed-saas.ts
  */
@@ -21,7 +21,7 @@ const prisma = new PrismaClient({
 async function main() {
   console.log("🌱 Seeding SaaS Multi-Tenant data...\n");
 
-  // 1. Find or create PagueMenos company (tenant id=1)
+  // 1. Find or create Orion company (tenant id=1)
   let company = await prisma.company.findFirst({
     where: { id: 1n },
   });
@@ -29,7 +29,7 @@ async function main() {
   if (!company) {
     // Try by trade name
     company = await prisma.company.findFirst({
-      where: { tradeName: { contains: "PagueMenos", mode: "insensitive" } },
+      where: { tradeName: { contains: "Orion", mode: "insensitive" } },
     });
   }
 
@@ -39,10 +39,10 @@ async function main() {
       where: { id: company.id },
       data: {
         subdomain: "paguemenos",
-        primaryColor: "#DC2626", // PagueMenos red
+        primaryColor: "#DC2626", // Orion red
         secondaryColor: "#EF4444",
         backgroundColor: "#0f111a",
-        appName: "PagueMenos",
+        appName: "Orion",
         plan: "enterprise",
         active: true,
       },
@@ -52,16 +52,16 @@ async function main() {
     console.log(`  appName: ${company.appName}`);
     console.log(`  colors: ${company.primaryColor} / ${company.secondaryColor}`);
   } else {
-    // Create PagueMenos as first tenant
+    // Create Orion as first tenant
     company = await prisma.company.create({
       data: {
-        tradeName: "PagueMenos",
-        legalName: "PagueMenos Farmácias S.A.",
+        tradeName: "Orion",
+        legalName: "Orion Platform LTDA",
         subdomain: "paguemenos",
         primaryColor: "#DC2626",
         secondaryColor: "#EF4444",
         backgroundColor: "#0f111a",
-        appName: "PagueMenos",
+        appName: "Orion",
         plan: "enterprise",
         active: true,
         country: "BR",
@@ -70,7 +70,7 @@ async function main() {
     console.log(`✓ Created company: ${company.tradeName} (id=${company.id})`);
   }
 
-  // 2. Create or update Enterprise license for PagueMenos
+  // 2. Create or update Enterprise license for Orion
   let license = await prisma.license.findFirst({
     where: { companies: { some: { id: company.id } } },
   });

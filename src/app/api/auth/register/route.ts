@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
  *   3. License trial de 14 dias (status=trial, trialEndsAt=+14d)
  *   4. User no Prisma (vinculado à Company, isSuperAdmin=false)
  *   5. Role "admin" se não existir
- *   6. EnabledModule para o produto escolhido (ex: paguemenos)
+ *   6. EnabledModule para o produto escolhido (ex: gestao-comercial)
  *
  * Body JSON:
  *   { name, email, password, companyName, cnpj?, productSlug?, primaryColor?, secondaryColor? }
