@@ -4,7 +4,8 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   Package, ExternalLink, Lock, Loader2, CreditCard, Settings,
-  LifeBuoy, MessageSquare, Mail, ArrowUpRight, Check, Sparkles
+  LifeBuoy, MessageSquare, Mail, ArrowUpRight, Check, Sparkles,
+  Clock, Bell, AlertCircle
 } from "lucide-react";
 import Link from "next/link";
 
@@ -37,58 +38,37 @@ export function MinimalDashboard({
   const router = useRouter();
   const [portalLoading, setPortalLoading] = useState(false);
   const [showContact, setShowContact] = useState(false);
+  const [showProvisioning, setShowProvisioning] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const enabledProducts = products.filter(p => p.enabled);
   const disabledProducts = products.filter(p => !p.enabled);
 
-  const handleOpenProduct = async (product: Product) => {
+  const handleOpenProduct = (product: Product) => {
     if (!product.enabled) {
       router.push(`/planos?reason=module_locked&module=${product.moduleKey}`);
       return;
     }
-    if (!product.deployUrl) {
-      // Internal modules
-      const internalRoutes: Record<string, string> = {
-        fabrica: "/fabrica",
-        vendas: "/vendas",
-        ia: "/ia",
-        deploy: "/deployments",
-        calendario: "/calendario",
-      };
-      const route = internalRoutes[product.moduleKey];
-      if (route) router.push(route);
+
+    // Para produtos externos (ex: Orion Gestão Comercial):
+    // NÃO redireciona para o PagueMenos — cada tenant tem sua própria
+    // instância que precisa ser provisionada separadamente.
+    // Mostra tela de provisionamento dentro do Orion.
+    if (product.deployUrl) {
+      setShowProvisioning(product.moduleKey);
       return;
     }
-    // External product (ex: Orion Gestão Comercial) — gera token SSO e abre
-    // O endpoint /api/sso/paguemenos-token retorna URL com JWT
-    // que o Orion Gestão Comercial valida em /api/sso para login automático
-    if (product.moduleKey === "paguemenos") {
-      // SSO cross-app: gera JWT e redireciona
-      // Se o usuário não existir na instância de destino, ele verá a tela
-      // de login com a mensagem de provisionamento
-      try {
-        const res = await fetch("/api/sso/paguemenos-token");
-        const data = await res.json();
-        if (data.url) {
-          window.open(data.url, "_blank", "noopener,noreferrer");
-          return;
-        }
-        if (data.error) {
-          alert("Sua instância está sendo provisionada. Você receberá um email quando estiver pronta.");
-          return;
-        }
-      } catch (e) {
-        console.error("SSO error:", e);
-        alert("Não foi possível conectar à sua instância. Tente novamente em alguns instantes.");
-      }
-      return;
-    }
-    // Outros produtos externos
-    const url = new URL(product.deployUrl);
-    url.searchParams.set("companyId", companyId);
-    url.searchParams.set("from", "orion");
-    window.open(url.toString(), "_blank", "noopener,noreferrer");
+
+    // Módulos internos
+    const internalRoutes: Record<string, string> = {
+      fabrica: "/fabrica",
+      vendas: "/vendas",
+      ia: "/ia",
+      deploy: "/deployments",
+      calendario: "/calendario",
+    };
+    const route = internalRoutes[product.moduleKey];
+    if (route) router.push(route);
   };
 
   const handleManageSubscription = async () => {
@@ -151,7 +131,7 @@ export function MinimalDashboard({
               <MessageSquare className="h-4 w-4 text-violet-300" /> Precisa de ajuda?
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <a href="mailto:suporte@orion.com?subject=Suporte%20-%20{companyTradeName}"
+              <a href="mailto:suporte@orion.com"
                 className="flex items-center gap-3 p-3 rounded-lg border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] transition-colors">
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-500/15">
                   <Mail className="h-4 w-4 text-blue-400" />
@@ -161,8 +141,7 @@ export function MinimalDashboard({
                   <div className="text-[10px] text-[#8b8fa3]">suporte@orion.com</div>
                 </div>
               </a>
-              <a href="https://wa.me/5511999999999?text=Ol%C3%A1%2C%20preciso%20de%20suporte%20no%20Orion"
-                target="_blank" rel="noopener noreferrer"
+              <a href="https://wa.me/5511999999999" target="_blank" rel="noopener noreferrer"
                 className="flex items-center gap-3 p-3 rounded-lg border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] transition-colors">
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500/15">
                   <MessageSquare className="h-4 w-4 text-emerald-400" />
@@ -221,7 +200,7 @@ export function MinimalDashboard({
                       <p className="text-xs text-[#8b8fa3] mt-0.5 line-clamp-1">{p.moduleDescription}</p>
                       <div className="flex items-center gap-3 mt-2">
                         <span className="text-[11px] font-medium" style={{ color: p.moduleColor }}>
-                          {p.deployUrl ? "Abrir aplicação" : "Acessar módulo"} →
+                          {p.deployUrl ? "Acessar aplicação" : "Acessar módulo"} →
                         </span>
                       </div>
                     </div>
@@ -289,11 +268,6 @@ export function MinimalDashboard({
                     : "Sem assinatura ativa"}
                 </span>
               </div>
-              {stripeCustomerId && (
-                <div className="mt-0.5 text-[10px] text-[#6b7280]">
-                  ID Stripe: {stripeCustomerId.substring(0, 16)}…
-                </div>
-              )}
             </div>
             <div className="flex items-center gap-2">
               <Link
@@ -324,6 +298,64 @@ export function MinimalDashboard({
           </p>
         </div>
       </div>
+
+      {/* Modal de Provisionamento */}
+      {showProvisioning && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={() => setShowProvisioning(null)}>
+          <div className="glass-card p-6 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-500/15">
+                <Clock className="h-6 w-6 text-amber-400" />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-white">Provisionando sua instância</h3>
+                <p className="text-[10px] text-[#8b8fa3]">Isso pode levar alguns minutos</p>
+              </div>
+            </div>
+
+            <div className="space-y-3 text-xs text-[#c4c8d8]">
+              <p>
+                Sua aplicação <strong className="text-white">{products.find(p => p.moduleKey === showProvisioning)?.moduleName}</strong> está sendo provisionada
+                em um ambiente isolado e exclusivo para <strong className="text-white">{companyTradeName}</strong>.
+              </p>
+
+              <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-3 space-y-2">
+                <div className="flex items-center gap-2">
+                  <Check className="h-3.5 w-3.5 text-emerald-400" />
+                  <span>Conta criada no Orion</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Check className="h-3.5 w-3.5 text-emerald-400" />
+                  <span>Trial de 14 dias ativado</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Loader2 className="h-3.5 w-3.5 text-amber-400 animate-spin" />
+                  <span>Provisionando ambiente isolado...</span>
+                </div>
+                <div className="flex items-center gap-2 opacity-50">
+                  <Clock className="h-3.5 w-3.5" />
+                  <span>Configuração inicial da aplicação</span>
+                </div>
+              </div>
+
+              <div className="rounded-lg bg-blue-500/10 border border-blue-500/20 p-3 flex items-start gap-2">
+                <Bell className="h-4 w-4 text-blue-400 mt-0.5 shrink-0" />
+                <p className="text-[11px] text-blue-200">
+                  Você receberá um <strong>email</strong> quando sua instância estiver pronta.
+                  A aplicação será entregue <strong>totalmente limpa</strong>, sem dados de outros clientes.
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setShowProvisioning(null)}
+              className="mt-5 w-full h-10 rounded-lg brand-gradient text-sm font-semibold text-white"
+            >
+              Entendi, aguardarei o email
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
