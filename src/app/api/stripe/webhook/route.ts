@@ -219,6 +219,39 @@ export async function POST(request: NextRequest) {
             console.log(`[stripe webhook] User já existe: ${customerEmail}`)
           }
         }
+
+        // === PROVISIONAR SUBDOMÍNIO NA VERCEL ===
+        // Se o tenant tem subdomínio e a Vercel API está configurada,
+        // adiciona o subdomínio ao projeto PagueMenos.
+        // NOTA: Se o wildcard *.projeto-paguemenos.vercel.app já estiver
+        // configurado, os subdomínios resolvem automaticamente e esta
+        // chamada é opcional (apenas para custom domains).
+        if (updatedCompany.subdomain && process.env.VERCEL_TOKEN && process.env.PAGUEMENOS_VERCEL_PROJECT_ID) {
+          try {
+            const { addProjectDomain } = await import("@/lib/vercel");
+            const domain = `${updatedCompany.subdomain}.projeto-paguemenos.vercel.app`;
+            const result = await addProjectDomain(domain);
+            if (result.ok) {
+              console.log(`[stripe webhook] ✓ Subdomínio provisionado: ${domain}`);
+              // Salva status na Company
+              await prisma.company.update({
+                where: { id: updatedCompany.id },
+                data: {
+                  metadata: {
+                    ...(updatedCompany.metadata as any ?? {}),
+                    vercelDomain: { domain, status: "added", addedAt: new Date().toISOString() },
+                  },
+                },
+              });
+            } else {
+              console.warn(`[stripe webhook] Falha ao provisionar subdomínio: ${result.error}`);
+              // Não bloqueia o webhook — o wildcard pode resolver automaticamente
+            }
+          } catch (vercelErr: any) {
+            console.warn(`[stripe webhook] Erro Vercel API: ${vercelErr.message}`);
+            // Não bloqueia — wildcard domain pode resolver
+          }
+        }
         break
       }
 

@@ -42,7 +42,7 @@ export function MinimalDashboard({
   const enabledProducts = products.filter(p => p.enabled);
   const disabledProducts = products.filter(p => !p.enabled);
 
-  const handleOpenProduct = (product: Product) => {
+  const handleOpenProduct = async (product: Product) => {
     if (!product.enabled) {
       router.push(`/planos?reason=module_locked&module=${product.moduleKey}`);
       return;
@@ -60,7 +60,26 @@ export function MinimalDashboard({
       if (route) router.push(route);
       return;
     }
-    // External product (ex: PagueMenos) — open with companyId
+    // External product (ex: PagueMenos) — gera token SSO e abre
+    // O endpoint /api/sso/paguemenos-token retorna URL com JWT
+    // que o PagueMenos valida em /api/sso para login automático
+    if (product.moduleKey === "paguemenos") {
+      // SSO cross-app: gera JWT e redireciona
+      try {
+        const res = await fetch("/api/sso/paguemenos-token");
+        const data = await res.json();
+        if (data.url) {
+          window.open(data.url, "_blank", "noopener,noreferrer");
+          return;
+        }
+      } catch (e) {
+        console.error("SSO error:", e);
+      }
+      // Fallback: abre sem SSO (usuário faz login manual)
+      window.open(product.deployUrl, "_blank", "noopener,noreferrer");
+      return;
+    }
+    // Outros produtos externos
     const url = new URL(product.deployUrl);
     url.searchParams.set("companyId", companyId);
     url.searchParams.set("from", "orion");
