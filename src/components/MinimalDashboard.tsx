@@ -218,11 +218,6 @@ export function MinimalDashboard({
                         <span className="text-[11px] font-medium" style={{ color: p.moduleColor }}>
                           {p.deployUrl ? "Abrir aplicação" : "Acessar módulo"} →
                         </span>
-                        {p.deployUrl && (
-                          <span className="text-[10px] text-[#6b7280] flex items-center gap-1">
-                            <ExternalLink className="h-3 w-3" /> {new URL(p.deployUrl).hostname}
-                          </span>
-                        )}
                       </div>
                     </div>
                     <ArrowUpRight className="h-5 w-5 text-[#6b7280] group-hover:text-white transition-colors shrink-0" />
